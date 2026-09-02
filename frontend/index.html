@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oslian — medication safety and synthetic FHIR stream research demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<link rel="stylesheet" href="/static/css/app.css">
+<link rel="stylesheet" href="/static/css/stream.css">
+</head>
+<body data-view="home">
+
+<!-- ── global bar · identical on every workflow ──────────────────────────
+     Two independent research demonstrations, plus a Home that selects
+     between them. They are not two stages of one patient. -->
+<header class="app-bar">
+  <div class="app-mark">oslian<span>rx</span></div>
+  <nav class="nav-views" id="navViews" aria-label="Research workflows">
+    <button class="nav-view active" data-view="home"><span class="full">Home</span><span class="short">Home</span></button>
+    <button class="nav-view" data-view="rx"><span class="full">Medication Safety</span><span class="short">Safety</span></button>
+    <button class="nav-view" data-view="stream"><span class="full">Monitoring</span><span class="short">Monitor</span></button>
+  </nav>
+  <div class="app-bar-right">
+    <select class="bar-provider" id="provider" aria-label="LLM provider">
+      <option value="openai">OpenAI</option>
+      <option value="gemini">Gemini</option>
+    </select>
+    <span class="bar-key" id="kstat"><i></i>No key — rules + graph</span>
+    <button class="bar-btn" id="modelSettingsBtn" type="button">Model settings</button>
+  </div>
+</header>
+
+<!-- ── research boundary · one strip, seven statements ─────────────────── -->
+<section class="boundary" id="boundary" data-open="0" aria-label="Research boundary">
+  <div class="boundary-row">
+    <span class="boundary-label">Research boundary</span>
+    <span class="boundary-text" id="boundaryText">Research use only · synthetic stream, not a live feed · no diagnosis, causal claim, treatment recommendation or clinical alert.</span>
+    <button class="boundary-toggle" id="boundaryToggle" type="button" aria-expanded="false" aria-controls="boundaryFull">All seven statements ⌄</button>
+  </div>
+  <div class="boundary-full" id="boundaryFull">
+    <h3>The seven statements</h3>
+    <p class="lead">Stated once, in full, here. No section repeats them.</p>
+    <ol class="boundary-list">
+      <li><span class="n">01</span><span><span class="t">Research use only</span><span class="d">This build exists for methods research. It is not a medical device and is not cleared for care.</span></span></li>
+      <li><span class="n">02</span><span><span class="t">Synthetic FHIR R4 stream, not a live feed</span><span class="d">The stream replays a synthetic FHIR R4 fixture on a simulated clock. Nothing here is connected to Epic or to any hospital, and no real patient data is used.</span></span></li>
+      <li><span class="n">03</span><span><span class="t">No diagnosis</span><span class="d">Labels shown in a case come from the source data. The system produces none of its own.</span></span></li>
+      <li><span class="n">04</span><span><span class="t">No causal or counterfactual claim</span><span class="d">Forecasts describe an observed trajectory. They do not state what an intervention would do. Every cell carries causal_claim_allowed: false.</span></span></li>
+      <li><span class="n">05</span><span><span class="t">No treatment recommendation or clinical alert</span><span class="d">The Rx view demonstrates a rule set against public labels. The stream view raises no alerts: persistence, missing and degraded are data boundaries, not warnings.</span></span></li>
+      <li><span class="n">06</span><span><span class="t">No automated prescribing</span><span class="d">No output of this system can be sent to an order entry system. There is no prescribing action in the product.</span></span></li>
+      <li><span class="n">07</span><span><span class="t">A forecast cannot change a drug ranking</span><span class="d">The Rx engine and the forecast runtime are isolated. Neither reads the other's output.</span></span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ── Home · workflow selection ─────────────────────────────────────────
+     Static copy only, rendered by /static/js/shell.js. -->
+<main class="view" id="view-home" aria-label="Workflow selection"></main>
+
+<!-- ── Medication Safety ─────────────────────────────────────────────────
+     Illustrative case scenarios against the symbolic medication-safety
+     engine. Independent of the stream and its forecast runtime. -->
+<main class="view" id="view-rx" aria-label="Medication safety">
+  <div id="rxCaseHead"></div>
+  <div class="disc-body" id="rxFullCase" data-open="0"></div>
+  <div class="shell">
+    <div class="split">
+      <div class="main" id="rxMain"></div>
+      <aside class="side" id="rxSide" aria-label="Evidence"></aside>
+    </div>
+  </div>
+</main>
+
+<!-- ── Monitoring: live synthetic stream + retrospective replay ──────────
+     Rendered by /static/js/stream/*.js from REST snapshots and the SSE channel.
+     Level 1 command bar answers: which mode (synthetic, not live / retrospective
+     replay), stream status, the clocks, where outputs come from. Level 2 is the
+     rail (anatomy or clinical functions) plus the workspace; level 3 is the
+     metric chart that replaces the workspace. -->
+<main class="view" id="view-stream" aria-label="Monitoring">
+  <div class="stream-strip" id="streamStrip" aria-live="polite"></div>
+  <div class="anchor-band" id="anchorBand" hidden></div>
+  <nav class="view-bar" id="viewBar" aria-label="Monitoring navigation"></nav>
+  <div class="stream-main" id="streamMain" data-view="anatomy">
+    <aside class="rail" id="rail" aria-label="Navigator">
+      <div class="rail-head" id="railHead"></div>
+      <div class="anatomy-host" id="anatomyHost"></div>
+      <ol class="rail-list" id="railList" aria-label="Navigator index"></ol>
+    </aside>
+    <section class="workspace" id="workspace" aria-label="Workspace" aria-live="polite"></section>
+  </div>
+  <div class="lower-panel" id="lowerPanel" hidden></div>
+</main>
+
+<!-- ── provenance drawer (stream) ───────────────────────────────────────── -->
+<aside class="drawer" id="provDrawer" data-open="0" aria-label="Provenance">
+  <div class="drawer-head">
+    <h2>Provenance</h2>
+    <span class="scope">raw FHIR · mapping · run</span>
+    <button class="icon-btn" type="button" data-act="drawer-close" aria-label="Close">✕</button>
+  </div>
+  <div class="drawer-body" id="provBody"></div>
+  <div class="drawer-foot"><p class="note">Everything here is read from the append-only ledger and the persisted run record. Nothing is recomputed for display.</p></div>
+</aside>
+
+<!-- ── independent-workflow transition disclosure ────────────────────────
+     Shown before the guided demo leaves Medication Safety. -->
+<div class="scrim" id="transitionScrim" data-open="0">
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="transitionTitle">
+    <div class="modal-head">
+      <h2 id="transitionTitle">Different case · independent model pathway</h2>
+      <button class="icon-btn" type="button" id="transitionClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="transition-lead">The next chapter uses a synthetic FHIR R4 patient and an independent factual forecast
+        runtime. No medication-safety result is carried into the stream.</p>
+      <dl class="kv" style="margin-top:18px">
+        <dt>Leaving</dt><dd>Medication Safety · illustrative case scenario · symbolic engine</dd>
+        <dt>Entering</dt><dd>Synthetic FHIR R4 stream · synthetic patient · WholeBody runtime adapter (gated)</dd>
+        <dt>Carried across</dt><dd>Nothing. No case text, patient identifier, ranking, safety decision or graph state
+          is passed into the stream.</dd>
+      </dl>
+    </div>
+    <div class="modal-foot">
+      <span class="note">A forecast cannot change a drug ranking. The two engines never read each other's output.</span>
+      <button class="btn" type="button" id="transitionCancel">Stay here</button>
+      <button class="btn primary" type="button" id="transitionAck">I understand — continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New case modal ───────────────────────────────────────────────────── -->
+<div class="scrim" id="caseScrim" data-open="0">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="caseModalTitle">
+    <div class="modal-head">
+      <h2 id="caseModalTitle">New case</h2>
+      <button class="icon-btn" type="button" id="caseModalClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="label" for="caseText">Case text</label>
+      <textarea class="field" id="caseText" rows="4" placeholder="64M, crushing chest pain, diaphoresis, left arm pain, dyspnea. BP 88/54, HR 112, SpO₂ 94, eGFR 72. No known allergies."></textarea>
+      <div class="hint">Free text · no identifiers are stored</div>
+      <div class="preset-head">Illustrative case scenarios</div>
+      <p class="hint" style="margin:8px 0 2px">Constructed teaching scenarios for the symbolic medication-safety
+        engine. They are not the synthetic patient used by the stream.</p>
+      <div class="presets" id="presets"></div>
+      <div class="modal-opts">
+        <label class="check"><input type="checkbox" id="useFda" checked> Fetch live openFDA labels</label>
+        <label class="check"><input type="checkbox" id="useLlmOrch" checked> LLM orchestration — falls back to rules without a key</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="note">Research use only. No prescribing action is taken.</span>
+      <button class="btn" type="button" id="caseCancel">Cancel</button>
+      <button class="btn primary" type="button" id="analyzeBtn">Analyze case</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Ask the agent drawer ─────────────────────────────────────────────── -->
+<aside class="drawer" id="chatDrawer" data-open="0" aria-label="Ask the agent">
+  <div class="drawer-head">
+    <h2>Ask the agent</h2>
+    <span class="scope">this case only</span>
+    <button class="icon-btn" type="button" id="drawerClose" aria-label="Close">✕</button>
+  </div>
+  <div class="drawer-body" id="chatBox"></div>
+  <div class="drawer-foot">
+    <div class="composer">
+      <input id="chatInput" type="text" placeholder="Ask about this recommendation…" aria-label="Ask about this recommendation">
+      <button class="btn primary" type="button" id="sendBtn">Send</button>
+    </div>
+    <p class="note" style="margin-top:10px">Answers explain the rule set. They do not add, remove or re-rank drugs.</p>
+  </div>
+</aside>
+
+<script>
+/* ── Rx & Safety view ──────────────────────────────────────────────────────
+ * The ranking is the page. Import lives behind the New case modal, the
+ * analyzed case becomes a compact header, and chat is an on-demand drawer.
+ * Data flow, endpoints and the symbolic engine are unchanged.
+ */
+const GROUPS={
+  patient:{color:'#182024',label:'patient'}, indication:{color:'#B64A32',label:'indication'},
+  disease:{color:'#8C1D18',label:'disease'}, pathology:{color:'#A0741C',label:'perturbation'},
+  symptom:{color:'#8B8F89',label:'symptom'}, target:{color:'#27645E',label:'target'},
+  flag:{color:'#A0741C',label:'flag'},
+  'drug-ok':{color:'#27645E',label:'drug · no flag'}, 'drug-caution':{color:'#A0741C',label:'drug · caution'},
+  'drug-adjust':{color:'#A0741C',label:'drug · adjust'}, 'drug-avoid':{color:'#8C1D18',label:'drug · hold'},
+  'drug-insufficient_data':{color:'#8B8F89',label:'drug · unverified'}, 'drug-emergency':{color:'#8B8F89',label:'drug'}
+};
+const BOUNDARY_TEXT={
+  home:'Research use only · two independent demonstrations · synthetic stream, not a live feed · no diagnosis, causal claim or treatment recommendation.',
+  rx:'Research use only · illustrative case scenarios · no diagnosis, causal claim or treatment recommendation · no automated prescribing.',
+  stream:'Research use only · synthetic FHIR R4 stream or retrospective research replay, never a live Epic or hospital feed · no diagnosis, causal claim, treatment recommendation or clinical alert. A forecast cannot change a drug ranking.'
+};
+let PATIENTS=[], CUR=-1, KEY='', PROVIDER='openai', ART_TAB='graph', SEL_DRUG=-1, _net=null;
+let _nodesDS=null,_edgesDS=null,_stages=[],_animTimers=[],_gpRO=null,_layout={};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+
+/* Sentence case everywhere — the only uppercase left is a unit or an acronym. */
+function sentenceCase(s){
+  s=String(s||'').trim();if(!s)return '';
+  if(s===s.toUpperCase())s=s.toLowerCase();
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+/* The safety cell carries the decision, not the evidence: reduce the rule
+ * message to the factor it fired on. The full message goes in Basis. */
+function shortCause(msg){
+  let s=String(msg||'').split(' (')[0].replace(/\.$/,'').trim();
+  const w=s.split(/\s+/);
+  if(w.length>3)s=w.slice(0,3).join(' ');
+  return s.toLowerCase();
+}
+/* Safety decision → the design's status vocabulary. "Unverified" is a distinct
+ * state from "No flag" and is never collapsed into a pass. */
+function safetyMeta(c){
+  const d=(c.safety&&c.safety.decision)||'insufficient_data';
+  const why=((c.safety&&c.safety.reasons)||[]).map(r=>r.message).filter(Boolean);
+  const cause=why.length?shortCause(why[0]):'';
+  if(d==='ok')return{cls:'ok',label:'No flag'};
+  if(d==='avoid')return{cls:'bad',label:'Hold'+(cause?' — '+cause:'')};
+  if(d==='adjust')return{cls:'warn',label:'Adjust'+(cause?' — '+cause:'')};
+  if(d==='caution')return{cls:'warn',label:'Caution'+(cause?' — '+cause:'')};
+  if(d==='emergency')return{cls:'warn',label:'Emergency use'};
+  return{cls:'warn',label:'Unverified — label missing'};
+}
+function statHtml(m){return `<span class="stat ${m.cls}"><i></i>${esc(m.label)}</span>`;}
+
+function caseToText(c){
+  const v=c.vitals||{},parts=[];parts.push(`${c.age??''}${c.sex||''}`.trim());
+  if(c.symptoms&&c.symptoms.length)parts.push('presents with '+c.symptoms.join(', '));parts.push(c.indication);
+  const vit=[];if(v.sbp)vit.push('BP '+v.sbp+'/?');if(v.heart_rate)vit.push('HR '+v.heart_rate);if(v.spo2)vit.push('SpO2 '+v.spo2);
+  let s=parts.filter(Boolean).join(', ')+'.';if(vit.length)s+=' '+vit.join(', ')+'.';
+  if(c.egfr)s+=' eGFR '+c.egfr+'.';
+  if(c.allergies&&c.allergies.length)s+=' Allergies: '+c.allergies.join(', ')+'.';else s+=' No known allergies.';
+  if(c.current_medications&&c.current_medications.length)s+=' Taking '+c.current_medications.join(', ')+'.';
+  if((c.labs||{}).potassium)s+=' K+ '+c.labs.potassium+'.';return s;
+}
+function sampleToFields(c){return {indication:c.indication,age:c.age,sex:c.sex,weight_kg:c.weight_kg,egfr:c.egfr,
+  hepatic_status:c.hepatic_status,allergies:c.allergies,current_medications:c.current_medications,symptoms:c.symptoms,vitals:c.vitals,labs:c.labs};}
+function usePreset(i){const c=window._SAMPLES[i];$('caseText').value=caseToText(c);closeModal();analyze(c);}
+
+function saveKey(){KEY=$('apikey')?$('apikey').value.trim():KEY;PROVIDER=$('provider').value;
+  sessionStorage.setItem('osler_key',KEY);sessionStorage.setItem('osler_prov',PROVIDER);updateKeyStat();}
+function updateKeyStat(){const s=$('kstat');
+  if(KEY){s.innerHTML='<i></i>'+esc(PROVIDER)+' key set';s.className='bar-key on';}
+  else{s.innerHTML='<i></i>No key — rules + graph';s.className='bar-key';}}
+
+async function init(){
+  KEY=sessionStorage.getItem('osler_key')||'';PROVIDER=sessionStorage.getItem('osler_prov')||'openai';
+  $('provider').value=PROVIDER;
+  setBoundaryText(document.body.getAttribute('data-view')||'home');
+  const j=await(await fetch('/api/cases')).json();
+  if(j.env_llm && !KEY){const s=$('kstat');s.innerHTML='<i></i>env key set';s.className='bar-key on';}else updateKeyStat();
+  // the age/sex prefix lives in its own mono column, so strip it from the title
+  const presetLabel=c=>String(c.title||'').replace(/^\s*\d+\s*[MF]\s*[·:-]\s*/i,'');
+  $('presets').innerHTML=j.cases.map((c,i)=>
+    `<button class="preset" type="button" data-preset="${i}"><span class="who">${esc(String(c.age??''))} ${esc(c.sex||'')}</span><span>${esc(presetLabel(c))}</span></button>`).join('');
+  window._SAMPLES=j.cases;
+  renderRx();
+}
+
+/* ── modal / drawer / disclosure ─────────────────────────────────────────── */
+let _lastFocus=null,_drawerFocus=null;
+function openModal(){_lastFocus=document.activeElement;$('caseScrim').setAttribute('data-open','1');
+  const t=$('caseText');if(t)t.focus();}
+function closeModal(){$('caseScrim').setAttribute('data-open','0');if(_lastFocus&&_lastFocus.focus)_lastFocus.focus();}
+function openDrawer(){_drawerFocus=document.activeElement;$('chatDrawer').setAttribute('data-open','1');const i=$('chatInput');if(i)i.focus();}
+function closeDrawer(){$('chatDrawer').setAttribute('data-open','0');
+  if(_drawerFocus&&_drawerFocus.focus)_drawerFocus.focus();_drawerFocus=null;}
+function toggleBoundary(){
+  const b=$('boundary'),open=b.getAttribute('data-open')==='1';
+  b.setAttribute('data-open',open?'0':'1');
+  const t=$('boundaryToggle');
+  t.setAttribute('aria-expanded',String(!open));
+  t.textContent=open?'All seven statements ⌄':'Collapse ⌃';
+}
+function toggleFullCase(){
+  const d=$('rxFullCase');d.setAttribute('data-open',d.getAttribute('data-open')==='1'?'0':'1');
+}
+function setBoundaryText(view){$('boundaryText').textContent=BOUNDARY_TEXT[view]||BOUNDARY_TEXT.home;}
+
+/* ── analyze (streamed workflow) ─────────────────────────────────────────── */
+async function analyze(structured){
+  const text=$('caseText').value.trim();
+  if(!text && !structured){openModal();return;}
+  const btn=$('analyzeBtn');btn.disabled=true;
+  const pid='p'+Date.now();
+  const p={id:pid,label:'Analyzing…',text:text,bundle:null,chat:[],steps:[],openfdaRequested:$('useFda').checked};
+  PATIENTS.push(p);CUR=PATIENTS.length-1;SEL_DRUG=-1;
+  renderRx();
+  const addStep=ev=>{
+    if(!ev.running && p.steps.length && p.steps[p.steps.length-1].running)p.steps.pop();
+    p.steps.push(ev);
+    if(document.body.getAttribute('data-view')==='rx')renderMain();
+  };
+  const body={patient_id:pid,text:text,fields:(structured?sampleToFields(structured):{}),
+    api_key:KEY,provider:PROVIDER,use_openfda:p.openfdaRequested,
+    orchestrator:$('useLlmOrch').checked?'llm':'deterministic'};
+  try{
+    const r=await fetch('/api/analyze_stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const reader=r.body.getReader();const dec=new TextDecoder();let buf='';
+    while(true){
+      const {done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});let nl;
+      while((nl=buf.indexOf('\n'))>=0){
+        const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;
+        let ev;try{ev=JSON.parse(line);}catch{continue;}
+        if(ev.type==='step')addStep(ev);
+        else if(ev.type==='error'){p.error=ev.error;addStep({icon:'⚠',title:'Error',detail:ev.error});}
+        else if(ev.type==='final'){
+          p.bundle=ev.bundle;
+          p.label=(ev.bundle.result.patient.age?ev.bundle.result.patient.age+' y · ':'')+(ev.bundle.result.indication_label||ev.bundle.indication);
+          renderRx();
+        }
+      }
+    }
+  }catch(e){p.error=e.message;addStep({icon:'⚠',title:'Request failed',detail:e.message});}
+  finally{btn.disabled=false;renderRx();}
+}
+
+/* ── Rx rendering ────────────────────────────────────────────────────────── */
+function engineLine(b){
+  const eng=(b.trace||[]).find(s=>/Symbolic engine/.test(s.title));
+  const ms=eng?((eng.title.match(/· ([\d.]+) ms/)||[])[1]):null;
+  const fda=b.openfda_loaded&&b.openfda_loaded.length?' · openFDA ×'+b.openfda_loaded.length:'';
+  return esc(sentenceCase(b.parser))+' parse + graph'+fda+(ms?' · '+ms+' ms':'');
+}
+function renderCaseHead(){
+  const host=$('rxCaseHead'),p=PATIENTS[CUR];
+  if(!p||!p.bundle){
+    host.innerHTML='<div class="case-head"><div class="case-id">'+
+      '<div class="case-title">No case loaded</div>'+
+      '<div class="case-meta">Import free-text case notes or pick an illustrative case scenario to run the symbolic '+
+      'medication-safety engine. Nothing is computed until you do.</div></div>'+
+      '<div class="case-actions"><button class="btn primary" type="button" data-act="new-case">New case</button></div></div>';
+    $('rxFullCase').setAttribute('data-open','0');
+    return;
+  }
+  const r=p.bundle.result,pt=r.patient||{},renal=pt.renal||{};
+  const facts=[].concat(
+    (pt.flags||[]).map(f=>esc(String(f).replace(/_/g,' '))),
+    [renal.egfr!=null?'eGFR '+esc(renal.egfr):null,
+     (pt.allergies&&pt.allergies.length)?'allergies: '+esc(pt.allergies.join(', ')):'no known allergies',
+     (pt.meds&&pt.meds.length)?'taking '+esc(pt.meds.join(', ')):null]
+  ).filter(Boolean).join(' · ');
+  host.innerHTML='<div class="case-head">'+
+    '<div class="case-id">'+
+      '<div class="case-title">'+esc([pt.age?pt.age+' y':null,
+        r.indication_label||p.bundle.indication].filter(Boolean).join(' · '))+'</div>'+
+      '<div class="case-meta">'+facts+' · <button class="disc" type="button" data-act="full-case">Full case text ⌄</button></div>'+
+    '</div>'+
+    '<div class="case-facts"><div class="fact"><div class="k">Engine</div>'+
+      '<div class="v">'+engineLine(p.bundle)+'</div></div></div>'+
+    '<div class="case-actions">'+
+      (PATIENTS.length>1?'<button class="btn" type="button" data-act="switch-case">Switch case ⌄</button>':'')+
+      '<button class="btn primary" type="button" data-act="new-case">New case</button>'+
+    '</div></div>';
+  $('rxFullCase').innerHTML='<dl class="kv"><dt>Case text as imported</dt><dd>'+esc(p.text||'(preset)')+'</dd>'+
+    '<dt>Parser</dt><dd class="mono">'+esc(p.bundle.parser)+'</dd>'+
+    (p.bundle.openfda_loaded&&p.bundle.openfda_loaded.length
+      ? '<dt>Live labels loaded</dt><dd>'+esc(p.bundle.openfda_loaded.join(', '))+'</dd>':'')+
+    '</dl>';
+}
+function renderMain(){
+  const host=$('rxMain'),p=PATIENTS[CUR];
+  if(!p){
+    host.innerHTML='<div class="empty"><h2>Ranked recommendation appears here</h2>'+
+      '<p>Oslian ranks candidate drugs, then applies the safety rule set. Nothing is computed until a case is imported.</p></div>';
+    return;
+  }
+  if(!p.bundle){
+    const steps=p.steps.map(s=>`<li class="${s.running?'pending':''}"><span class="i">${s.running?'<span class="spin"></span>':'✓'}</span>`+
+      `<span class="t">${esc(s.title)}</span><span class="d">${esc(s.detail||'')}</span></li>`).join('');
+    host.innerHTML='<div class="section"><div class="section-head"><h1 class="display">Ranked recommendation</h1>'+
+      `<span class="sub">Analyzing · step ${p.steps.length} of 5</span></div>`+
+      '<ol class="steps">'+steps+'</ol>'+
+      '<p class="note" style="margin-top:16px">Ranking is withheld until every label request has resolved or failed. Partial rankings are never shown.</p></div>';
+    return;
+  }
+  const res=p.bundle.result,cands=res.candidates||[];
+  const held=cands.filter(c=>(c.safety&&c.safety.decision)==='avoid');
+  const adjusted=cands.filter(c=>['adjust','caution'].indexOf((c.safety&&c.safety.decision))>=0);
+  const unverified=cands.filter(c=>(c.safety&&c.safety.decision)==='insufficient_data');
+  let banner='';
+  if(held.length||adjusted.length){
+    const n=held.length||adjusted.length;
+    const word=held.length?'held':'adjusted',noun=held.length?'hold':'adjustment';
+    const first=(held[0]||adjusted[0]);
+    let reason=((first.safety&&first.safety.reasons)||[]).map(r=>r.message)[0]||'';
+    reason=sentenceCase(reason);if(reason&&!/[.!?]$/.test(reason))reason+='.';
+    banner='<div class="hold-banner"><span class="n">'+n+' of '+cands.length+' drugs '+word+'</span>'+
+      '<span class="d">'+esc(reason)+' Ranking is unchanged; the '+noun+' is applied on top of it.</span></div>';
+  }
+  if(res.mechanism_only||unverified.length===cands.length&&cands.length){
+    banner+='<div class="notice"><span class="n">openFDA unavailable</span>'+
+      '<span class="d">Label requests did not resolve, so the ranking below was produced by the local rule set alone. '+
+      'Unverified is a distinct state from no flag. It is never collapsed into a pass.</span>'+
+      '<span class="acts"><button class="btn sm" type="button" data-act="new-case">Retry</button></span></div>';
+  }
+  const rows=cands.map((c,i)=>{
+    const m=safetyMeta(c),dose=c.dose||{};
+    const basis=sentenceCase(((c.safety&&c.safety.reasons)||[]).map(r=>r.message)[0]
+      ||c.indication_support||'indication match');
+    const sub=[sentenceCase((c.clinical_role&&c.clinical_role.label)||''),
+      c.indication_support?esc(c.indication_support):null,
+      (dose.patient_specific_allowed&&dose.verbatim)?esc(String(dose.verbatim)):null
+    ].filter(Boolean).join(' · ');
+    return `<tr class="rank-row${i===SEL_DRUG?' selected':''}" tabindex="0" data-drug="${i}">`+
+      `<td class="col-rank">${i+1}</td>`+
+      `<td><div class="drug-name">${esc(sentenceCase(c.drug))}</div><div class="drug-sub">${sub}</div></td>`+
+      `<td class="col-safety">${statHtml(m)}</td>`+
+      `<td class="col-basis"><div class="basis">${esc(basis)}</div></td>`+
+      `<td class="col-more">›</td></tr>`;
+  }).join('');
+  host.innerHTML='<div class="section">'+
+    '<div class="section-head"><h1 class="display">Ranked recommendation</h1>'+
+      `<span class="sub">${cands.length} candidate${cands.length===1?'':'s'} · ranked by indication match, then safety</span></div>`+
+    banner+
+    '<table class="rank-table"><thead><tr><th class="col-rank">Rank</th><th>Drug</th>'+
+      '<th class="col-safety">Safety decision</th><th class="col-basis">Basis</th><th class="col-more"></th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table>'+
+    '<div class="engine-iso"><span class="n">Engine isolation</span>'+
+      '<span class="d">The medication-safety engine reads this case text and the label rule set only. It does not read the synthetic stream\'s forecast output, and no forecast can change this ranking.</span></div>'+
+    '<div class="ranking-foot">'+
+      `<span class="meta">Agent workflow · ${(p.bundle.trace||[]).length} steps · ${engineLine(p.bundle)} · `+
+        '<button class="disc" type="button" data-act="open-chat">View trace ⌄</button></span>'+
+      '<button class="btn" type="button" data-act="open-chat">Ask the agent →</button>'+
+      '<button class="btn primary" type="button" data-act="continue-stream">Continue to synthetic FHIR stream</button>'+
+    '</div></div>';
+}
+function renderSide(){
+  const host=$('rxSide'),p=PATIENTS[CUR];
+  const split=host&&host.closest('.split');
+  if(split)split.classList.toggle('graph-expanded',!!(p&&p.bundle&&SEL_DRUG<0&&ART_TAB==='graph'));
+  if(!p||!p.bundle){
+    host.innerHTML='<div class="panel-tabs"><span class="panel-tab active">Evidence</span></div>'+
+      '<div class="panel-body"><p class="note">The reasoning artifact — mind-map graph, disease model and drug label cards — opens once a case is analyzed.</p></div>';
+    return;
+  }
+  if(SEL_DRUG>=0){host.innerHTML=drugDetailHtml(p,SEL_DRUG);return;}
+  const b=p.bundle,res=b.result,dm=b.disease_model;
+  // only legend the groups this graph actually contains
+  const present={};((b.graph&&b.graph.nodes)||[]).forEach(n=>{if(GROUPS[n.group])present[n.group]=1;});
+  const legend=Object.keys(present).map(k=>
+    `<span><i style="background:${GROUPS[k].color}"></i>${esc(GROUPS[k].label)}</span>`).join('');
+  host.innerHTML='<div class="panel-tabs">'+
+      `<button class="panel-tab${ART_TAB==='graph'?' active':''}" type="button" data-tab="graph">Graph</button>`+
+      `<button class="panel-tab${ART_TAB==='disease'?' active':''}" type="button" data-tab="disease">Disease</button>`+
+      `<button class="panel-tab${ART_TAB==='drugs'?' active':''}" type="button" data-tab="drugs">Drugs<span class="n">${res.candidates.length}</span></button>`+
+    '</div><div class="panel-body">'+
+    `<div class="panel-pane${ART_TAB==='graph'?' active':''}" data-pane="graph">`+
+      '<div class="graph-tools"><button class="btn sm" type="button" id="replayBtn" data-act="replay-graph">▶ Replay reasoning</button>'+
+      '<span class="graph-step" id="gpStep"></span></div>'+
+      '<div class="graph-host"><div id="art-graph"></div><div class="graph-cap" id="gpCap"></div></div>'+
+      `<div class="legend">${legend}</div></div>`+
+    `<div class="panel-pane${ART_TAB==='disease'?' active':''}" data-pane="disease">${diseaseCardHtml(dm,b.openfda_loaded)}</div>`+
+    `<div class="panel-pane${ART_TAB==='drugs'?' active':''}" data-pane="drugs">${drugCardsHtml(res,dm,p)}</div>`+
+    '</div>';
+  if(ART_TAB==='graph')renderGraph(b.graph);
+}
+function renderRx(){renderCaseHead();renderMain();renderSide();}
+
+function drugDetailHtml(p,i){
+  const c=p.bundle.result.candidates[i];if(!c)return '';
+  const m=safetyMeta(c),reasons=(c.safety&&c.safety.reasons)||[];
+  const ev=(c.evidence&&c.evidence[0])||null;
+  return '<div class="detail-head"><div><div class="detail-title">'+esc(sentenceCase(c.drug))+'</div>'+
+      '<div class="detail-sub">'+esc(sentenceCase((c.clinical_role&&c.clinical_role.label)||''))+
+      ' · rank '+(i+1)+' of '+p.bundle.result.candidates.length+'</div>'+
+      '<div style="margin-top:8px">'+statHtml(m)+'</div></div>'+
+      '<button class="icon-btn x" type="button" data-act="close-detail" aria-label="Close">✕</button></div>'+
+    '<div class="detail-sec"><div class="h-sec">Why this decision</div>'+
+      (reasons.length?reasons.map((r,k)=>'<div class="rule-item"><span class="rid">rule '+String(k+1).padStart(2,'0')+'</span>'+
+        '<span class="rtxt">'+esc(r.message)+'</span></div>').join('')
+        :'<p class="note">No safety rule fired for this candidate.</p>')+'</div>'+
+    '<div class="detail-sec"><div class="h-sec">Label source</div><dl class="kv">'+
+      '<dt>Source</dt><dd class="mono">'+esc(ev?(ev.source||'local rule set'):'local rule set only')+'</dd>'+
+      (ev&&ev.retrieved_at?'<dt>Fetched</dt><dd>'+esc(ev.retrieved_at)+'</dd>':'')+
+      '<dt>Mechanism</dt><dd>'+esc(c.mechanism_chain||'—')+'</dd>'+
+      '<dt>Indication support</dt><dd>'+esc(c.indication_support||'—')+'</dd>'+
+      '</dl></div>'+
+    (c.final_answer?'<div class="detail-sec"><div class="h-sec">Label extract</div>'+
+      '<div class="extract">'+esc(c.final_answer)+'</div></div>':'')+
+    '<p class="note" style="margin-top:16px">No prescribing action is available in this build.</p>';
+}
+function diseaseCardHtml(dm,openfda){
+  if(!dm)return '<p class="note">No disease model was produced for this case.</p>';
+  return '<div class="ev-card"><div class="src">disease world-model · '+esc(dm.source)+(dm.source_file?' · data/'+esc(dm.source_file):'')+'</div>'+
+    '<div class="h">'+esc(dm.disease)+'</div>'+
+    (dm.description?'<p class="note" style="margin-top:4px">'+esc(dm.description.slice(0,220))+'</p>':'')+
+    '<div class="ev-lab">perturbations</div><div class="tag-list">'+
+      (dm.perturbations||[]).map(pp=>'<span class="tag warn" title="'+esc(pp.cause||'')+'">'+
+        esc(pp.variable.replace(/_/g,' '))+' '+(pp.direction==='high'?'↑':'↓')+'</span>').join('')+'</div>'+
+    '<div class="cites">'+(dm.perturbations||[]).filter(pp=>pp.cause).slice(0,6).map(pp=>
+      '<span class="cite"><b>'+esc(pp.variable.replace(/_/g,' '))+' '+(pp.direction==='high'?'↑':'↓')+'</b> — '+esc(pp.cause)+'</span>').join('')+'</div>'+
+    ((dm.symptoms||[]).length?'<div class="ev-lab">derived symptoms</div><div class="tag-list">'+
+      dm.symptoms.map(s=>'<span class="tag">'+esc(s)+'</span>').join('')+'</div>':'')+
+    (openfda&&openfda.length?'<div class="ev-lab">live openFDA</div><div class="tag-list"><span class="tag">'+esc(openfda.join(', '))+'</span></div>':'')+
+    '</div>';
+}
+function hashStr(s){let h=0;for(let i=0;i<String(s).length;i++)h=(h*31+String(s).charCodeAt(i))>>>0;return h;}
+function pharmacyLinksHtml(c,m){
+  const name=String(c.drug||''),q=encodeURIComponent(name),base=6+(hashStr(name)%34);
+  const vendors=[
+    {name:'CVS',color:'#CC0000',price:base+2,url:'https://www.cvs.com/search?searchTerm='+q},
+    {name:'Walgreens',color:'#E31837',price:base+4,url:'https://www.walgreens.com/search/results.jsp?Ntt='+q},
+    {name:'Walmart',color:'#0071CE',price:Math.max(4,base-1),url:'https://www.walmart.com/search?q='+q},
+    {name:'GoodRx',color:'#B78300',price:Math.max(3,base-3),url:'https://www.goodrx.com/'+q}
+  ];
+  const gate=m.cls==='bad'
+    ? '<p class="access-note safety-access">Access links do not override the Hold safety gate and are not a recommendation.</p>'
+    : '<p class="access-note">External searches only — not a purchase recommendation.</p>';
+  return '<div class="drug-access"><div class="ev-lab">Pharmacy price links · illustrative prices</div>'+gate+
+    '<p class="price-truth">Deterministic illustrative estimates only · not a live quote.</p><div class="pharmacy-links">'+
+    vendors.map(v=>'<a class="pharmacy-link'+(m.cls==='bad'?' held':'')+'" href="'+esc(v.url)+'" target="_blank" rel="noopener noreferrer">'+
+      '<span><i style="background:'+v.color+'"></i>'+v.name+'</span><b>$'+v.price+'.'+String(hashStr(name+v.name)%90+10)+' est.</b></a>').join('')+
+    '</div></div>';
+}
+function drugEvidenceHtml(c,dm,p){
+  const ev=(c.evidence&&c.evidence[0])||null,setid=ev&&ev.set_id;
+  const realLabel=!!(ev&&/openfda|dailymed|spl/i.test(ev.source||''));
+  const loaded=((p.bundle&&p.bundle.openfda_loaded)||[]).some(name=>String(name).toLowerCase()===String(c.drug).toLowerCase());
+  const labelUrl=realLabel&&setid
+    ? 'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid='+encodeURIComponent(String(setid))
+    : 'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query='+encodeURIComponent(c.drug);
+  const status=loaded
+    ? '<div class="source-state live"><b>Live openFDA label loaded</b><span>'+esc(ev.source||'openFDA / DailyMed')+
+      (ev.retrieved_at?' · retrieved '+esc(ev.retrieved_at):'')+'</span></div>'
+    : (p.openfdaRequested
+      ? '<div class="source-state unavailable"><b>Live openFDA label unavailable</b><span>No live label was loaded; local modeled evidence and external lookup links are shown.</span></div>'
+      : '<div class="source-state local"><b>Live openFDA not requested</b><span>Local modeled evidence and external lookup links only.</span></div>');
+  const mechUrl='https://go.drugbank.com/unearth/q?searcher=drugs&query='+encodeURIComponent(c.drug);
+  const diseaseUrl='https://en.wikipedia.org/w/index.php?search='+encodeURIComponent(String((dm&&dm.disease)||'').replace(/\//g,' '));
+  const adverseUrl='https://www.drugs.com/sfx/'+encodeURIComponent(String(c.drug).toLowerCase().replace(/\s+/g,'-'))+'-side-effects.html';
+  let links='<a class="source-link" href="'+esc(mechUrl)+'" target="_blank" rel="noopener noreferrer"><b>Mechanism · DrugBank</b><span>'+esc(c.rationale||c.mechanism_chain||'—')+' · modeled effect; external pharmacology lookup ↗</span></a>';
+  if(dm)links+='<a class="source-link" href="'+esc(diseaseUrl)+'" target="_blank" rel="noopener noreferrer"><b>Disease model source</b><span>'+esc((dm.description||dm.disease||'').slice(0,150))+' · local unreviewed model; external reference ↗</span></a>';
+  links+='<a class="source-link" href="'+esc(labelUrl)+'" target="_blank" rel="noopener noreferrer"><b>FDA label · DailyMed SPL</b><span>'+
+    (loaded?'Live openFDA evidence for this result':'External label lookup; not fetched into this result')+
+    (setid?' · '+esc(String(setid).slice(0,8)):'')+' ↗</span></a>';
+  if(c.faers_signals&&c.faers_signals.length)links+='<a class="source-link" href="'+esc(adverseUrl)+'" target="_blank" rel="noopener noreferrer"><b>Adverse events · Drugs.com</b><span>External side-effect reference; FAERS signals are not causation ↗</span></a>';
+  return '<div class="drug-evidence"><div class="ev-lab">Sources &amp; evidence</div>'+status+'<div class="source-links">'+links+'</div></div>';
+}
+function drugCardsHtml(res,dm,p){
+  return res.candidates.map((c,i)=>{
+    const m=safetyMeta(c),dose=c.dose||{};
+    return '<div class="ev-card"><div class="h">'+(i+1)+' · '+esc(c.drug)+'</div>'+
+      '<div class="src">'+esc((c.clinical_role&&c.clinical_role.label)||'')+' · score '+esc(c.mechanism_score)+'</div>'+
+      '<div style="margin:6px 0">'+statHtml(m)+'</div>'+
+      '<div class="ev-lab">mechanism</div><div class="cite">'+esc(c.mechanism_chain||'—')+'</div>'+
+      '<div class="ev-lab">matched targets · '+esc(c.indication_support)+'</div><div class="tag-list">'+
+        ((c.matched_targets||[]).map(t=>'<span class="tag">'+esc(t.target)+'</span>').join('')||'—')+'</div>'+
+      '<div class="ev-lab">dose</div><div class="cite">'+
+        (dose.patient_specific_allowed&&dose.verbatim?esc(dose.verbatim)
+          :'not shown — '+(res.mechanism_only?'no label loaded':'blocked by the safety gate'))+'</div>'+
+      (c.final_answer?'<div class="ev-lab">summary</div><div class="cite">'+esc(c.final_answer)+'</div>':'')+
+      drugEvidenceHtml(c,dm,p)+pharmacyLinksHtml(c,m)+
+      '</div>';
+  }).join('')+'<p class="note" style="margin-top:12px">'+esc(res._disclaimer||'')+'</p>';
+}
+
+/* ── reasoning graph ─────────────────────────────────────────────────────── */
+function _reasoningLevel(group){
+  if(group==='patient')return 0;
+  if(group==='indication'||group==='flag')return 1;
+  if(group==='disease')return 2;
+  if(group==='pathology'||group==='symptom')return 3;
+  if(group==='target')return 4;
+  return 5; // ranked drug candidates share the final visual level
+}
+function reasoningLayout(nodes,compact){
+  const levels=[[],[],[],[],[],[]],layout={};
+  nodes.forEach(n=>levels[_reasoningLevel(n.group)].push(n));
+  levels.forEach(items=>items.sort((a,b)=>String(a.id).localeCompare(String(b.id))));
+  if(!compact){
+    const levelGap=156,rowGap=64;
+    levels.forEach((items,level)=>items.forEach((n,index)=>{
+      layout[n.id]={x:(level-2.5)*levelGap,y:(index-(items.length-1)/2)*rowGap};
+    }));
+    return layout;
+  }
+  // A narrow canvas uses two stable lanes. Each reasoning level owns a block,
+  // so even the nine pathology/symptom nodes remain separated at phone width.
+  const laneGap=160,rowGap=58,blockGap=62;
+  let cursor=0;
+  levels.forEach(items=>{
+    const columns=items.length>1?2:1,rows=Math.ceil(items.length/columns);
+    items.forEach((n,index)=>{
+      const row=Math.floor(index/columns),column=index%columns;
+      const rowItems=Math.min(columns,items.length-row*columns);
+      layout[n.id]={x:(column-(rowItems-1)/2)*laneGap,y:cursor+row*rowGap};
+    });
+    cursor+=(Math.max(1,rows)-1)*rowGap+blockGap;
+  });
+  const ys=Object.values(layout).map(p=>p.y),mid=(Math.min(...ys)+Math.max(...ys))/2;
+  Object.values(layout).forEach(p=>{p.y-=mid;});
+  return layout;
+}
+function renderGraph(g){
+  const el=$('art-graph');if(!el||!g)return;
+  _clearAnim();
+  if(typeof vis==='undefined'){el.innerHTML='<p class="note" style="padding:16px">Graph library blocked (offline). See the Disease and Drugs tabs.</p>';return;}
+  const nodes=g.nodes.map(n=>({id:n.id,label:n.label,group:n.group,title:n.title||undefined}));
+  const edges=g.edges.map(e=>({from:e.from,to:e.to,label:e.label||undefined,dashes:e.dashes||false,color:e.color?{color:e.color}:undefined}));
+  _layout=reasoningLayout(nodes,el.clientWidth<620);
+  const positioned=nodes.map(n=>Object.assign({},n,{x:_layout[n.id].x,y:_layout[n.id].y,
+    fixed:{x:true,y:true},physics:false}));
+  _stages=buildStages(positioned,edges);
+  _nodesDS=new vis.DataSet(positioned);_edgesDS=new vis.DataSet(edges);
+  const groupOpts={};for(const k in GROUPS)groupOpts[k]={color:{background:GROUPS[k].color,border:GROUPS[k].color},font:{color:'#FCFAF5'}};
+  _net=new vis.Network(el,{nodes:_nodesDS,edges:_edgesDS},{
+    nodes:{shape:'box',margin:7,font:{size:12,color:'#FCFAF5',face:'IBM Plex Sans'},borderWidth:0,widthConstraint:{maximum:125}},
+    edges:{font:{size:9,color:'#626762',strokeWidth:3,strokeColor:'#FCFAF5'},color:{color:'#D1CCC2'},
+      arrows:{to:{enabled:true,scaleFactor:.5}},smooth:{enabled:true,type:'cubicBezier',roundness:.12}},
+    groups:groupOpts,layout:{improvedLayout:false},physics:false,
+    interaction:{hover:true,tooltipDelay:120}});
+  _net.on('click',pr=>{if(pr.nodes.length&&String(pr.nodes[0]).startsWith('drug:'))artTab('drugs');});
+  if(_gpRO)_gpRO.disconnect();
+  _gpRO=new ResizeObserver(()=>{try{_net.setSize('100%','100%');_net.redraw();}catch(_){}});
+  _gpRO.observe(el);
+  let started=false;
+  const fitAndPlay=()=>{
+    if(started)return;started=true;
+    try{_net.fit({animation:false});}catch(_){}
+    playReasoning();
+  };
+  _net.once('afterDrawing',()=>requestAnimationFrame(fitAndPlay));
+  _animTimers.push(setTimeout(fitAndPlay,120));
+}
+function artTab(name){
+  ART_TAB=name;
+  const split=$('rxSide')&&$('rxSide').closest('.split');
+  if(split)split.classList.toggle('graph-expanded',name==='graph');
+  document.querySelectorAll('#rxSide .panel-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('#rxSide .panel-pane').forEach(pn=>pn.classList.toggle('active',pn.dataset.pane===name));
+  if(name==='graph'&&PATIENTS[CUR]&&PATIENTS[CUR].bundle)renderGraph(PATIENTS[CUR].bundle.graph);
+}
+const REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function playReasoning(){
+  if(!_net||!_stages.length||!_nodesDS)return;
+  _clearAnim();
+  _nodesDS.clear();_edgesDS.clear();
+  const btn=$('replayBtn');if(btn)btn.disabled=true;
+  if(REDUCED){ // no motion: reveal everything at once
+    _stages.forEach((st,si)=>_runStage(st,si,true));
+    _finishReplay();return;
+  }
+  let t=0;
+  _stages.forEach((st,si)=>{_animTimers.push(setTimeout(()=>_runStage(st,si),t));t+=st.drug?1350:850;});
+  _animTimers.push(setTimeout(_finishReplay,t+200));
+}
+function _runStage(st,si,quiet){
+  const stepEl=$('gpStep'),capEl=$('gpCap');
+  const ns=st.nodes.map(n=>{const p=_layout[n.id];return p?Object.assign({},n,{x:p.x,y:p.y}):n;});
+  try{_nodesDS.add(ns);_edgesDS.add(st.edges);}catch(_){}
+  if(stepEl)stepEl.textContent='step '+(si+1)+' / '+_stages.length;
+  if(quiet)return;
+  _showCap(capEl,st.cap);
+  if(st.drug){
+    try{_net.focus(st.drug,{scale:1.15,animation:{duration:620,easingFunction:'easeInOutCubic'}});}catch(_){}
+    _animTimers.push(setTimeout(()=>_popDrug(st.drug),660));
+  }else{
+    try{_net.fit({animation:{duration:520,easingFunction:'easeInOutQuad'}});}catch(_){}
+  }
+}
+function _finishReplay(){
+  const btn=$('replayBtn'),capEl=$('gpCap');
+  if(btn)btn.disabled=false;if(capEl)capEl.innerHTML='';
+  try{_net.fit(REDUCED?undefined:{animation:{duration:700,easingFunction:'easeInOutQuad'}});}catch(_){}
+}
+function buildStages(nodes,edges){
+  const drugNodes=nodes.filter(n=>n.group&&n.group.indexOf('drug-')===0);
+  const ns={};
+  drugNodes.forEach((n,i)=>{ns[n.id]=5+i;});
+  nodes.forEach(n=>{if(!(n.id in ns))ns[n.id]=_reasoningLevel(n.group);});
+  const last=5+Math.max(0,drugNodes.length-1);
+  const stages=[];for(let s=0;s<=last;s++)stages.push({nodes:[],edges:[],cap:'',drug:null});
+  nodes.forEach(n=>stages[ns[n.id]].nodes.push(n));
+  edges.forEach(e=>{const s=Math.max(ns[e.from]==null?0:ns[e.from],ns[e.to]==null?0:ns[e.to]);stages[s].edges.push(e);});
+  const labelOf=g=>{const n=nodes.find(x=>x.group===g);return n?n.label:'';};
+  stages[0].cap='Patient presented';
+  if(stages[1])stages[1].cap='Mapped to indication · '+(labelOf('indication')||'—');
+  if(stages[2])stages[2].cap='Disease world-model · '+(labelOf('disease')||'—');
+  if(stages[3])stages[3].cap='Pathophysiology — perturbations and symptoms';
+  if(stages[4])stages[4].cap='Treatment targets identified';
+  drugNodes.forEach((n,i)=>{stages[5+i].cap=n.label+' · '+(n.group||'').replace('drug-','');stages[5+i].drug=n.id;});
+  return stages;
+}
+function _showCap(el,text){if(!el||!text)return;el.innerHTML='<div class="cap">'+esc(text)+'</div>';}
+function _popDrug(id){
+  const node=_nodesDS.get(id);if(!node)return;
+  const bg=(GROUPS[node.group]||{}).color||'#182024';
+  try{
+    _nodesDS.update({id,borderWidth:3,color:{background:bg,border:'#B64A32'}});
+    _animTimers.push(setTimeout(()=>{try{_nodesDS.update({id,borderWidth:0,color:{background:bg,border:bg}});}catch(_){}},900));
+  }catch(_){}
+  try{
+    const pos=_net.getPositions([id])[id],dom=_net.canvasToDOM(pos),host=$('art-graph');
+    const b=document.createElement('div');b.className='pop-badge';b.textContent=node.label;
+    b.style.left=dom.x+'px';b.style.top=dom.y+'px';host.appendChild(b);
+    _animTimers.push(setTimeout(()=>b.remove(),1400));
+  }catch(_){}
+}
+function _clearAnim(){_animTimers.forEach(clearTimeout);_animTimers=[];
+  document.querySelectorAll('#art-graph .pop-badge').forEach(b=>b.remove());}
+
+/* ── chat (stateless grounding) ──────────────────────────────────────────── */
+function ask(q){$('chatInput').value=q;send();}
+function renderChat(){
+  const p=PATIENTS[CUR],box=$('chatBox');
+  if(!p||!p.bundle){box.innerHTML='<p class="note">Analyze a case first — answers are grounded in that case only.</p>';return;}
+  let h='';
+  if((p.bundle.trace||[]).length){
+    h+='<div class="trace collapsed" id="traceBlock"><button class="trace-h" type="button" data-act="toggle-trace">'+
+      'Agent workflow · '+(p.bundle.trace||[]).length+' steps ▸</button><div class="trace-body">'+
+      p.bundle.trace.map(s=>'<div class="trace-step"><span>·</span><div><b>'+esc(s.title)+'</b>'+
+        '<div class="td">'+esc(s.detail||'')+'</div></div></div>').join('')+'</div></div>';
+  }
+  for(const m of p.chat){
+    h+='<div class="msg '+(m.role==='user'?'user':'ai')+'"><div class="who">'+(m.role==='user'?'You':'Oslian · rules engine')+
+      '</div><div class="body">'+(m.role==='user'?esc(m.content):marked.parse(m.content))+'</div></div>';
+  }
+  const drugs=p.bundle.result.candidates.map(c=>c.drug);
+  h+='<div class="chips">'+drugs.slice(0,2).map(x=>'<button class="chip" type="button" data-ask="Why is '+esc(x)+' recommended?">Why '+esc(x)+'?</button>').join('')+
+    '<button class="chip" type="button" data-ask="Which rules did not fire?">Which rules did not fire?</button>'+
+    '<button class="chip" type="button" data-ask="Which drug is top priority and why?">Top priority?</button></div>';
+  box.innerHTML=h;box.scrollTop=box.scrollHeight;
+}
+async function send(){
+  const inp=$('chatInput');const q=inp.value.trim();if(!q)return;
+  if(CUR<0||!PATIENTS[CUR].bundle)return;
+  const p=PATIENTS[CUR];inp.value='';p.chat.push({role:'user',content:q});renderChat();
+  const btn=$('sendBtn');btn.disabled=true;
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({patient_id:p.id,messages:p.chat,api_key:KEY,provider:PROVIDER,
+        result:p.bundle.result,disease_model:p.bundle.disease_model})});
+    const ct=r.headers.get('content-type')||'';
+    if(!ct.includes('application/json'))throw new Error('server returned '+r.status);
+    const j=await r.json();
+    p.chat.push({role:'assistant',content:j.reply||'(no reply)'});
+  }catch(e){p.chat.push({role:'assistant',content:'⚠ '+e.message});}
+  btn.disabled=false;renderChat();
+}
+
+/* ── events ──────────────────────────────────────────────────────────────── */
+document.addEventListener('click',e=>{
+  const nav=e.target.closest('.nav-view');
+  if(nav){setBoundaryText(nav.getAttribute('data-view'));return;}
+  const t=e.target.closest('[data-act],[data-tab],[data-preset],[data-drug],[data-ask]');
+  if(!t)return;
+  if(t.hasAttribute('data-preset')){usePreset(Number(t.getAttribute('data-preset')));return;}
+  if(t.hasAttribute('data-tab')){artTab(t.getAttribute('data-tab'));return;}
+  if(t.hasAttribute('data-ask')){openDrawer();ask(t.getAttribute('data-ask'));return;}
+  if(t.hasAttribute('data-drug')){
+    const i=Number(t.getAttribute('data-drug'));
+    SEL_DRUG=(SEL_DRUG===i?-1:i);renderMain();renderSide();return;
+  }
+  const act=t.getAttribute('data-act');
+  if(act==='new-case')openModal();
+  else if(act==='full-case')toggleFullCase();
+  else if(act==='close-detail'){SEL_DRUG=-1;renderMain();renderSide();}
+  else if(act==='open-chat'){openDrawer();renderChat();}
+  else if(act==='replay-graph')playReasoning();
+  else if(act==='toggle-trace')$('traceBlock').classList.toggle('collapsed');
+  else if(act==='switch-case'){CUR=(CUR+1)%PATIENTS.length;SEL_DRUG=-1;renderRx();}
+  else if(act==='continue-stream'){
+    /* The stream is a different case and a different model pathway, so the
+     * hand-off is a disclosure the user has to acknowledge. Nothing from this
+     * case travels with it. */
+    if(window.OslianViews)window.OslianViews.requestStreamTransition();
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if($('caseScrim').getAttribute('data-open')==='1')closeModal();
+    else if($('chatDrawer').getAttribute('data-open')==='1')closeDrawer();
+    else if(SEL_DRUG>=0){SEL_DRUG=-1;renderMain();renderSide();}
+  }
+  const row=e.target.closest&&e.target.closest('.rank-row');
+  if(row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();row.click();}
+  if(e.key==='Enter'&&e.target.id==='chatInput')send();
+});
+$('boundaryToggle').addEventListener('click',toggleBoundary);
+$('caseModalClose').addEventListener('click',closeModal);
+$('caseCancel').addEventListener('click',closeModal);
+$('caseScrim').addEventListener('click',e=>{if(e.target.id==='caseScrim')closeModal();});
+$('analyzeBtn').addEventListener('click',()=>{closeModal();analyze();});
+$('drawerClose').addEventListener('click',closeDrawer);
+$('sendBtn').addEventListener('click',send);
+$('provider').addEventListener('change',saveKey);
+$('modelSettingsBtn').addEventListener('click',()=>{
+  const k=prompt('API key (optional — the demo runs on rules + graph without one):',KEY||'');
+  if(k!==null){KEY=k.trim();sessionStorage.setItem('osler_key',KEY);updateKeyStat();}
+});
+
+/* ── bridge for the guided demo ───────────────────────────────────────────
+ * Chapter 1 runs the real analyze stream on an illustrative scenario. The
+ * external openFDA and LLM options are left exactly as the user set them —
+ * the guided demo never silently enables a network dependency.
+ */
+function defaultScenarioIndex(){
+  const s=window._SAMPLES||[];
+  const i=s.findIndex(c=>/acute coronary|\bacs\b|myocardial|chest pain/i.test(
+    String(c.indication||'')+' '+String(c.title||'')+' '+String((c.symptoms||[]).join(' '))));
+  return i>=0?i:0;
+}
+window.OslerRx={
+  hasResult(){return CUR>=0&&!!(PATIENTS[CUR]&&PATIENTS[CUR].bundle);},
+  analyzing(){return CUR>=0&&!!PATIENTS[CUR]&&!PATIENTS[CUR].bundle&&!PATIENTS[CUR].error;},
+  defaultScenarioLabel(){const c=(window._SAMPLES||[])[defaultScenarioIndex()];return c?(c.title||c.indication||''):'';},
+  runDefaultScenario(){
+    const s=window._SAMPLES||[];
+    if(!s.length)return Promise.resolve(false);
+    const c=s[defaultScenarioIndex()];
+    $('caseText').value=caseToText(c);
+    closeModal();
+    return analyze(c).then(()=>window.OslerRx.hasResult());
+  },
+  openCasePicker(){openModal();}
+};
+init();
+</script>
+<script src="/static/js/shell.js"></script>
+<script type="module" src="/static/js/stream/main.js"></script>
+</body>
+</html>
