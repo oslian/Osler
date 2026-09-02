@@ -22,8 +22,10 @@ to the console.
 from __future__ import annotations
 
 import json
+import queue
 import sys
 import threading
+import time
 from typing import Any, Callable, TextIO
 
 from .source import RETROSPECTIVE_SOURCE_SYSTEM, SYNTHETIC_SOURCE_SYSTEM
@@ -54,8 +56,16 @@ def _ids(values: Any) -> str:
     return ",".join(values) if values else "none"
 
 
+# The console is an observer, never a participant. Records are handed to a
+# bounded queue and written by one background thread, so a terminal that stops
+# reading - a PowerShell window in selection mode is the usual way - can never
+# stall ingestion, the SSE generator or an HTTP response. The bound is what makes
+# that true: an unbounded queue would simply move the stall into memory.
+LOG_QUEUE_MAXSIZE = 4096
+
+
 class StreamEventLogger:
-    """Single writer for both stages. Never raises into the stream."""
+    """Single writer for both stages. Never raises into, and never blocks, the stream."""
 
     def __init__(self, mode: str = LOG_EVENTS, log_format: str = FORMAT_PRETTY,
                  payload_level: str = PAYLOAD_SUMMARY, stream: TextIO | None = None) -> None:
@@ -70,6 +80,22 @@ class StreamEventLogger:
         self.payload_level = payload_level
         self._stream = stream if stream is not None else sys.stdout
         self._lock = threading.Lock()
+        # One lock over the whole accounting, so accepted / written / dropped are
+        # always a consistent triple. Every accepted line is eventually settled -
+        # written to the sink, or evicted and counted - and flush() waits on
+        # exactly that, rather than on the queue looking momentarily empty.
+        self._count_lock = threading.Lock()
+        self._accepted = 0
+        self._settled = 0
+        self.dropped = 0
+        self._unreported_drops = 0
+        self._closing = False
+        self._queue: queue.Queue[str | None] | None = None
+        self._writer: threading.Thread | None = None
+        if self.mode == LOG_EVENTS:
+            self._queue = queue.Queue(maxsize=LOG_QUEUE_MAXSIZE)
+            self._writer = threading.Thread(target=self._drain, name="oslian-log", daemon=True)
+            self._writer.start()
 
     @classmethod
     def from_env(cls, env: dict[str, str], stream: TextIO | None = None) -> "StreamEventLogger":
@@ -99,11 +125,130 @@ class StreamEventLogger:
         try:
             record = self._record(stage, context, event, delivery_mode)
             line = json.dumps(record, sort_keys=True) if self.format == FORMAT_JSON else self._pretty(record)
-            with self._lock:
-                self._stream.write(line + "\n")
-                self._stream.flush()
+            self._offer(line)
         except Exception:                                  # noqa: BLE001 - logging never breaks the stream
             pass
+
+    # ---- non-blocking hand-off ------------------------------------------------
+    def _offer(self, line: str) -> None:
+        """Queue a line without ever waiting for the terminal.
+
+        When the console cannot keep up the oldest lines are discarded and
+        counted, so the newest state is what survives and the caller returns at
+        once. Dropping is announced on the next line that gets through, because
+        a console that silently loses records is worse than one that says so.
+        """
+        q = self._queue
+        if q is None:
+            return
+        with self._count_lock:
+            if self._closing:
+                # close() has already queued the sentinel. A line accepted now
+                # would sit behind it and never be written, so it is refused
+                # here and counted as a drop rather than lost in silence.
+                self.dropped += 1
+                return
+            self._accepted += 1
+        while True:
+            try:
+                q.put_nowait(line)
+                return
+            except queue.Full:
+                try:
+                    q.get_nowait()
+                    with self._count_lock:
+                        self.dropped += 1
+                        self._unreported_drops += 1
+                        self._settled += 1     # evicted counts as settled
+                except queue.Empty:                        # drained underneath us; retry
+                    pass
+
+    def _drain(self) -> None:
+        q = self._queue
+        assert q is not None
+        while True:
+            line = q.get()
+            if line is None:
+                return
+            batch = [line]
+            while len(batch) < 256:                        # one write per burst, not per event
+                try:
+                    nxt = q.get_nowait()
+                except queue.Empty:
+                    break
+                if nxt is None:
+                    batch.append(None)                     # keep the sentinel; handled below
+                    break
+                batch.append(nxt)
+            stopping = batch and batch[-1] is None
+            if stopping:
+                batch.pop()
+            with self._count_lock:
+                dropped, self._unreported_drops = self._unreported_drops, 0
+            if dropped:
+                batch.insert(0, f"{PREFIX} console_dropped lines={dropped} "
+                                f"reason=terminal slower than the stream")
+            try:
+                with self._lock:
+                    self._stream.write("".join(f"{item}\n" for item in batch))
+                    self._stream.flush()
+            except Exception:                              # noqa: BLE001
+                pass
+            finally:
+                # settle every line taken from the queue, written or not: a sink
+                # that raises must never leave flush() waiting for it
+                with self._count_lock:
+                    self._settled += len(batch) - (1 if dropped else 0)
+            if stopping:
+                return
+
+    def flush(self, timeout: float = 2.0) -> bool:
+        """Block until everything queued so far has reached the sink.
+
+        The console is asynchronous by design, so anything that needs to *read*
+        what was logged - a test, or an orderly shutdown - has to say when it
+        wants to wait. Nothing on the stream path calls this.
+        """
+        if self._queue is None:
+            return True
+        with self._count_lock:
+            target = self._accepted
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            with self._count_lock:
+                if self._settled >= target:
+                    return True
+            time.sleep(0.002)
+        with self._count_lock:
+            return self._settled >= target
+
+    def close(self, timeout: float = 2.0) -> None:
+        """Flush what is queued and stop the writer. Safe to call more than once."""
+        q, writer = self._queue, self._writer
+        if q is None or writer is None:
+            return
+        with self._count_lock:
+            already_closing = self._closing
+            self._closing = True
+        if already_closing:
+            # a concurrent close already queued the sentinel; wait for it rather
+            # than queue a second one
+            writer.join(timeout=timeout)
+            return
+        try:
+            q.put_nowait(None)
+        except queue.Full:                                 # make room for the sentinel
+            try:
+                q.get_nowait()
+                with self._count_lock:
+                    self.dropped += 1
+                    self._unreported_drops += 1
+                    self._settled += 1
+                q.put_nowait(None)
+            except (queue.Empty, queue.Full):
+                pass
+        writer.join(timeout=timeout)
+        self._writer = None
 
     def _record(self, stage: str, context: dict[str, Any], event: dict[str, Any],
                 delivery_mode: str | None) -> dict[str, Any]:

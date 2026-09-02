@@ -323,5 +323,50 @@ class ReleaseRuntimeTests(unittest.TestCase):
             service.close()
 
 
+class PlaybackMetadataTests(unittest.TestCase):
+    """Each source states how it may be played back; the page never assumes."""
+
+    def setUp(self):
+        self.service, self.client = _app()
+
+    def tearDown(self):
+        self.service.close()
+
+    def test_sources_declare_demo_speeds_and_keep_the_stress_speed_apart(self):
+        sources = {s["source_key"]: s for s in self.client.get("/api/demo-streams/sources").get_json()["sources"]}
+        synthetic = sources["synthetic"]["playback"]
+        self.assertEqual(synthetic["kind"], "simulated")
+        self.assertEqual([o["label"] for o in synthetic["speeds"]], ["Normal demo", "Fast demo"])
+        self.assertEqual([o["value"] for o in synthetic["speeds"]], [1.0, 5.0])
+        self.assertEqual([o["label"] for o in synthetic["developer_speeds"]], ["Stress test"])
+        self.assertEqual([o["value"] for o in synthetic["developer_speeds"]], [20.0])
+        self.assertIn("not the speed of real hospital data",
+                      synthetic["developer_speeds"][0]["note"])
+        # 20x must never appear among the speeds a reader is offered
+        self.assertNotIn(20.0, [o["value"] for o in synthetic["speeds"]])
+
+        retrospective = sources["retrospective"]["playback"]
+        self.assertTrue(retrospective["step"], "the recorded case must still step one observation at a time")
+        self.assertEqual([o["label"] for o in retrospective["speeds"]], ["Normal demo", "Fast demo"])
+        self.assertEqual(retrospective["developer_speeds"], [])
+
+    def test_a_real_time_source_declares_no_playback_speeds_at_all(self):
+        from oslian_demo.monitoring.source import EpicFhirSource, EpicSourceConfig
+
+        source = EpicFhirSource(EpicSourceConfig(fhir_base_url="https://example.invalid/api/FHIR/R4",
+                                                 client_id="not-a-secret"))
+        playback = source.describe()["playback"]
+        self.assertEqual(playback["kind"], "realtime")
+        self.assertEqual(playback["speeds"], [])
+        self.assertEqual(playback["developer_speeds"], [])
+        self.assertFalse(playback["step"])
+
+    def test_the_backend_still_accepts_the_stress_speed(self):
+        sid = self.client.post("/api/demo-streams", json={"source": "synthetic"}).get_json()["session_id"]
+        self.assertEqual(self.client.post(f"/api/demo-streams/{sid}/speed",
+                                          json={"speed": 20}).get_json()["speed"], 20.0)
+        self.assertIn(20.0, self.client.get(f"/api/demo-streams/{sid}").get_json()["speeds"])
+
+
 if __name__ == "__main__":
     unittest.main()

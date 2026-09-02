@@ -8,7 +8,8 @@ import { S, catalogCellsForVariable, cellsForVariable, clinicalNow, currentCells
   currentOrganEvents, currentVariables, onsetMs, organWithoutAsset, sourceInfo, timeAxis,
   workspaceFor } from './store.js';
 import { bigChart, chartLegend, makeTimeFormatter, sparkline } from './chart.js';
-import { esc, fmtNum } from './format.js';
+import { esc, fmtNum, FORECAST_LABEL, FORECAST_NOTE, NO_FORECAST_MODEL, OBSERVED_HISTORY,
+  POINT_ONLY_NOTE, UPDATING_FORECAST } from './format.js';
 
 const el = (id) => document.getElementById(id);
 const LABELS = {
@@ -25,7 +26,7 @@ const LABELS = {
 export const label = (v) => LABELS[v] || String(v || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const SOURCE_LABELS = { frozen_whole_body_jepa: 'frozen JEPA', unified_shared_jepa_target_head: 'shared target head',
   patient_persistence_anchor: 'persistence anchor', none: 'none', missing: 'missing' };
-const STATUS_WORDS = { model: 'model', persistence: 'persistence baseline', missing: 'missing', degraded: 'degraded' };
+const STATUS_WORDS = FORECAST_LABEL;
 
 const fmtTime = () => makeTimeFormatter(timeAxis(), onsetMs());
 export function fmtClinical(iso) { return iso ? fmtTime().short(new Date(iso).getTime()) : null; }
@@ -62,6 +63,29 @@ export function renderCommandBar() {
   if (conn === 'reconnecting' || conn === 'connecting') { statusWord = conn === 'connecting' ? 'Connecting' : 'Reconnecting'; statusClass = 'warn'; }
   else if (conn === 'closed') { statusWord = 'Disconnected'; statusClass = 'bad'; }
   const speed = Number(s.speed || 1);
+  /* Which speeds exist, and which of them a reader should see, is the source's
+   * statement about itself - not a rule written into this page. A simulated
+   * fixture offers demo speeds; a stress speed is declared separately and lives
+   * behind a disclosure so nobody mistakes it for a clinical rate; a real
+   * hospital feed would declare no speeds at all and this renders nothing. */
+  const playback = src.playback || {};
+  const speedButton = (opt) => `<button type="button" data-act="speed" data-speed="${opt.value}"`
+    + ` aria-pressed="${speed === Number(opt.value)}"${opt.note ? ` title="${esc(opt.note)}"` : ''}>`
+    + `${esc(opt.label)}</button>`;
+  const speedOptions = playback.speeds || [];
+  const speedGroup = speedOptions.length
+    ? `<div class="segmented" role="group" aria-label="Demo speed">${speedOptions.map(speedButton).join('')}</div>`
+    : '';
+  const devOptions = playback.developer_speeds || [];
+  const developerSpeeds = devOptions.length ? `
+      <details class="dev-tools"${devOptions.some((o) => speed === Number(o.value)) ? ' open' : ''}>
+        <summary>Developer / QA</summary>
+        <div class="dev-body">
+          <div class="segmented" role="group" aria-label="Stress test speed">${devOptions.map(speedButton).join('')}</div>
+          <p class="note">${esc(devOptions[0].note || '')} It exercises the ingest, scheduler and SSE
+             path under load; it says nothing about how fast a hospital delivers data.</p>
+        </div>
+      </details>` : '';
   const counts = S.live.run ? S.live.run.summary : null;
   const runtimeTag = rt.runtime_attached
     ? '<span class="tag">runtime attached · bounded research demo</span>'
@@ -74,8 +98,12 @@ export function renderCommandBar() {
   const output = S.lastRunFailed
     ? '<span class="status degraded"><i></i>runtime failure · no current forecast</span>'
     : counts
-      ? `<span class="counts"><span class="m">model ${counts.model_cells}</span><span class="p">persistence ${counts.persistence_cells}</span><span class="x">missing ${counts.missing_cells}</span><span class="d">degraded ${counts.degraded_cells}</span></span>`
-      : '<span class="meta">no run yet</span>';
+      ? `<span class="counts"><span class="m" title="predicted by the model">model forecast ${counts.model_cells}</span>`
+        + `<span class="p" title="not a model prediction: the last observed value, repeated">carried forward ${counts.persistence_cells}</span>`
+        + (counts.missing_cells ? `<span class="x" title="the model returned no value">no forecast ${counts.missing_cells}</span>` : '')
+        + (counts.degraded_cells ? `<span class="d" title="the model runtime is not attached">withheld ${counts.degraded_cells}</span>` : '')
+        + '</span>'
+      : '<span class="meta">no forecast yet</span>';
   const retro = isRetro();
   const modeTag = retro ? '<span class="tag graphite">Retrospective replay</span>' : '<span class="tag">Synthetic FHIR R4</span>';
   const context = retro && src.context
@@ -91,10 +119,10 @@ export function renderCommandBar() {
     : `<div class="clock"><div class="k">Latest clinical event</div><div class="v${S.clock.latest_clinical_event_time ? '' : ' na'}">${esc(fmtClinical(S.clock.latest_clinical_event_time) || 'none yet')}</div></div>
        <div class="clock"><div class="k">Last received</div><div class="v${S.clock.latest_received_at ? '' : ' na'}">${esc(fmtReceived(S.clock.latest_received_at) || 'none yet')}</div></div>
        <div class="clock"><div class="k">Model input watermark</div><div class="v${S.clock.model_input_watermark ? '' : ' na'}">${esc(fmtClinical(S.clock.model_input_watermark) || 'no run yet')}</div></div>
-       <div class="clock"><div class="k">Delivered / queued</div><div class="v">${esc(s.cursor ?? 0)} / ${esc(s.remaining_events ?? '—')} · ${esc(fmtSim(simElapsed(s)))} at ${esc(speed)}×</div></div>`;
+       <div class="clock"><div class="k">Delivered / remaining</div><div class="v">${esc(s.cursor ?? 0)} / ${esc(s.remaining_events ?? '—')} · ${esc(fmtSim(simElapsed(s)))} at ${esc(speed)}×</div></div>`;
   host.innerHTML = `
     <div class="cmd-id">
-      <div class="cmd-title"><h1>${esc(src.display_name || (S.patient ? S.patient.display : 'Patient'))}</h1>${modeTag}<span class="stat ${statusClass}"><i></i>${esc(statusWord)}${s.status === 'running' ? ' · ' + esc(speed) + '×' : ''}</span>${S.runInFlight ? '<span class="stat na run-flow"><i></i>run in flight</span>' : ''}</div>
+      <div class="cmd-title"><h1>${esc(src.display_name || (S.patient ? S.patient.display : 'Patient'))}</h1>${modeTag}<span class="stat ${statusClass}"><i></i>${esc(statusWord)}${s.status === 'running' ? ' · ' + esc(speed) + '×' : ''}</span>${S.runInFlight ? `<span class="stat na run-flow"><i></i>${UPDATING_FORECAST}</span>` : ''}</div>
     </div>
     <div class="cmd-clocks" aria-label="Clocks">${clocks}</div>
     <div class="cmd-transport">
@@ -102,10 +130,11 @@ export function renderCommandBar() {
         ${s.status === 'running'
           ? '<button class="btn sm primary" type="button" data-act="pause">❚❚ Pause</button>'
           : `<button class="btn sm primary" type="button" data-act="start"${s.status === 'completed' ? ' disabled' : ''}>▶ ${s.status === 'paused' ? 'Resume' : 'Play'}</button>`}
-        <button class="btn sm" type="button" data-act="step"${s.status === 'completed' || (s.remaining_events || 0) === 0 ? ' disabled' : ''}>${esc(src.step_label || 'Next event')} ▸</button>
+        ${playback.step === false ? '' : `<button class="btn sm" type="button" data-act="step"${s.status === 'completed' || (s.remaining_events || 0) === 0 ? ' disabled' : ''}>${esc(src.step_label || 'Next event')} ▸</button>`}
         <button class="btn sm" type="button" data-act="reset">Reset</button>
-        <div class="segmented" role="group" aria-label="Arrival speed">${[1, 5, 20].map((v) => `<button type="button" data-act="speed" data-speed="${v}" aria-pressed="${speed === v}">${v}×</button>`).join('')}</div>
+        ${speedGroup}
       </div>
+      ${developerSpeeds}
       <div class="queue">epoch ${esc(s.epoch ?? '—')} · session <span class="mono">${esc((s.session_id || '').slice(0, 8))}</span> · SSE ${esc(conn)}</div>
     </div>
     <div class="cmd-sub"><span class="cmd-runtime"><span class="mono">WholeBody-JEPA ${esc((rt.model_commit || '').slice(0, 7) || '—')}</span> ${runtimeTag} ${output}</span><span class="cmd-context">${context}</span><span class="cmd-bounded">${esc(bounded)}</span></div>`;
@@ -218,13 +247,16 @@ function signalTile(v, opts = {}) {
   const cells = catalogCellsForVariable(v);
   const liveCells = cellsForVariable(v, currentCells());
   const horizons = cells.map((c) => c.horizon_hours).sort((a, b) => a - b);
-  const fcText = !horizons.length ? 'no runtime cell' : (() => {
+  const fcText = !horizons.length ? NO_FORECAST_MODEL : (() => {
     const statuses = new Set(liveCells.map((c) => c.status));
-    const word = statuses.size === 0 ? 'no run yet' : statuses.has('model') ? (statuses.size === 1 ? 'model' : 'model + baseline') : statuses.has('persistence') ? 'persistence baseline' : statuses.has('degraded') ? 'gated · point withheld' : 'missing';
-    return `${horizons.map((h) => h + 'h').join(' · ')} · <span class="${statuses.has('model') ? 'm' : 'p'}">${word}</span>`;
+    const word = statuses.size === 0 ? UPDATING_FORECAST
+      : statuses.has('model') ? (statuses.size === 1 ? FORECAST_LABEL.model : `${FORECAST_LABEL.model} + carried forward`)
+      : statuses.has('persistence') ? FORECAST_LABEL.persistence
+      : statuses.has('degraded') ? FORECAST_LABEL.degraded : FORECAST_LABEL.missing;
+    return `${horizons.map((h) => h + 'h').join(' · ')} · <span class="${statuses.has('model') ? 'm' : 'p'}">${esc(word)}</span>`;
   })();
   if (!state) {
-    return `<div class="tile empty${opts.compact ? ' compact' : ''}"><div class="t">${esc(label(v))}</div><div class="v na">no observation yet</div><div class="d">Mapped · unit ${esc(unit)} · nothing delivered in this stream</div><div class="fc">Forecast ${fcText}</div></div>`;
+    return `<div class="tile empty${opts.compact ? ' compact' : ''}"><div class="t">${esc(label(v))}</div><div class="v na">no observation yet</div><div class="d">Mapped · unit ${esc(unit)} · nothing delivered in this stream</div><div class="fc">${fcText}</div></div>`;
   }
   const age = ageHours(state.effective_time, clinicalNow());
   const maxAge = S.capabilities ? S.capabilities.forward_fill_max_age_hours : 6;
@@ -236,8 +268,9 @@ function signalTile(v, opts = {}) {
     <div class="t">${esc(label(v))}</div>
     <div class="v">${esc(fmtNum(state.value))}<small>${esc(state.unit)}</small></div>
     <div class="d">${esc(fmtClinical(state.effective_time))} · age <span class="${stale ? 'stale' : ''}">${esc(fmtAge(age))}${stale ? ' · beyond ' + maxAge + ' h forward-fill' : ''}</span> · ${esc(state.count)} obs</div>
+    <div class="spark-label">${OBSERVED_HISTORY}</div>
     ${sparkline(series.map((p) => ({ value: p.value })), 240, 44)}
-    <div class="fc">Forecast ${fcText}</div>
+    <div class="fc">${fcText}</div>
     <span class="open">Open chart →</span>
   </button>`;
 }
@@ -247,7 +280,7 @@ function signalRow(v) {
   const cells = catalogCellsForVariable(v);
   const liveCells = cellsForVariable(v, currentCells());
   const horizons = cells.map((c) => c.horizon_hours).sort((a, b) => a - b).map((h) => h + 'h').join(' · ') || 'no runtime cell';
-  const status = liveCells.length ? statusChip(liveCells.some((c) => c.status === 'model') ? 'model' : liveCells[0].status) : (cells.length ? '<span class="note">no run yet</span>' : '<span class="note">observations only</span>');
+  const status = liveCells.length ? statusChip(liveCells.some((c) => c.status === 'model') ? 'model' : liveCells[0].status) : (cells.length ? `<span class="note">${UPDATING_FORECAST}</span>` : `<span class="note">${NO_FORECAST_MODEL} · observations only</span>`);
   if (!state) {
     return `<div class="row dim"><div><div class="t">${esc(label(v))}</div><div class="d">mapped · unit ${esc(unit)} · nothing delivered in this stream</div></div><div></div><div class="v na">no observation</div><div class="fc">${esc(horizons)}</div><div class="fc">${status}</div></div>`;
   }
@@ -335,7 +368,7 @@ export function renderMetric(host) {
   host.innerHTML = `
     <div class="crumb"><button class="disc" type="button" data-act="close-metric">← ${back}</button><span>›</span><span>${esc(label(v))}</span></div>
     <div class="metric-h">
-      <div><h2>${esc(label(v))}</h2><div class="note">${esc(unitOf(v))}${cellsHere.length ? ` · ${cellsHere.length} forecast cell${cellsHere.length === 1 ? '' : 's'}` : ' · observations only · no runtime cell'}${S.anchor ? ' · frozen at historical anchor' : (S.session && S.session.status === 'running' ? ' · live follow' : ' · paused: not following')}</div></div>
+      <div><h2>${esc(label(v))}</h2><div class="note">${esc(unitOf(v))}${cellsHere.length ? ` · ${cellsHere.length} forecast cell${cellsHere.length === 1 ? '' : 's'}` : ` · ${NO_FORECAST_MODEL} · observations only`}${S.anchor ? ' · frozen at historical anchor' : (S.session && S.session.status === 'running' ? ' · live follow' : ' · paused: not following')}</div></div>
       ${state ? `<div class="big">${esc(fmtNum(state.value))}<small>${esc(state.unit)}</small></div>
       <dl class="kv"><dt>Effective</dt><dd>${esc(fmtClinical(state.effective_time))}</dd><dt>Received</dt><dd>${esc(fmtReceived(state.received_at) || '—')}</dd><dt>Age</dt><dd>${esc(fmtAge(age))}</dd><dt>Observations</dt><dd>${esc(state.count)}</dd></dl>` : '<div class="note">No observation yet for this signal.</div>'}
       <div class="chips-col">
@@ -347,11 +380,11 @@ export function renderMetric(host) {
       <div>
         <div class="chart-wrap">${chart.empty ? '<p class="empty-note">Nothing to plot yet: no observation of this signal has been delivered. Nothing is imputed.</p>' : chart.svg}<div class="chart-tip" id="chartTip" role="status" hidden></div></div>
         ${chart.empty ? '' : chartLegend(hasModel, hasPers)}
-        <p class="foot">Every observed point is a ledger row; every forecast point is a persisted run. ${chart.window_points < chart.total_points ? `Showing ${chart.window_points} of ${chart.total_points} points (recent window).` : ''} Point forecasts only · no calibrated interval for this runtime cell.</p>
+        <p class="foot">Every observed point is a ledger row; every forecast point is a persisted run. ${chart.window_points < chart.total_points ? `Showing ${chart.window_points} of ${chart.total_points} points (recent window).` : ''} ${POINT_ONLY_NOTE}</p>
         ${runs.length > 1 ? `<div class="scrub"><label for="runScrub" class="note">Scrub run history</label><input id="runScrub" type="range" min="0" max="${runs.length - 1}" value="${Math.max(0, anchorIdx)}" data-act="scrub-run" aria-label="Select a past model run as the historical anchor"><span class="mono note">${anchorIdx >= 0 ? esc(fmtClinical(runs[anchorIdx].input_cutoff)) : ''} · ${S.anchor ? 'historical anchor' : 'live head'}</span></div>` : ''}
       </div>
       <div class="metric-side">
-        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${statusChip(c.status)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button></div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? 'No run yet for this session.' : 'No target × horizon cell in the pinned registry.'}</p>`}
+        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${statusChip(c.status)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button></div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? UPDATING_FORECAST + ' No run yet for this session.' : NO_FORECAST_MODEL + ': this signal has no target × horizon cell in the pinned registry, so only observations are shown.'}</p>`}
           ${cellsHere.some((c) => c.fallback_reason) ? `<p class="note">${esc(Array.from(new Set(cellsHere.map((c) => c.fallback_reason).filter(Boolean))).join(' · '))}</p>` : ''}</div>
         ${run ? `<div class="side"><h3>Run</h3><dl class="kv"><dt>Run</dt><dd class="mono">${esc(run.run_id.slice(0, 8))}</dd><dt>Cutoff</dt><dd>${esc(fmtClinical(run.input_cutoff))}</dd><dt>Input</dt><dd>${esc(run.input_resource_count)} resources</dd><dt>Commit</dt><dd class="mono">${esc((run.model_commit || '').slice(0, 7))}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)}</dd><dt>Duration</dt><dd>${esc(run.duration_ms ?? '—')} ms</dd></dl><p class="note">causal_claim_allowed: false</p></div>` : ''}
         ${state ? `<div class="side"><h3>Latest observation</h3><dl class="kv"><dt>Resource</dt><dd class="mono">${esc(state.resource_id)} v${esc(state.version_id)}</dd></dl><button class="disc" type="button" data-act="prov-obs" data-variable="${esc(v)}">FHIR provenance ⌄</button></div>` : ''}
@@ -389,7 +422,7 @@ function cellRow(c, extra = '') {
   const point = c.forecast_point === null || c.forecast_point === undefined ? '<span class="nullv">null</span>' : `<span class="pt">${esc(fmtNum(c.forecast_point))}</span>`;
   const observed = c.observed_value === null || c.observed_value === undefined ? '<span class="nullv">—</span>' : esc(fmtNum(c.observed_value));
   const age = c.measurement_age_hours === null || c.measurement_age_hours === undefined ? '' : ` <span class="why">age ${esc(fmtAge(c.measurement_age_hours))}</span>`;
-  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td>${statusChip(c.status)}${c.fallback_reason ? `<div class="why">${esc(c.fallback_reason)}</div>` : ''}</td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
+  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td>${statusChip(c.status)}<div class="why">${esc(FORECAST_NOTE[c.status] || '')}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
 }
 function runFooter(run) {
   const note = run.runtime_mode === 'fixture'

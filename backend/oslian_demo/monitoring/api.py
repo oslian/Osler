@@ -60,6 +60,8 @@ class StreamService:
 
     def close(self) -> None:
         self.sessions.shutdown()
+        # flush whatever the console writer still holds before the stream goes away
+        self.logger.close()
         self.repo.close()
 
 

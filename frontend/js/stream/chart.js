@@ -10,7 +10,7 @@
  * An interval band is never drawn: this runtime bundles no patient-specific
  * conformal artifact. */
 
-import { esc, fmtNum } from './format.js';
+import { esc, fmtNum, FORECAST_LABEL, POINT_ONLY_NOTE } from './format.js';
 
 const COLORS = { ink: '#171A1C', ink2: '#626762', blue: '#344F69', oxide: '#B64A32', caution: '#A0741C',
   cautionText: '#8A6316', divider: '#D1CCC2', soft: '#E7E3DA', surface: '#FCFAF5', bg: '#F1EFE9', teal: '#27645E', nul: '#8B8F89' };
@@ -153,7 +153,7 @@ export function bigChart(opts) {
   // persistence baselines
   const lastObs = points[points.length - 1];
   const persistence = drawn.filter((f) => f.status === 'persistence');
-  const persistenceLabels = placeLabels(persistence.map((f) => ({ x: X(f.due_ms), y: Y(f.forecast_point), text: `${f.horizon_hours}h persistence`, f })));
+  const persistenceLabels = placeLabels(persistence.map((f) => ({ x: X(f.due_ms), y: Y(f.forecast_point), text: `${f.horizon_hours}h carried forward`, f })));
   persistenceLabels.forEach(({ x, y, text, f, w, lane }) => {
     const x1 = X(opts.cutoff_ms || (lastObs ? lastObs.ms : f.due_ms));
     s += `<line x1="${x1.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${COLORS.caution}" stroke-dasharray="1 4"/>`;
@@ -209,10 +209,10 @@ export function bigChart(opts) {
 
 export function chartLegend(hasModel, hasPersistence) {
   return `<div class="chart-legend">
-    <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.ink}" stroke-width="1.8"/><circle cx="13" cy="5" r="3.5" fill="${COLORS.ink}"/></svg>observed (ledger row)</span>
-    ${hasModel ? `<span><svg width="26" height="12" aria-hidden="true"><line x1="1" y1="6" x2="25" y2="6" stroke="${COLORS.blue}" stroke-width="1.5" stroke-dasharray="5 4"/><polygon points="13,1 18,6 13,11 8,6" fill="${COLORS.surface}" stroke="${COLORS.blue}" stroke-width="1.5"/></svg>model point at its due time</span>` : ''}
-    ${hasPersistence ? `<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.caution}" stroke-dasharray="1 4"/><rect x="20" y="1" width="8" height="8" fill="${COLORS.surface}" stroke="${COLORS.caution}"/></svg>persistence baseline · not a prediction</span>` : ''}
-    <span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="0" x2="6" y2="12" stroke="${COLORS.oxide}" stroke-dasharray="4 3"/></svg>model input cutoff</span>
-    <span><i class="lg-band"></i>future · no interval band is ever drawn</span>
+    <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.ink}" stroke-width="1.8"/><circle cx="13" cy="5" r="3.5" fill="${COLORS.ink}"/></svg>Observed</span>
+    ${hasModel ? `<span><svg width="26" height="12" aria-hidden="true"><line x1="1" y1="6" x2="25" y2="6" stroke="${COLORS.blue}" stroke-width="1.5" stroke-dasharray="5 4"/><polygon points="13,1 18,6 13,11 8,6" fill="${COLORS.surface}" stroke="${COLORS.blue}" stroke-width="1.5"/></svg>${FORECAST_LABEL.model}</span>` : ''}
+    ${hasPersistence ? `<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.caution}" stroke-dasharray="1 4"/><rect x="20" y="1" width="8" height="8" fill="${COLORS.surface}" stroke="${COLORS.caution}"/></svg>${FORECAST_LABEL.persistence} — not a model prediction</span>` : ''}
+    <span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="0" x2="6" y2="12" stroke="${COLORS.oxide}" stroke-dasharray="4 3"/></svg>Model input cutoff</span>
+    <span><i class="lg-band"></i>${POINT_ONLY_NOTE}</span>
   </div>`;
 }

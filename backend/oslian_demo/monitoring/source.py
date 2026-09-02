@@ -34,6 +34,22 @@ class SourceEvent:
     scenario: str = "routine"      # fixture annotation only; never used for logic
 
 
+# How a source is played back, declared by the source rather than assumed by the
+# page. A speed is a simulated arrival clock over a fixture; it is never a claim
+# about how fast real data arrives, which is why the labels say "demo" and the
+# stress test is declared apart from the two speeds a reader should see.
+# A real hospital feed declares kind="realtime" and no speeds at all: data
+# appears when it arrives, so there is nothing to select.
+DEMO_SPEEDS = [
+    {"value": 1.0, "label": "Normal demo"},
+    {"value": 5.0, "label": "Fast demo"},
+]
+STRESS_SPEEDS = [
+    {"value": 20.0, "label": "Stress test",
+     "note": "Stress test only. This is not the speed of real hospital data."},
+]
+
+
 class ClinicalDataSource(Protocol):
     source_system: str
     fixture_version: str
@@ -82,6 +98,14 @@ class MockFhirSource:
             "display_name": "Synthetic patient SYN-0001",
             "provenance": "Synthetic FHIR R4 fixture; no real patient data; not a hospital connection.",
             "step_label": "Next event",
+            "playback": {
+                "kind": "simulated",
+                "step": True,
+                "speeds": DEMO_SPEEDS,
+                "developer_speeds": STRESS_SPEEDS,
+                "note": "A simulated arrival clock over a fixture. Clinical timestamps inside the "
+                        "resources are never changed by it.",
+            },
         }
 
 
@@ -206,6 +230,15 @@ class RetrospectiveCaseSource:
                       "variables": sorted(k for k in e["observation"] if not k.endswith("_age_hr") and k != "hours_since_onset")}
                      for i, e in enumerate(self.case["observation_events"])],
             "step_label": "Next observation",
+            "playback": {
+                "kind": "simulated",
+                "step": True,
+                "speeds": DEMO_SPEEDS,
+                # a three-row case has nothing to stress; the backend still accepts 20x
+                "developer_speeds": [],
+                "note": "The recorded case is revealed one observation at a time, or on a "
+                        "simulated clock. Case time is hours since ICU admission.",
+            },
         }
 
 
@@ -274,6 +307,11 @@ class EpicFhirSource:
             "source_system": self.source_system,
             "status": "not_connected",
             "phase": "P3",
+            # A real feed has no playback: resources appear when the hospital
+            # sends them. Declared here so the page hides the speed control from
+            # source metadata rather than from a hard-coded exception.
+            "playback": {"kind": "realtime", "step": False, "speeds": [], "developer_speeds": [],
+                         "note": "Live data appears at its actual arrival time; there is no speed to choose."},
             "fhir_base_url": self.config.fhir_base_url,
             "auth": {
                 "backend": "SMART Backend Services (client_credentials + JWT client assertion)",

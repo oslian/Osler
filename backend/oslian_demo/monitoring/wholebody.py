@@ -173,6 +173,21 @@ class ReleaseWorker:
             self._start_locked()
             return self.startup or {"ready": False, "checks": [], "error": self.error}
 
+    def status(self) -> dict[str, Any]:
+        """The startup verdict, without ever waiting for an inference to finish.
+
+        ``self._lock`` is held for the whole of a ``predict`` round trip, so
+        asking for it here would make ``/api/model/health`` - and anything else
+        that reads the runtime - queue behind the model. The startup record and
+        the process handle are written once at start and only read afterwards, so
+        a live worker can be reported from them directly. The lock is taken only
+        when the worker genuinely has to be started, which happens at most once
+        per process and never while inference is in flight.
+        """
+        if self._process is not None and self._process.poll() is None and self.startup:
+            return self.startup
+        return self.ensure_started()
+
     def _start_locked(self) -> None:
         self.startup = None
         self.error = None
@@ -314,7 +329,7 @@ class WholeBodyRuntime:
                             "detail": f"{len(self.catalog)} catalog cells from {self.contract['generated_from']}"}],
             }
         assert self.worker is not None
-        startup = self.worker.ensure_started()
+        startup = self.worker.status()
         ready = self.worker.alive()
         return {
             **base, "status": "healthy" if ready else "degraded", "ready": ready,

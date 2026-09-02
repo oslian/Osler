@@ -128,6 +128,9 @@ CREATE TABLE IF NOT EXISTS model_runs (
     input_resource_count INTEGER NOT NULL,
     input_hash TEXT NOT NULL,
     input_refs_json TEXT NOT NULL,
+    -- what set this run off, as a bounded {first, latest, count} summary. The
+    -- record of what the run actually consumed is input_refs_json; this column
+    -- is provenance only, and is deliberately not a growing list of ids.
     trigger_event_ids_json TEXT NOT NULL,
     started_at TEXT NOT NULL,
     completed_at TEXT,
@@ -514,7 +517,7 @@ class Repository:
     def _run_dict(row: sqlite3.Row) -> dict:
         run = dict(row)
         run["input_refs"] = json.loads(run.pop("input_refs_json") or "[]")
-        run["trigger_event_ids"] = json.loads(run.pop("trigger_event_ids_json") or "[]")
+        run["triggers"] = json.loads(run.pop("trigger_event_ids_json") or "{}")
         summary = run.pop("summary_json")
         run["summary"] = json.loads(summary) if summary else None
         return run

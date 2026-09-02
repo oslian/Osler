@@ -102,33 +102,108 @@ class _Clock:
             self.resume()
 
 
+@dataclass
+class _PendingRun:
+    """The single waiting run, in constant space.
+
+    Only one run is ever waiting, so the triggers that arrive while a run is in
+    flight are a stream of ids with no bound. Keeping the list would let a long
+    inference under a 20x feed grow memory in proportion to the feed, for data
+    that answers one question: what set this run off. First, latest and count
+    answer it. The audit record of what a run actually consumed is
+    ``input_refs``, written from the delivered timeline when the run starts, and
+    that is unaffected.
+    """
+
+    first: str | None = None
+    latest: str | None = None
+    count: int = 0
+
+    def add(self, trigger_event_id: str) -> None:
+        if self.first is None:
+            self.first = trigger_event_id
+        self.latest = trigger_event_id
+        self.count += 1
+
+    def take(self) -> dict[str, Any]:
+        summary = {"first": self.first, "latest": self.latest, "count": self.count}
+        self.clear()
+        return summary
+
+    def clear(self) -> None:
+        self.first = None
+        self.latest = None
+        self.count = 0
+
+    def __bool__(self) -> bool:
+        return self.count > 0
+
+
 class RunScheduler:
-    """Debounce/coalesce run requests for one session and execute them serially."""
+    """One inference at a time, one pending run, and never a stale prefix.
+
+    The invariant is deliberately small: at most one run executing, and at most
+    one run waiting. Triggers that arrive while a run is in flight are merged
+    into that single waiting run rather than queued behind each other, so a 20x
+    burst cannot build a backlog of forecasts that are obsolete before they are
+    computed. The waiting run reads the delivered timeline when it *starts*, not
+    when it was requested, so whatever it finally computes describes the newest
+    delivered prefix. Nothing is dropped from the ledger by this: only redundant
+    inference requests are merged.
+
+    Consecutive runs are separated by ``debounce`` measured from the end of the
+    previous run, which bounds how much of the worker a sustained burst can take
+    while still guaranteeing a final run once the burst stops.
+
+    Shutdown is explicit: after :meth:`stop` no further request is accepted, a
+    run that has not started is cancelled, a run already executing is allowed to
+    finish so its cells reach the ledger, and the thread ends.
+    """
 
     def __init__(self, session: "StreamSession", debounce_seconds: float = RUN_DEBOUNCE_SECONDS):
         self.session = session
         self.debounce = debounce_seconds
         self._cv = threading.Condition()
-        self._pending: list[str] = []
+        self._pending = _PendingRun()
         self._deadline: float | None = None
         self._stop = False
+        self._busy = False
         self._thread = threading.Thread(target=self._loop, name=f"runs:{session.session_id}", daemon=True)
         self._thread.start()
         self.runs_started = 0
+        self.runs_superseded = 0
+        self.runs_cancelled = 0
+        self.max_in_flight = 0
+        self.max_pending_runs = 0
 
     def request(self, trigger_event_id: str) -> None:
-        # Leading-edge coalesce: the window opens with the first trigger and is
-        # not extended by later ones, so a sustained burst still yields a run
-        # every `debounce` seconds instead of starving until the burst ends.
         with self._cv:
-            self._pending.append(trigger_event_id)
+            if self._stop:
+                # closing: a new run must not be started, and the caller is not
+                # left believing one was scheduled
+                return
+            self._pending.add(trigger_event_id)
             if self._deadline is None:
                 self._deadline = time.monotonic() + self.debounce
+            # pending *runs*, not pending triggers: the triggers all merge into one
+            self.max_pending_runs = max(self.max_pending_runs, 1)
             self._cv.notify_all()
+
+    def stats(self) -> dict[str, int]:
+        with self._cv:
+            return {"runs_started": self.runs_started, "runs_superseded": self.runs_superseded,
+                    "runs_cancelled": self.runs_cancelled,
+                    "in_flight": 1 if self._busy else 0,
+                    "pending_runs": 1 if self._pending else 0,
+                    "pending_triggers": self._pending.count,
+                    "max_in_flight": self.max_in_flight,
+                    "max_pending_runs": self.max_pending_runs,
+                    "stopped": 1 if self._stop else 0,
+                    "thread_alive": 1 if self._thread.is_alive() else 0}
 
     def idle(self) -> bool:
         with self._cv:
-            return not self._pending and not getattr(self, "_busy", False)
+            return not self._pending and not self._busy
 
     def wait_idle(self, timeout: float = 30.0) -> bool:
         end = time.monotonic() + timeout
@@ -138,10 +213,30 @@ class RunScheduler:
             time.sleep(0.02)
         return False
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 15.0) -> bool:
+        """Stop scheduling, cancel what has not started, and end the thread.
+
+        A run already executing keeps going: its cells belong in the ledger and
+        the repository must outlive it. A run that is only pending is cancelled
+        outright - starting an inference during shutdown would delay exit for a
+        forecast nobody will read. Idempotent, and safe to call from any thread
+        except the scheduler's own.
+
+        Returns True when the thread has ended.
+        """
         with self._cv:
+            first_call = not self._stop
             self._stop = True
+            if self._pending:
+                self.runs_cancelled += 1
+                self._pending.clear()
+            self._deadline = None
             self._cv.notify_all()
+        thread = self._thread
+        if first_call or thread.is_alive():
+            if thread is not threading.current_thread():
+                thread.join(timeout)
+        return not thread.is_alive()
 
     def _loop(self) -> None:
         while True:
@@ -151,14 +246,21 @@ class RunScheduler:
                     self._cv.wait(timeout)
                 if self._stop:
                     return
-                triggers, self._pending = self._pending, []
+                triggers = self._pending.take()
                 self._deadline = None
                 self._busy = True
+                self.runs_started += 1
+                self.max_in_flight = max(self.max_in_flight, 1)
             try:
                 self.session.execute_run(triggers)
             finally:
                 with self._cv:
                     self._busy = False
+                    # space the next run from the end of this one, so a sustained
+                    # burst cannot keep the worker permanently saturated
+                    if self._pending and not self._stop:
+                        self._deadline = time.monotonic() + self.debounce
+                    self._cv.notify_all()
 
 
 class StreamSession:
@@ -180,6 +282,7 @@ class StreamSession:
         self._lock = threading.RLock()
         self._stop = False
         self._thread: threading.Thread | None = None
+        self._last_run_input_hash: str | None = None
         self.scheduler = RunScheduler(self)
         encounter = repo.encounter_for_patient(self.patient_id)
         self.onset = encounter["period_start"] if encounter else None
@@ -283,6 +386,7 @@ class StreamSession:
         return self.state()
 
     def stop(self) -> None:
+        """Stop playback and the scheduler. Returns once the scheduler thread has ended."""
         self._stop = True
         self.scheduler.stop()
 
@@ -381,7 +485,7 @@ class StreamSession:
         self.scheduler.request(event_id)
 
     # ---- model runs -----------------------------------------------------------------
-    def execute_run(self, trigger_event_ids: list[str]) -> dict[str, Any] | None:
+    def execute_run(self, trigger_summary: dict[str, Any]) -> dict[str, Any] | None:
         with self._lock:
             epoch = self.epoch
             timeline_all = delivered_timeline(self.repo, self.session_id, epoch)
@@ -390,6 +494,13 @@ class StreamSession:
         cutoff = max(row["effective_time"] for row in timeline_all)
         timeline = [row for row in timeline_all if row["effective_time"] <= cutoff]
         model_input = build_model_input(timeline, cutoff, self.onset)
+        # The delivered prefix is unchanged since the last completed run, so the
+        # forecast would be identical. Skipping keeps the worker for prefixes that
+        # actually moved; the newest completed run still describes the newest
+        # delivered prefix, which is the property that matters.
+        if model_input.input_hash == self._last_run_input_hash:
+            self.scheduler.runs_superseded += 1
+            return None
         state = variable_state(timeline, cutoff)
         run_id = uuid.uuid4().hex
         started_at = now_utc()
@@ -401,13 +512,13 @@ class StreamSession:
             "release_date": provenance["release_date"], "input_cutoff": cutoff,
             "input_watermark": model_input.watermark, "input_resource_count": len(model_input.resource_refs),
             "input_hash": model_input.input_hash, "input_refs_json": __import__("json").dumps(list(model_input.resource_refs)),
-            "trigger_event_ids_json": __import__("json").dumps(trigger_event_ids), "started_at": iso(started_at),
+            "trigger_event_ids_json": __import__("json").dumps(trigger_summary), "started_at": iso(started_at),
         }
         self.repo.create_run(record)
         self.bus.emit(self.session_id, "model.run.started", {
             "run_id": run_id, "epoch": epoch, "input_cutoff": cutoff, "input_watermark": model_input.watermark,
             "input_resource_count": len(model_input.resource_refs), "input_hash": model_input.input_hash,
-            "trigger_event_ids": trigger_event_ids, "runtime_mode": provenance["runtime_mode"],
+            "triggers": trigger_summary, "runtime_mode": provenance["runtime_mode"],
             "model_commit": provenance["model_commit"], "started_at": record["started_at"]})
         try:
             result = self.runtime.run(model_input, state)
@@ -443,6 +554,7 @@ class StreamSession:
             "registry_sha256": provenance["registry_sha256"], "duration_ms": result.duration_ms,
             "completed_at": iso(completed), "cells": result.cells,
         }
+        self._last_run_input_hash = model_input.input_hash
         self.bus.emit(self.session_id, "model.run.completed", payload)
         return payload
 
@@ -522,6 +634,10 @@ class SessionManager:
         self._deliver_snapshot(session, session.source)
 
     def shutdown(self) -> None:
+        # session.stop() cancels a pending run and joins the scheduler thread, so
+        # by the time it returns any run that was already executing has finished
+        # writing and the repository can close under it safely. There is nothing
+        # left to wait for, which is why there is no timeout here.
         for session in self._sessions.values():
             session.stop()
         self.runtime.close()

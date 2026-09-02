@@ -54,7 +54,7 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
             "input_cutoff": cutoff, "input_watermark": model_input.watermark,
             "input_resource_count": len(model_input.resource_refs), "input_hash": model_input.input_hash,
             "input_refs_json": json.dumps(list(model_input.resource_refs)),
-            "trigger_event_ids_json": "[]", "started_at": now_iso()})
+            "trigger_event_ids_json": "{}", "started_at": now_iso()})
         return self.repo.run(run_id)
 
     def test_a_run_snapshot_covers_the_organs_of_the_observations_it_used(self):
@@ -260,7 +260,7 @@ class RestartRecoveryTests(unittest.TestCase):
                 "runtime_mode": "fixture", "model_commit": "abc", "registry_sha256": "def", "release_date": "2026-08-22",
                 "input_cutoff": "2026-03-14T08:00:00.000Z", "input_watermark": "2026-03-14T08:00:00.000Z",
                 "input_resource_count": 1, "input_hash": "h", "input_refs_json": json.dumps(["Observation/x/_history/1"]),
-                "trigger_event_ids_json": "[]", "started_at": now_iso()})
+                "trigger_event_ids_json": "{}", "started_at": now_iso()})
             repo.finish_run("r1", status="completed", completed_at=now_iso(), duration_ms=1, error=None, summary={"catalog_cells": 41})
             repo.insert_cells("r1", [{"cell": "map@1h", "target": "map", "horizon_hours": 1, "unit": "mmHg", "observed_value": 70.0,
                                        "measurement_age_hours": 0.0, "observations": 1, "forecast_point": None,

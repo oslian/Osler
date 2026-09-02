@@ -29,7 +29,10 @@ def _service(logger):
     return service, app.test_client()
 
 
-def _lines(sink, stage=None):
+def _lines(service, sink, stage=None):
+    # The console writes on its own thread so it can never stall the stream;
+    # a reader has to say when it wants to wait for it.
+    service.logger.flush()
     out = [l for l in sink.getvalue().splitlines() if l.strip()]
     return [l for l in out if stage is None or f" {stage} " in l]
 
@@ -53,7 +56,7 @@ class ConsoleStageTests(unittest.TestCase):
             self.client.post(f"/api/demo-streams/{sid}/step")
         time.sleep(1.5)                                   # let the debounced model run land
         emitted = self.service.repo.events_after(sid, 0)
-        lines = _lines(self.sink, "event_emit")
+        lines = _lines(self.service, self.sink, "event_emit")
         self.assertEqual(len(lines), len(emitted))
         self.assertEqual([_field(l, "seq") for l in lines], [str(e["sequence"]) for e in emitted])
         self.assertEqual(Counter(_field(l, "event_id") for l in lines),
@@ -75,10 +78,11 @@ class ConsoleStageTests(unittest.TestCase):
             if seen > len(delivered):
                 break
         stream.close()
-        sends = _lines(self.sink, "sse_send")
+        sends = _lines(self.service, self.sink, "sse_send")
         self.assertEqual(len(sends), len(delivered))
         self.assertTrue(all(_field(l, "mode") == "replay" for l in sends))
         self.assertEqual([_field(l, "seq") for l in sends], [str(e["sequence"]) for e in delivered])
+        self.service.logger.flush()
         self.assertNotIn("keep-alive", self.sink.getvalue())
 
     def test_sequence_is_continuous_at_twenty_times(self):
@@ -88,7 +92,7 @@ class ConsoleStageTests(unittest.TestCase):
         time.sleep(4.0)
         self.client.post(f"/api/demo-streams/{sid}/pause")
         time.sleep(1.0)
-        sequences = [int(_field(l, "seq")) for l in _lines(self.sink, "event_emit")]
+        sequences = [int(_field(l, "seq")) for l in _lines(self.service, self.sink, "event_emit")]
         self.assertGreater(len(sequences), 20, "20x should have produced a substantial burst")
         self.assertEqual(sequences, sorted(sequences))
         self.assertEqual(sequences, list(range(sequences[0], sequences[0] + len(sequences))),
@@ -98,7 +102,7 @@ class ConsoleStageTests(unittest.TestCase):
         sid = self.client.post("/api/demo-streams").get_json()["session_id"]
         for _ in range(3):
             self.client.post(f"/api/demo-streams/{sid}/step")
-        normalized = [l for l in _lines(self.sink) if "type=observation.normalized" in l]
+        normalized = [l for l in _lines(self.service, self.sink) if "type=observation.normalized" in l]
         self.assertTrue(normalized)
         line = normalized[0]
         for key in ("session", "epoch", "seq", "event_id", "type", "source", "resource",
@@ -113,7 +117,7 @@ class ConsoleStageTests(unittest.TestCase):
         for _ in range(4):
             self.client.post(f"/api/demo-streams/{sid}/step")
         time.sleep(2.0)
-        completed = [l for l in _lines(self.sink) if "type=model.run.completed" in l]
+        completed = [l for l in _lines(self.service, self.sink) if "type=model.run.completed" in l]
         self.assertTrue(completed, "a debounced run should have completed")
         line = completed[-1]
         for key in ("run", "cutoff", "runtime", "model", "persistence", "missing", "degraded", "duration_ms"):
@@ -138,6 +142,7 @@ class ConsoleConfigTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams").get_json()["session_id"]
             client.post(f"/api/demo-streams/{sid}/step")
+            service.logger.flush()
             self.assertEqual(sink.getvalue(), "")
         finally:
             service.close()
@@ -148,6 +153,7 @@ class ConsoleConfigTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams").get_json()["session_id"]
             client.post(f"/api/demo-streams/{sid}/step")
+            service.logger.flush()
             records = [json.loads(l) for l in sink.getvalue().splitlines() if l.strip()]
             self.assertTrue(records)
             for record in records:
@@ -163,6 +169,7 @@ class ConsoleConfigTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams").get_json()["session_id"]
             client.post(f"/api/demo-streams/{sid}/step")
+            service.logger.flush()
             self.assertIn("payload=", sink.getvalue())
         finally:
             service.close()
@@ -175,6 +182,7 @@ class ConsoleConfigTests(unittest.TestCase):
                  "payload": {"resource": {"resourceType": "Observation", "id": "x", "meta": {"versionId": "1"}},
                              "authorization": "Bearer sk-live-do-not-log", "effective_time": "t"}}
         logger.event_emit({"session_id": "s", "epoch": 1, "source": EpicFhirSource.source_system}, event)
+        logger.flush()
         line = sink.getvalue()
         self.assertIn(PREFIX, line)
         self.assertNotIn("payload=", line)
@@ -214,6 +222,7 @@ class ConsoleSecretScanTests(unittest.TestCase):
             time.sleep(3.0)
             client.post(f"/api/demo-streams/{sid}/pause")
             time.sleep(1.0)
+            service.logger.flush()
             text = sink.getvalue()
             self.assertTrue(text.strip())
             for name, pattern in self.PATTERNS.items():

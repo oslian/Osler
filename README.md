@@ -223,14 +223,42 @@ Both modes are sessions of the same pipeline; switch with the mode control, or
 deep-link.
 
 - **Synthetic** — 147 Observation events over ~30 clinical hours (about 10
-  minutes at 1×). The fixture deliberately includes duplicate delivery, an
-  amended version, an out-of-order lab, a missing UCUM unit, `dataAbsentReason`,
-  an unmapped code, an `entered-in-error` retraction, °F and mmol/L conversions,
-  a blood-pressure panel and urine volume over `effectivePeriod`. Transport:
-  **Play / Pause**, speed **1× / 5× / 20×**, or **Step**.
+  minutes at Normal demo). The fixture deliberately includes duplicate delivery,
+  an amended version, an out-of-order lab, a missing UCUM unit,
+  `dataAbsentReason`, an unmapped code, an `entered-in-error` retraction, °F and
+  mmol/L conversions, a blood-pressure panel and urine volume over
+  `effectivePeriod`. Transport: **Play / Pause**, **Next event**, and
+  **Normal demo** or **Fast demo**.
 - **Retrospective** — the deidentified public eICU CRD Demo 2.0.1 stay, converted
   to FHIR R4 at replay time and revealed one row per **Next observation**.
-  Withheld rows never enter the session, the DOM or the model input.
+  Withheld rows never enter the session, the DOM or the model input. Transport:
+  **Next observation**, **Normal demo** or **Fast demo**.
+
+### Playback speed
+
+A speed is a **simulated arrival clock over a fixture**. It changes when the
+demo hands each resource to the pipeline; it never touches the clinical
+timestamps inside the resources, and it is not a statement about how fast a
+hospital delivers data. So the interface offers two:
+
+| Control | Clock | Where |
+|---|---|---|
+| **Normal demo** | 1× | main transport, default |
+| **Fast demo** | 5× | main transport |
+| **Stress test** | 20× | folded into **Developer / QA** |
+
+**Stress test** is a load tool: it drives ingest, the run scheduler and the SSE
+channel far faster than any real feed, to prove the demo stays responsive. It is
+kept out of the main transport so nobody reads 20× as a clinical rate. The
+backend accepts all three speeds exactly as before — `POST
+/api/demo-streams/<id>/speed` still takes `1`, `5` or `20`.
+
+Which speeds appear is decided by the **source**, not by the page: each source
+returns a `playback` block from `describe()` with `kind`, `step`, `speeds` and
+`developer_speeds`, and the page renders what it finds. A real hospital feed
+declares `kind: "realtime"` with no speeds, so it would render no speed control
+at all — data would simply appear at its actual arrival time. That connection is
+a contract boundary today, not an implementation.
 
 **Reset** opens a new epoch: the ledger keeps everything and the session starts
 again from the hour-0 baseline, with live and historical organ state both
@@ -374,6 +402,7 @@ To begin from an empty ledger, stop the server and delete `var/oslian_stream.sql
 | `/api/model/health` returns 503 `runtime_not_attached` | Fixture mode. Correct and intended; start with `-Mode release`. |
 | Release health is `degraded`, `ready: false` | A fail-closed check failed. Read `checks` and `reason`. |
 | `scikit_learn` is not `1.7.2` | The worker interpreter has a different version. Pass `-ReleasePythonPath` with a 1.7.2 overlay. |
+| Every request takes ~300 ms in the browser, even when idle | You opened `http://localhost:<port>`. The server binds IPv4 loopback only, so on Windows the browser tries `::1` first and pays the fallback on every request — measured at 314 ms median via `localhost` against 15 ms via `127.0.0.1`. Use the URL the launcher prints (`http://127.0.0.1:<port>`). Werkzeug's development server always closes the connection, so keep-alive cannot amortise it. |
 | The page looks stale after editing an ES module | Chrome caches modules per document. Open a new tab, or hard-reload. |
 | Backend edits have no effect | The server does not hot-reload. Stop it and start it again. |
 

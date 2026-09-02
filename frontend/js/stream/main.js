@@ -16,9 +16,36 @@ let booted = null;
 let raf = 0;
 const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+/* Two render paths, because they answer to different clocks.
+ *
+ * A person clicking a tab must see it immediately, so a user action renders on
+ * the next frame and nothing else. Stream events are a firehose - a 20x burst
+ * delivers faster than anyone can read - so they are floored at STREAM_RENDER_MS
+ * between full passes. Throttling here loses nothing: every event has already
+ * been folded into the store by the time the render runs, so the next pass draws
+ * the newest observations, organ states and forecast, just not once per event.
+ * A trailing pass is always scheduled, so the last event of a burst is drawn. */
+const STREAM_RENDER_MS = 120;
+let renderTimer = 0;
+let lastRenderAt = 0;
+
+function paint() {
+  raf = 0;
+  renderTimer = 0;
+  lastRenderAt = performance.now();
+  renderAll(anatomyBuilt);
+}
+
 function scheduleRender() {
   if (raf) return;
-  raf = requestAnimationFrame(() => { raf = 0; renderAll(anatomyBuilt); });
+  raf = requestAnimationFrame(paint);
+}
+
+function scheduleStreamRender() {
+  if (raf || renderTimer) return;
+  const wait = STREAM_RENDER_MS - (performance.now() - lastRenderAt);
+  if (wait <= 0) { scheduleRender(); return; }
+  renderTimer = setTimeout(() => { renderTimer = 0; scheduleRender(); }, wait);
 }
 
 async function loadSnapshot() {
@@ -101,7 +128,7 @@ function openChannel() {
     onEvent(type, data, sequence) {
       const hint = applyEvent(type, data, sequence);
       if (hint === 'reset' || hint === 'superseded') loadSnapshot().then(scheduleRender);
-      scheduleRender();
+      scheduleStreamRender();
     },
   });
 }
@@ -168,7 +195,7 @@ function showTip(target) {
   const unit = S.anatomy ? (S.anatomy.variable_units[S.metric] || '') : '';
   tip.innerHTML = d.kind === 'observed'
     ? `<b>${when}</b> · observed<br><span class="mono">${value} ${unit}</span> · ${d.resource} v${d.version}${d.received ? '<br>received ' + fmtReceived(d.received) : ''}<br><u>click for FHIR provenance</u>`
-    : `<b>${when}</b> · ${d.horizon}h ${d.status === 'persistence' ? 'persistence baseline' : 'model point'}<br><span class="mono">${value} ${unit}</span> · ${d.source}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
+    : `<b>${when}</b> · ${d.horizon}h ${d.status === 'persistence' ? 'last value carried forward · not a model prediction' : 'model forecast'}<br><span class="mono">${value} ${unit}</span> · ${d.source}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
   const r = target.getBoundingClientRect(), w = wrap.getBoundingClientRect();
   tip.hidden = false;
   const left = Math.min(Math.max(8, r.left - w.left + r.width / 2 - 110), w.width - 230);

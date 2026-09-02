@@ -63,10 +63,33 @@ class StreamUiContractTests(unittest.TestCase):
     def test_controls_speeds_and_transport(self):
         for act in ('data-act="start"', 'data-act="pause"', 'data-act="reset"', 'data-act="speed"', 'data-act="step"'):
             self.assertIn(act, STREAM_JS)
-        self.assertIn("[1, 5, 20]", STREAM_JS)
+        # The page must not decide which speeds exist: it renders what the
+        # source declares, so a real feed can declare none and get no selector.
+        self.assertNotIn("[1, 5, 20]", STREAM_JS, "speeds are hard-coded into the page again")
+        self.assertNotRegex(MODULES["render.js"], r"\b20\s*×|\b20x\b",
+                            "a bare 20x label is back in the main transport")
+        self.assertIn("src.playback", MODULES["render.js"])
+        self.assertIn("playback.speeds", MODULES["render.js"])
+        self.assertIn("playback.developer_speeds", MODULES["render.js"])
         self.assertNotIn("setInterval(() => fetch", STREAM_JS)          # no polling of the ledger
         self.assertIn("new EventSource(", STREAM_JS)
         self.assertIn("last_event_id=", STREAM_JS)
+
+    def test_the_stress_speed_is_a_developer_tool_not_a_demo_speed(self):
+        """20x stays available, but never as one of the speeds a reader is offered.
+
+        A speed here is a simulated arrival clock over a fixture. Presenting
+        1x / 5x / 20x side by side invited the reading that 20x is how fast a
+        hospital sends data, so the two demo speeds are named and the stress
+        speed sits behind a disclosure that says what it is for.
+        """
+        render = MODULES["render.js"]
+        self.assertIn('<details class="dev-tools"', render)
+        self.assertIn("Developer / QA", render)
+        self.assertIn('aria-label="Stress test speed"', render)
+        # the disclosure is a real one: default-closed unless it is the active speed
+        self.assertIn("devOptions.some((o) => speed === Number(o.value)) ? ' open' : ''", render)
+        self.assertIn(".dev-tools", STREAM_CSS)
 
     def test_three_level_navigation(self):
         for view in ("anatomy", "functions", "signals", "cells"):
@@ -83,10 +106,12 @@ class StreamUiContractTests(unittest.TestCase):
     def test_metric_chart_semantics(self):
         chart = MODULES["chart.js"]
         self.assertIn("no calibrated interval for this runtime cell", chart)
-        self.assertIn("no interval band is ever drawn", chart)
+        # the legend says it in plain language now; the invariant is unchanged
+        self.assertIn("POINT_ONLY_NOTE", chart)
+        self.assertIn("An interval band is never drawn", chart)
         self.assertNotIn("f.lower", chart)
         self.assertNotIn("f.upper", chart)
-        self.assertIn("persistence baseline", chart)
+        self.assertIn("carried forward", chart)
         self.assertIn('stroke-dasharray="5 4"', chart)         # model path is dashed
         self.assertIn('stroke-dasharray="1 4"', chart)         # persistence baseline is dotted
         self.assertIn("withheld", chart)
@@ -130,6 +155,38 @@ class StreamUiContractTests(unittest.TestCase):
         self.assertIn("never states that an organ or function is normal or abnormal", MODULES["render.js"])
         declarations = re.sub(r"/\*.*?\*/", "", STREAM_CSS, flags=re.S)
         self.assertNotRegex(declarations, r"#(?:e|f)[0-9a-f]0000|\bred\b|\bgreen\b", "no red/green status colours")
+
+    def test_stream_events_are_throttled_but_user_actions_are_not(self):
+        """A 20x burst must not repaint the page once per event.
+
+        Rendering is the browser's half of the same problem the backend had: at
+        20x the SSE channel delivers far faster than anyone can read, and a full
+        pass per event is what made tab switching feel stuck. Events go through a
+        floored path; a click goes straight to the next frame, because a person
+        waiting on their own action is exactly what must not be throttled.
+        """
+        main = MODULES["main.js"]
+        floor = re.search(r"const STREAM_RENDER_MS = (\d+)", main)
+        self.assertIsNotNone(floor, "the stream render floor is gone")
+        self.assertGreater(int(floor.group(1)), 0)
+
+        # the SSE handler must use the throttled path, and only that one
+        handler = re.search(r"onEvent\(type, data, sequence\) \{(.*?)\n    \},", main, re.S)
+        self.assertIsNotNone(handler)
+        body = handler.group(1)
+        self.assertIn("scheduleStreamRender()", body)
+        self.assertNotIn("scheduleRender();", body)
+
+        # user-driven changes keep the immediate path
+        for action in ("selectOrgan", "selectFunction", "async function control"):
+            block = main[main.index(action):main.index(action) + 400]
+            self.assertIn("scheduleRender()", block, action)
+
+        # the throttle must always leave a trailing pass, or the last event of a
+        # burst would never be drawn
+        throttle = re.search(r"function scheduleStreamRender\(\) \{(.*?)\n\}", main, re.S)
+        self.assertIsNotNone(throttle)
+        self.assertIn("setTimeout", throttle.group(1))
 
     def test_the_page_container_has_a_gutter_and_home_is_centred(self):
         """`.shell` wraps Home and Medication Safety and once had no rule at all,
