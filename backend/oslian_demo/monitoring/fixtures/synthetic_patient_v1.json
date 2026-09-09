@@ -1,6 +1,11 @@
 {
  "schema": "oslian.synthetic-fhir-stream.v1",
- "fixture_version": "synthetic_patient_v1",
+ "fixture_version": "synthetic_patient_v1.r2",
+ "revision": 2,
+ "revision_notes": [
+  "r1: the original stream (fixture_version synthetic_patient_v1).",
+  "r2: laboratory observations of the eight variables listed under reference_ranges.supplied carry Observation.referenceRange and a derived Observation.interpretation, and the bicarbonate drift ends at 21 mmol/L rather than 23; every such resource carries a meta.versionId higher than any version its id had in r1 (1 -> 2; the potassium at 12 h, whose id had used 1 and 2, goes 1 -> 3 with its amendment 2 -> 4) so no (id, version) ever names two contents. Unchanged resources keep their version."
+ ],
  "synthetic": true,
  "phi": false,
  "generated_by": "oslian_demo/monitoring/build_synthetic_fixture.py",
@@ -11,8 +16,204 @@
  "notes": [
   "All identifiers are synthetic (syn-*). No real patient data was used.",
   "Clinical timestamps are fixed inside each resource; arrival_offset_seconds is the demo delivery schedule at 1x.",
-  "Scenarios: duplicate_delivery, amended_v2, out_of_order, missing_ucum_unit, data_absent_reason, unmapped_code, entered_in_error_v2, fahrenheit_unit_conversion, mmol_unit_conversion, bp_panel_components, volume_over_period."
+  "Scenarios: duplicate_delivery, amended_v2, out_of_order, missing_ucum_unit, data_absent_reason, unmapped_code, entered_in_error_v2, fahrenheit_unit_conversion, mmol_unit_conversion, bp_panel_components, volume_over_period.",
+  "Laboratory observations carry Observation.referenceRange from the cited public reference in reference_ranges (see reference_ranges.supplied for source, URL, unit and applicability) and an Observation.interpretation that is derived_from_supplied_reference_range: arithmetic on that interval, never a laboratory or clinician reading. Variables listed under reference_ranges.not_supplied carry neither, on purpose."
  ],
+ "reference_ranges": {
+  "interpretation_provenance": "derived_from_supplied_reference_range",
+  "retrieval_date": "2026-09-08",
+  "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+  "supplied": [
+   {
+    "variable": "sodium",
+    "low": 135.0,
+    "high": 145.0,
+    "unit": "mmol/L",
+    "unit_code": "mmol/L",
+    "source_low": 135.0,
+    "source_high": 145.0,
+    "source_unit": "mEq/L",
+    "unit_note": "source states mEq/L; for a monovalent ion 1 mEq/L equals 1 mmol/L by definition (factor 1)",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood (serum)",
+    "source_title": "Sodium blood test",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003481.htm",
+    "source_review_date": "2025-11-06",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "potassium",
+    "low": 3.7,
+    "high": 5.2,
+    "unit": "mmol/L",
+    "unit_code": "mmol/L",
+    "source_low": 3.7,
+    "source_high": 5.2,
+    "source_unit": "mEq/L (3.70 to 5.20 mmol/L)",
+    "unit_note": "source states both mEq/L and mmol/L; same number",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood (serum)",
+    "source_title": "Potassium test",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003484.htm",
+    "source_review_date": "2025-05-19",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "chloride",
+    "low": 98.0,
+    "high": 107.0,
+    "unit": "mmol/L",
+    "unit_code": "mmol/L",
+    "source_low": 98.0,
+    "source_high": 107.0,
+    "source_unit": "mEq/L (98 to 107 mmol/L)",
+    "unit_note": "source states both mEq/L and mmol/L; same number",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood (serum)",
+    "source_title": "Chloride test - blood",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003485.htm",
+    "source_review_date": "2025-05-19",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "bicarbonate",
+    "low": 23.0,
+    "high": 29.0,
+    "unit": "mmol/L",
+    "unit_code": "mmol/L",
+    "source_low": 23.0,
+    "source_high": 29.0,
+    "source_unit": "mEq/L (23 to 29 mmol/L)",
+    "unit_note": "source states both mEq/L and mmol/L; same number. The source page describes the CO2 blood test, which measures bicarbonate; the observation is LOINC 1963-8 bicarbonate",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood (serum)",
+    "source_title": "CO2 blood test",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003469.htm",
+    "source_review_date": "2025-05-19",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "bun",
+    "low": 6.0,
+    "high": 20.0,
+    "unit": "mg/dL",
+    "unit_code": "mg/dL",
+    "source_low": 6.0,
+    "source_high": 20.0,
+    "source_unit": "mg/dL",
+    "unit_note": "same unit",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood (serum)",
+    "source_title": "BUN - blood test",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003474.htm",
+    "source_review_date": "2025-05-19",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "lactate",
+    "low": 0.5,
+    "high": 2.2,
+    "unit": "mmol/L",
+    "unit_code": "mmol/L",
+    "source_low": 0.5,
+    "source_high": 2.2,
+    "source_unit": "mmol/L (4.5 to 19.8 mg/dL)",
+    "unit_note": "source states both mg/dL and mmol/L; the mmol/L figure is used as stated",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood",
+    "source_title": "Lactic acid test",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003507.htm",
+    "source_review_date": "2025-05-19",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "wbc",
+    "low": 4.5,
+    "high": 11.0,
+    "unit": "10*3/uL",
+    "unit_code": "10*3/uL",
+    "source_low": 4.5,
+    "source_high": 11.0,
+    "source_unit": "×10⁹/L (4,500 to 11,000 per microliter)",
+    "unit_note": "source states ×10⁹/L (cells per microlitre ×10³); 10⁹/L equals 10³/µL by definition (factor 1)",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood",
+    "source_title": "WBC count",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003643.htm",
+    "source_review_date": "2025-02-03",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   },
+   {
+    "variable": "platelets",
+    "low": 150.0,
+    "high": 400.0,
+    "unit": "10*3/uL",
+    "unit_code": "10*3/uL",
+    "source_low": 150.0,
+    "source_high": 400.0,
+    "source_unit": "×10⁹/L (150,000 to 400,000 per microliter)",
+    "unit_note": "source states ×10⁹/L (cells per microlitre ×10³); 10⁹/L equals 10³/µL by definition (factor 1)",
+    "applicable_age": "adult (general adult interval as published; the synthetic patient is declared an adult inpatient and carries no date of birth)",
+    "applicable_sex": "not sex-specific in the source",
+    "context": "blood",
+    "source_title": "Platelet count",
+    "source_organization": "MedlinePlus Medical Encyclopedia (A.D.A.M.), U.S. National Library of Medicine, National Institutes of Health",
+    "source_url": "https://medlineplus.gov/ency/article/003647.htm",
+    "source_review_date": "2025-02-03",
+    "retrieval_date": "2026-09-08",
+    "applicability": "written into the synthetic fixture's Observation.referenceRange as the interval a report would print beside the value; used by the demo to say whether an observed value lies inside it; not a diagnostic or treatment threshold",
+    "origin": "external_reference_cited_by_demo_fixture",
+    "citable": true
+   }
+  ],
+  "not_supplied": {
+   "creatinine": "sex-specific in the source (0.7–1.3 mg/dL men, 0.5–0.95 mg/dL women; https://medlineplus.gov/ency/article/003475.htm, review date 2025-07-13); the synthetic patient carries no sex, so no interval applies",
+   "hemoglobin": "sex- and age-specific in the source (13.8–17.2 g/dL men, 12.1–15.1 g/dL women; https://medlineplus.gov/ency/article/003645.htm, review date 2026-02-27); no sex or age is carried",
+   "hematocrit": "sex- and age-specific in the source (37–48 % men, 34–43 % women; https://medlineplus.gov/ency/article/003646.htm, review date 2026-02-27); no sex or age is carried",
+   "glucose": "depends on sampling context in the source (fasting 70–99 mg/dL; a random result depends on the last meal; https://medlineplus.gov/ency/article/003482.htm, review date 2025-01-10); the synthetic observations carry no fasting context",
+   "heart_rate": "a vital sign; its interpretation is contextual and no laboratory reference interval is adopted",
+   "respiratory_rate": "a vital sign; its interpretation is contextual and no laboratory reference interval is adopted",
+   "o2sat": "a vital sign; its interpretation is contextual and no laboratory reference interval is adopted",
+   "temperature": "a vital sign; its interpretation is contextual and no laboratory reference interval is adopted",
+   "map": "a derived vital sign; its interpretation is contextual and no laboratory reference interval is adopted",
+   "urine_output": "a charted rate, not a laboratory analyte; no reference interval is adopted"
+  }
+ },
  "initial_bundle": {
   "resourceType": "Bundle",
   "id": "syn-bundle-0001",
@@ -81,7 +282,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-bicarbonate-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -118,7 +319,45 @@
       "unit": "mmol/L",
       "system": "http://unitsofmeasure.org",
       "code": "mmol/L"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 23.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "high": {
+        "value": 29.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "L",
+         "display": "Low"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -209,7 +448,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-bun-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -246,7 +485,45 @@
       "unit": "mg/dL",
       "system": "http://unitsofmeasure.org",
       "code": "mg/dL"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 6.0,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+       },
+       "high": {
+        "value": 20.0,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "H",
+         "display": "High"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -258,7 +535,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-chloride-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -295,7 +572,45 @@
       "unit": "mmol/L",
       "system": "http://unitsofmeasure.org",
       "code": "mmol/L"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 98.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "high": {
+        "value": 107.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "N",
+         "display": "Normal"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -552,7 +867,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-lactate-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -589,7 +904,45 @@
       "unit": "mmol/L",
       "system": "http://unitsofmeasure.org",
       "code": "mmol/L"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 0.5,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "high": {
+        "value": 2.2,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "H",
+         "display": "High"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -650,7 +1003,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-platelets-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -687,7 +1040,45 @@
       "unit": "10*3/uL",
       "system": "http://unitsofmeasure.org",
       "code": "10*3/uL"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 150.0,
+        "unit": "10*3/uL",
+        "system": "http://unitsofmeasure.org",
+        "code": "10*3/uL"
+       },
+       "high": {
+        "value": 400.0,
+        "unit": "10*3/uL",
+        "system": "http://unitsofmeasure.org",
+        "code": "10*3/uL"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "N",
+         "display": "Normal"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -699,7 +1090,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-potassium-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -736,7 +1127,45 @@
       "unit": "mmol/L",
       "system": "http://unitsofmeasure.org",
       "code": "mmol/L"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 3.7,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "high": {
+        "value": 5.2,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "N",
+         "display": "Normal"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -797,7 +1226,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-sodium-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -834,7 +1263,45 @@
       "unit": "mmol/L",
       "system": "http://unitsofmeasure.org",
       "code": "mmol/L"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 135.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "high": {
+        "value": 145.0,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "N",
+         "display": "Normal"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -895,7 +1362,7 @@
      "resourceType": "Observation",
      "id": "syn-obs-wbc-h00",
      "meta": {
-      "versionId": "1",
+      "versionId": "2",
       "lastUpdated": "2026-03-14T06:22:00Z"
      },
      "status": "final",
@@ -932,7 +1399,45 @@
       "unit": "10*3/uL",
       "system": "http://unitsofmeasure.org",
       "code": "10*3/uL"
-     }
+     },
+     "referenceRange": [
+      {
+       "low": {
+        "value": 4.5,
+        "unit": "10*3/uL",
+        "system": "http://unitsofmeasure.org",
+        "code": "10*3/uL"
+       },
+       "high": {
+        "value": 11.0,
+        "unit": "10*3/uL",
+        "system": "http://unitsofmeasure.org",
+        "code": "10*3/uL"
+       },
+       "type": {
+        "coding": [
+         {
+          "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+          "code": "normal",
+          "display": "Normal Range"
+         }
+        ]
+       },
+       "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+      }
+     ],
+     "interpretation": [
+      {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+         "code": "H",
+         "display": "High"
+        }
+       ],
+       "text": "derived_from_supplied_reference_range"
+      }
+     ]
     },
     "search": {
      "mode": "include"
@@ -1560,7 +2065,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bicarbonate-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -1597,7 +2102,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 23.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 29.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "L",
+        "display": "Low"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 13
   },
@@ -1608,7 +2151,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bun-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -1645,7 +2188,45 @@
      "unit": "mg/dL",
      "system": "http://unitsofmeasure.org",
      "code": "mg/dL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 6.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "high": {
+       "value": 20.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 14
   },
@@ -1656,7 +2237,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-chloride-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -1693,7 +2274,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 98.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 107.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 15
   },
@@ -1944,7 +2563,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-lactate-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -1981,7 +2600,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 0.5,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 2.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 21
   },
@@ -2088,7 +2745,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-platelets-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -2125,7 +2782,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 150.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 400.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 24
   },
@@ -2136,7 +2831,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -2173,7 +2868,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 25
   },
@@ -2232,7 +2965,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-sodium-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -2269,7 +3002,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 135.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 145.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 27
   },
@@ -2331,7 +3102,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-wbc-h06",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T12:22:00Z"
     },
     "status": "final",
@@ -2368,7 +3139,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 4.5,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 11.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 29
   },
@@ -2991,7 +3800,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bicarbonate-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3024,11 +3833,49 @@
     "effectiveDateTime": "2026-03-14T18:00:00Z",
     "issued": "2026-03-14T18:22:00Z",
     "valueQuantity": {
-     "value": 20.0,
+     "value": 19.0,
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 23.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 29.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "L",
+        "display": "Low"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 42
   },
@@ -3117,7 +3964,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bun-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3154,7 +4001,45 @@
      "unit": "mg/dL",
      "system": "http://unitsofmeasure.org",
      "code": "mg/dL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 6.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "high": {
+       "value": 20.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 44
   },
@@ -3165,7 +4050,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-chloride-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3202,7 +4087,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 98.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 107.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 45
   },
@@ -3453,7 +4376,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-lactate-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3490,7 +4413,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 0.5,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 2.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 51
   },
@@ -3549,7 +4510,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-platelets-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3586,7 +4547,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 150.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 400.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 53
   },
@@ -3597,7 +4596,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "3",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3634,7 +4633,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 54
   },
@@ -3693,7 +4730,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-sodium-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3730,7 +4767,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 135.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 145.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 56
   },
@@ -3840,7 +4915,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-wbc-h12",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-14T18:22:00Z"
     },
     "status": "final",
@@ -3877,7 +4952,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 4.5,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 11.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 59
   },
@@ -3935,7 +5048,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h12",
     "meta": {
-     "versionId": "2",
+     "versionId": "4",
      "lastUpdated": "2026-03-14T19:35:00Z"
     },
     "status": "amended",
@@ -3972,7 +5085,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "arrival_offset_seconds": 246.9,
    "source_sequence": 61
@@ -4500,7 +5651,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bicarbonate-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -4533,11 +5684,49 @@
     "effectiveDateTime": "2026-03-15T00:00:00Z",
     "issued": "2026-03-15T00:22:00Z",
     "valueQuantity": {
-     "value": 22.0,
+     "value": 21.0,
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 23.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 29.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "L",
+        "display": "Low"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 72
   },
@@ -4548,7 +5737,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bun-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -4585,7 +5774,45 @@
      "unit": "mg/dL",
      "system": "http://unitsofmeasure.org",
      "code": "mg/dL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 6.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "high": {
+       "value": 20.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 73
   },
@@ -4596,7 +5823,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-chloride-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -4633,7 +5860,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 98.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 107.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 74
   },
@@ -4980,7 +6245,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-platelets-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -5017,7 +6282,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 150.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 400.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 82
   },
@@ -5028,7 +6331,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -5065,7 +6368,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 83
   },
@@ -5124,7 +6465,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-sodium-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -5161,7 +6502,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 135.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 145.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 85
   },
@@ -5223,7 +6602,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-wbc-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:22:00Z"
     },
     "status": "final",
@@ -5260,7 +6639,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 4.5,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 11.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 87
   },
@@ -5493,7 +6910,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-lactate-h18",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T00:35:00Z"
     },
     "status": "final",
@@ -5530,7 +6947,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 0.5,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 2.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 92
   },
@@ -5883,7 +7338,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bicarbonate-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -5916,11 +7371,49 @@
     "effectiveDateTime": "2026-03-15T06:00:00Z",
     "issued": "2026-03-15T06:22:00Z",
     "valueQuantity": {
-     "value": 21.0,
+     "value": 20.0,
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 23.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 29.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "L",
+        "display": "Low"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 100
   },
@@ -6009,7 +7502,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bun-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6046,7 +7539,45 @@
      "unit": "mg/dL",
      "system": "http://unitsofmeasure.org",
      "code": "mg/dL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 6.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "high": {
+       "value": 20.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 102
   },
@@ -6057,7 +7588,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-chloride-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6094,7 +7625,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 98.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 107.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 103
   },
@@ -6343,7 +7912,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-lactate-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6380,7 +7949,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 0.5,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 2.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 109
   },
@@ -6439,7 +8046,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-platelets-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6476,7 +8083,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 150.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 400.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 111
   },
@@ -6487,7 +8132,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6524,7 +8169,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 112
   },
@@ -6583,7 +8266,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-sodium-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6620,7 +8303,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 135.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 145.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 114
   },
@@ -6730,7 +8451,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-wbc-h24",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T06:22:00Z"
     },
     "status": "final",
@@ -6767,7 +8488,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 4.5,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 11.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 117
   },
@@ -7432,7 +9191,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bicarbonate-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -7465,11 +9224,49 @@
     "effectiveDateTime": "2026-03-15T12:00:00Z",
     "issued": "2026-03-15T12:22:00Z",
     "valueQuantity": {
-     "value": 23.0,
+     "value": 21.0,
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 23.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 29.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "23–29 mEq/L (23 to 29 mmol/L) · CO2 blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "L",
+        "display": "Low"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 131
   },
@@ -7480,7 +9277,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-bun-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -7517,7 +9314,45 @@
      "unit": "mg/dL",
      "system": "http://unitsofmeasure.org",
      "code": "mg/dL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 6.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "high": {
+       "value": 20.0,
+       "unit": "mg/dL",
+       "system": "http://unitsofmeasure.org",
+       "code": "mg/dL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "6–20 mg/dL · BUN - blood test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 132
   },
@@ -7528,7 +9363,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-chloride-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -7565,7 +9400,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 98.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 107.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "98–107 mEq/L (98 to 107 mmol/L) · Chloride test - blood, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 133
   },
@@ -7819,7 +9692,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-lactate-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -7856,7 +9729,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 0.5,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 2.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "0.5–2.2 mmol/L (4.5 to 19.8 mg/dL) · Lactic acid test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 139
   },
@@ -7963,7 +9874,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-platelets-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -8000,7 +9911,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 150.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 400.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "150–400 ×10⁹/L (150,000 to 400,000 per microliter) · Platelet count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 142
   },
@@ -8011,7 +9960,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-potassium-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -8048,7 +9997,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.7,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 5.2,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "3.7–5.2 mEq/L (3.70 to 5.20 mmol/L) · Potassium test, MedlinePlus Medical Encyclopedia · review date 2025-05-19 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 143
   },
@@ -8107,7 +10094,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-sodium-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -8144,7 +10131,45 @@
      "unit": "mmol/L",
      "system": "http://unitsofmeasure.org",
      "code": "mmol/L"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 135.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "high": {
+       "value": 145.0,
+       "unit": "mmol/L",
+       "system": "http://unitsofmeasure.org",
+       "code": "mmol/L"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "135–145 mEq/L · Sodium blood test, MedlinePlus Medical Encyclopedia · review date 2025-11-06 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "N",
+        "display": "Normal"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 145
   },
@@ -8206,7 +10231,7 @@
     "resourceType": "Observation",
     "id": "syn-obs-wbc-h30",
     "meta": {
-     "versionId": "1",
+     "versionId": "2",
      "lastUpdated": "2026-03-15T12:22:00Z"
     },
     "status": "final",
@@ -8243,7 +10268,45 @@
      "unit": "10*3/uL",
      "system": "http://unitsofmeasure.org",
      "code": "10*3/uL"
-    }
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 4.5,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "high": {
+       "value": 11.0,
+       "unit": "10*3/uL",
+       "system": "http://unitsofmeasure.org",
+       "code": "10*3/uL"
+      },
+      "type": {
+       "coding": [
+        {
+         "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+         "code": "normal",
+         "display": "Normal Range"
+        }
+       ]
+      },
+      "text": "4.5–11 ×10⁹/L (4,500 to 11,000 per microliter) · WBC count, MedlinePlus Medical Encyclopedia · review date 2025-02-03 · demo fixture reference, not a clinical threshold"
+     }
+    ],
+    "interpretation": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "code": "H",
+        "display": "High"
+       }
+      ],
+      "text": "derived_from_supplied_reference_range"
+     }
+    ]
    },
    "source_sequence": 147
   }

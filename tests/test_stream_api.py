@@ -121,7 +121,7 @@ class StreamApiTests(unittest.TestCase):
         self.assertEqual(old["anchor"], "historical")
         timeline = self.client.get(f"/api/patients/{pid}/timeline?run_id={old_run}").get_json()
         self.assertTrue(all(pt["effective_time"] <= timeline["cutoff"] for s in timeline["series"].values() for pt in s))
-        raw = self.client.get("/api/fhir/Observation/syn-obs-potassium-h12/_history/2").get_json()
+        raw = self.client.get("/api/fhir/Observation/syn-obs-potassium-h12/_history/4").get_json()
         self.assertEqual(raw["resource"]["status"], "amended")
         self.assertEqual(self.client.get("/api/fhir/Observation/nope/_history/1").status_code, 404)
 

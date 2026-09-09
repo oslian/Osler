@@ -161,6 +161,20 @@ CREATE TABLE IF NOT EXISTS forecast_cells (
 """
 
 
+class ResourceVersionConflict(RuntimeError):
+    """One resource identity and version already holds different content.
+
+    Carries what a diagnosis needs and nothing a patient would mind: the source
+    system, the resource type, the resource id and the version id. Never the payload.
+    """
+
+    def __init__(self, source_system: str, resource_type: str, resource_id: str, version_id: str):
+        self.source_system, self.resource_type = source_system, resource_type
+        self.resource_id, self.version_id = resource_id, version_id
+        super().__init__(f"resource version conflict: {resource_type}/{resource_id} version {version_id} "
+                         f"from {source_system} is already in the ledger with different content; not imported")
+
+
 @dataclass(frozen=True)
 class RawInsert:
     raw_id: int
@@ -241,22 +255,42 @@ class Repository:
     def insert_raw(self, *, source_system: str, resource_type: str, resource_id: str, version_id: str,
                    patient_id: str | None, source_last_updated: str | None, received_at: str,
                    event_id: str | None, resource: dict, validation_status: str) -> RawInsert:
+        """Append a raw resource, once per (source system, type, id, version).
+
+        The same identity delivered again with the same content is the idempotent
+        case and returns the row already there. The same identity with different
+        content is a resource version conflict and is refused: the ledger would
+        otherwise answer one version id with two contents, and a stream that
+        replays it would mix the old copy with the new one. Content is compared
+        as canonical JSON (sorted keys), which is exactly what is stored.
+        """
+        canonical = json.dumps(resource, sort_keys=True)
         with self._lock:
             existing = self._one(
-                "SELECT raw_id FROM raw_fhir_resources WHERE source_system=? AND resource_type=? "
+                "SELECT raw_id, resource_json FROM raw_fhir_resources WHERE source_system=? AND resource_type=? "
                 "AND resource_id=? AND version_id=?",
                 (source_system, resource_type, resource_id, version_id),
             )
             if existing:
+                if existing["resource_json"] != canonical:
+                    raise ResourceVersionConflict(source_system, resource_type, resource_id, version_id)
                 return RawInsert(int(existing["raw_id"]), False)
             cursor = self._exec(
                 "INSERT INTO raw_fhir_resources(source_system, resource_type, resource_id, version_id, patient_id, "
                 "source_last_updated, first_received_at, first_event_id, resource_json, validation_status) "
                 "VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (source_system, resource_type, resource_id, version_id, patient_id, source_last_updated,
-                 received_at, event_id, json.dumps(resource, sort_keys=True), validation_status),
+                 received_at, event_id, canonical, validation_status),
             )
             return RawInsert(int(cursor.lastrowid), True)
+
+    def delivered_versions(self, session_id: str, epoch: int, resource_type: str, resource_id: str) -> list[str]:
+        """Every version of one resource this session has delivered in this epoch, oldest first."""
+        rows = self._rows(
+            "SELECT r.version_id FROM session_deliveries d JOIN raw_fhir_resources r ON r.raw_id=d.raw_id "
+            "WHERE d.session_id=? AND d.epoch=? AND r.resource_type=? AND r.resource_id=? ORDER BY d.source_sequence",
+            (session_id, epoch, resource_type, resource_id))
+        return [str(r["version_id"]) for r in rows]
 
     def raw(self, raw_id: int) -> dict | None:
         row = self._one("SELECT * FROM raw_fhir_resources WHERE raw_id=?", (raw_id,))

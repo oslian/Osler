@@ -22,6 +22,10 @@ Cell contract (every mode)::
     missing | degraded), fallback_reason, interval_status, lower, upper (null
     unless an exact patient-specific conformal artifact exists — none does),
     causal_claim_allowed (always false)
+
+``status`` is decided per prediction, not per cell. ``can_move`` is the catalog's
+statement that a cell *has* a head; it is not that head's statement that it moved
+this time. See ``head_abstained``.
 """
 
 from __future__ import annotations
@@ -43,6 +47,8 @@ from .timeline import ModelInput
 MODE_FIXTURE = "fixture"
 MODE_RELEASE = "release"
 PERSISTENCE_SOURCE = "patient_persistence_anchor"
+SHARED_HEAD_SOURCE = "unified_shared_jepa_target_head"
+ABSTENTION_REASON = "shared_jepa_head_abstained"
 STATUS_MODEL, STATUS_PERSISTENCE, STATUS_MISSING, STATUS_DEGRADED = "model", "persistence", "missing", "degraded"
 INTERVAL_STATUS_NONE = "no_patient_specific_conformal_artifact"
 # User decision (2026-09-01): the 2026-08-22 release may produce real outputs in an explicit demo
@@ -105,6 +111,27 @@ def load_contract_fixture(path: Path = CONTRACT_FIXTURE) -> dict[str, Any]:
     return document
 
 
+def head_abstained(source: str, point: Any, observed: Any) -> bool:
+    """True when a shared head declined to move and emitted the anchor value.
+
+    The release zeroes any normalized delta below the head's
+    ``normalized_abstention_threshold`` and then returns ``current + 0``, so the
+    forecast is bit-identical to the observation while the release still reports
+    ``can_move: true`` and the head's own ``source_model``. Reading ``can_move``
+    alone therefore badges a copied lab value as a model prediction. Measured on
+    the eICU and MIMIC-IV demo sets (2026-09-02), that is 54-71% of
+    ``chloride@12h`` rows and 39-53% of ``sodium@24h`` rows.
+
+    Only the shared-head path carries that threshold. The frozen backbone can
+    equal the observation by coincidence — a binary ``hypoxemia_event`` forecast
+    of 0.0 on an observed 0.0 is a real prediction — so the source is part of the
+    test and not just the equality.
+    """
+    if source != SHARED_HEAD_SOURCE or point is None or observed is None:
+        return False
+    return abs(float(point) - float(observed)) < 1e-9
+
+
 def normalize_release_cells(release_cells: list[dict[str, Any]], state: dict[str, dict[str, Any]],
                             catalog: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Map raw release cells onto the Oslian cell contract.
@@ -122,10 +149,13 @@ def normalize_release_cells(release_cells: list[dict[str, Any]], state: dict[str
         observed = state.get(state_variable)
         point = raw.get("forecast_point")
         source = str(raw.get("source_model") or "unknown")
+        fallback_reason = raw.get("fallback_reason")
         if point is None:
             status = STATUS_MISSING
         elif source == PERSISTENCE_SOURCE:
             status = STATUS_PERSISTENCE
+        elif head_abstained(source, point, raw.get("observed_value")):
+            status, fallback_reason = STATUS_PERSISTENCE, ABSTENTION_REASON
         elif raw.get("can_move"):
             status = STATUS_MODEL
         else:
@@ -143,7 +173,7 @@ def normalize_release_cells(release_cells: list[dict[str, Any]], state: dict[str
             "forecast_point": float(point) if point is not None else None,
             "source_model": source,
             "status": status,
-            "fallback_reason": raw.get("fallback_reason"),
+            "fallback_reason": fallback_reason,
             "interval_status": str(raw.get("interval_status") or INTERVAL_STATUS_NONE),
             "lower": None,
             "upper": None,

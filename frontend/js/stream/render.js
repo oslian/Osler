@@ -5,11 +5,16 @@
  * ledger row or a persisted run. */
 
 import { S, catalogCellsForVariable, cellsForVariable, clinicalNow, currentCells, currentRun, currentSeries,
-  currentOrganEvents, currentVariables, onsetMs, organWithoutAsset, sourceInfo, timeAxis,
+  currentOrganEvents, currentVariables, indicatorRows, observationAttention, onsetMs, organAttentionMap,
+  organWithoutAsset, organsByAttention, sourceInfo, timeAxis, trajectoryFor, variablesByAttention,
   workspaceFor } from './store.js';
-import { bigChart, chartLegend, makeTimeFormatter, sparkline } from './chart.js';
-import { esc, fmtNum, FORECAST_LABEL, FORECAST_NOTE, NO_FORECAST_MODEL, OBSERVED_HISTORY,
-  POINT_ONLY_NOTE, UPDATING_FORECAST } from './format.js';
+import { chartLegend, makeTimeFormatter, sparkline, trajectoryChart } from './chart.js';
+import { renderWardRail, renderWardWorkspace } from './ward.js';
+import { renderDataView } from './signals.js';
+import { mountReportAnatomy, renderReport } from './report.js';
+import { esc, fmtNum, DATA_VIEW, FLAG, FORECAST_LABEL, NO_FORECAST_MODEL, OBSERVED_HISTORY,
+  POINT_ONLY_NOTE, PROJECTED, RANGE, STATUS_MARK, TRAJECTORY, UPDATING_FORECAST, flagOf, forecastLabel,
+  forecastNote, isAbstained, unavailableReason } from './format.js';
 
 const el = (id) => document.getElementById(id);
 const LABELS = {
@@ -41,12 +46,15 @@ function ageHours(effective, now) {
   if (!effective || !now) return null;
   return (new Date(now).getTime() - new Date(effective).getTime()) / 3600000;
 }
-function fmtAge(h) {
+export function fmtAge(h) {
   if (h === null || h === undefined) return '—';
   if (h < 1) return `${Math.round(h * 60)} min`;
   return `${h.toFixed(1)} h`;
 }
 const statusChip = (status) => `<span class="status ${esc(status)}"><i></i>${esc(STATUS_WORDS[status] || status)}</span>`;
+/** A cell's badge, read from its status and its reason: a shared head that abstained
+ *  is "carried forward — model abstained", styled as every other baseline, never as a model. */
+export const cellChip = (c) => `<span class="status ${esc(c.status)}"${isAbstained(c) ? ' data-abstained="true"' : ''}><i></i>${esc(forecastLabel(c))}</span>`;
 const unitOf = (v) => (S.anatomy && S.anatomy.variable_units[v]) || '';
 const isRetro = () => sourceInfo().mode === 'retrospective';
 
@@ -157,9 +165,11 @@ export function renderAnchorBand() {
   if (!S.anchor) { host.hidden = true; host.innerHTML = ''; return; }
   const run = S.anchor.run;
   host.hidden = false;
-  host.innerHTML = `<span class="eyebrow">Historical anchor · not the live head</span>
-    <span>Run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · epoch ${esc(run.epoch)} · input cutoff <span class="mono">${esc(fmtClinical(run.input_cutoff))}</span> · ${esc(run.input_resource_count)} resources · ${esc(run.runtime_mode)}</span>
-    <span>Signals, charts and cells are frozen at this cutoff. New stream data does not change them.</span>
+  // A historical snapshot is one run's frozen inputs and cells. The stream keeps
+  // flowing into the live state underneath; nothing here follows it.
+  host.innerHTML = `<div class="anchor-main"><span class="eyebrow">${TRAJECTORY.snapshot}</span>
+    <span class="anchor-line">Frozen at <span class="mono">${esc(fmtClinical(run.input_cutoff))}</span> · Later observations are not included</span>
+    <span class="anchor-detail">Historical anchor · not the live head · run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · epoch ${esc(run.epoch)} · ${esc(run.input_resource_count)} resources · ${esc(run.runtime_mode)} · signals, charts and cells are frozen at this cutoff</span></div>
     <button class="btn sm" type="button" data-act="anchor-live">Return to live head</button>`;
 }
 
@@ -167,11 +177,17 @@ export function renderViewBar() {
   const host = el('viewBar');
   if (!host) return;
   const modes = S.sources.length ? S.sources : [{ source_key: 'synthetic', label: 'Live synthetic stream' }, { source_key: 'retrospective', label: 'Retrospective replay' }];
-  const views = [['anatomy', 'Anatomy'], ['functions', 'Functions'], ['signals', 'All signals'], ['cells', 'All forecast cells']];
+  const views = [['anatomy', 'Anatomy'], ['functions', 'Functions'], ['data', DATA_VIEW.title], ['ward', 'Ward order']];
+  // A ward stay is its own source key (`retrospective:<case id>`). The bar names it,
+  // so a reader can see whose data every view below is showing.
+  const src = sourceInfo();
+  const stay = String(S.mode).includes(':')
+    ? `<button type="button" data-act="mode" data-mode="${esc(S.mode)}" data-stay="${esc(src.case_id || '')}" aria-pressed="true">Ward stay · ${esc(src.display_name || String(S.mode).split(':')[1])}</button>`
+    : '';
   host.innerHTML = `
-    <div class="segmented sans" role="group" aria-label="Data mode">${modes.map((m) => `<button type="button" data-act="mode" data-mode="${esc(m.source_key)}" aria-pressed="${S.mode === m.source_key}">${esc(m.label)}</button>`).join('')}</div>
+    <div class="segmented sans" role="group" aria-label="Data mode">${modes.map((m) => `<button type="button" data-act="mode" data-mode="${esc(m.source_key)}" aria-pressed="${S.mode === m.source_key}">${esc(m.label)}</button>`).join('')}${stay}</div>
     <div class="segmented sans" role="group" aria-label="View">${views.map(([k, l]) => `<button type="button" data-act="view" data-view="${k}" aria-pressed="${S.view === k}">${l}</button>`).join('')}</div>
-    <span class="meta">${S.anchor ? 'historical anchor' : 'live head'} · epoch ${esc((S.session || {}).epoch ?? '—')}${isRetro() ? ' · same timeline, chart and runtime contract as the live stream' : ''}</span>
+    <span class="meta">${S.anchor ? 'historical snapshot' : 'live head'} · epoch ${esc((S.session || {}).epoch ?? '—')}${isRetro() ? ' · same timeline, chart and runtime contract as the live stream' : ''}</span>
     <button class="disc right" type="button" data-act="toggle-lower" aria-expanded="${S.lowerOpen ? 'true' : 'false'}">History &amp; events ${S.lowerOpen ? '⌃' : '⌄'}</button>`;
 }
 
@@ -190,9 +206,10 @@ export function organSummary() {
   if (!S.anatomy) return byOrgan;
   const vars = currentVariables();
   const cells = currentCells();
+  const attention = organAttentionMap();
   S.anatomy.organs.forEach((o) => {
     const organCells = o.variables.flatMap((v) => cellsForVariable(v, cells));
-    byOrgan[o.id] = { label: o.label, signals: o.variables.filter((v) => vars[v]).length, mapped: o.variables.length,
+    byOrgan[o.id] = { label: o.label, attention: attention[o.id], signals: o.variables.filter((v) => vars[v]).length, mapped: o.variables.length,
       cells: o.cells.length, modelCells: organCells.filter((c) => c.status === 'model').length,
       boundaryCells: organCells.filter((c) => c.status !== 'model').length,
       fresh: freshOrgan(o.id), noAsset: organWithoutAsset(o.id) };
@@ -214,18 +231,36 @@ export function renderRail() {
   const head = el('railHead');
   if (!main || !list) return;
   main.setAttribute('data-view', S.view);
+  main.classList.toggle('report-open', !!S.report);
   main.classList.toggle('metric-open', !!S.metric);
   main.classList.toggle('frozen', !!S.anchor);
   main.classList.toggle('paused', !!(S.session && S.session.status !== 'running'));
+  if (S.report) { head.innerHTML = ''; list.innerHTML = ''; return; }
   if (S.view === 'anatomy') {
     const summary = organSummary();
-    head.innerHTML = `<h2 class="h-sec">Anatomy</h2><span class="meta">${S.metric ? esc(summary[S.selectedOrgan] ? summary[S.selectedOrgan].label : '') : 'anatomical organs only · teal = new data just arrived'}</span>`;
-    list.innerHTML = S.anatomy ? S.anatomy.organs.map((o) => {
+    const rows = indicatorRows();
+    const ordered = organsByAttention(rows);
+    const needing = ordered.filter((o) => o.attention.abnormal).length;
+    head.innerHTML = `<h2 class="h-sec">Anatomy</h2><span class="meta">${S.metric ? esc(summary[S.selectedOrgan] ? summary[S.selectedOrgan].label : '')
+      : (needing ? `${needing} organ${needing === 1 ? '' : 's'} with a result outside its supplied range, first` : 'anatomical organs only · no result is outside a supplied range')}</span>`;
+    list.innerHTML = ordered.map(({ organ: o, attention: a }) => {
       const s = summary[o.id];
-      const cellsText = s.cells ? `${s.cells} cell${s.cells === 1 ? '' : 's'}` : 'no runtime cell';
       const noArt = s.noAsset ? ' <span class="noart" title="no detailed vector asset exists for this organ; its events are still recorded">no visual asset</span>' : '';
-      return `<li><button type="button" data-act="select-organ" data-organ="${esc(o.id)}" aria-pressed="${S.selectedOrgan === o.id}" class="${s.signals ? 'has' : 'dim'}"><i></i><span class="t">${esc(o.label)}${s.fresh ? ' <span class="new">● new</span>' : ''}${noArt}</span><span class="n">${s.signals}/${s.mapped} signal${s.mapped === 1 ? '' : 's'} · ${esc(cellsText)}</span></button></li>`;
-    }).join('') : '';
+      // what put this organ at the top, in the indicator list's own words
+      const names = (ids) => ids.map((v) => label(v)).join(' · ');
+      const why = a.abnormal
+        ? `<span class="why">${names(a.above.map((v) => v))}${a.above.length ? ' high' : ''}${a.above.length && a.below.length ? ' · ' : ''}${names(a.below)}${a.below.length ? ' low' : ''}</span>`
+        : a.projected ? `<span class="why">${names(a.projectedIds)} projected outside</span>`
+          : '';
+      const line = a.abnormal
+        ? `<span class="n attn">${a.abnormal} observed result${a.abnormal === 1 ? '' : 's'} outside range</span>`
+        : a.projected ? `<span class="n proj">${a.projected} projected outside range</span>`
+          : `<span class="n">${s.signals}/${s.mapped} signal${s.mapped === 1 ? '' : 's'}</span>`;
+      return `<li><button type="button" data-act="select-organ" data-organ="${esc(o.id)}" aria-pressed="${S.selectedOrgan === o.id}"
+        class="organ-row ${s.signals ? 'has' : 'dim'}" data-attention="${esc(a.state)}"><i></i>
+        <span class="t">${esc(o.label)}${a.abnormal ? '<b class="needs">Needs attention</b>' : ''}${!a.abnormal && a.fresh ? ' <span class="new">● new</span>' : ''}${noArt}</span>
+        ${line}${why}</button></li>`;
+    }).join('');
   } else if (S.view === 'functions') {
     head.innerHTML = `<h2 class="h-sec">Clinical functions</h2><span class="meta">${S.metric ? '' : '11 modules from the release checkpoint · demo-approved primary/related split v1'}</span>`;
     list.innerHTML = S.functions ? S.functions.groups.map((g) => {
@@ -233,6 +268,8 @@ export function renderRail() {
       const pct = s.mapped ? Math.round((s.observed / s.mapped) * 100) : 0;
       return `<li><button type="button" data-act="select-function" data-function="${esc(g.id)}" aria-pressed="${S.selectedFunction === g.id}" class="fn ${s.observed ? 'has' : 'dim'}"><span class="t">${esc(g.label)}${s.fresh ? ' <span class="new">● new</span>' : ''}</span><span class="n">${s.observed}/${s.mapped} · ${s.cells ? s.cells + ' cells' : 'no cell'}</span><span class="bar"><i style="width:${pct}%"></i></span></button></li>`;
     }).join('') : '';
+  } else if (S.view === 'ward') {
+    renderWardRail(head, list);
   } else {
     head.innerHTML = '';
     list.innerHTML = '';
@@ -244,6 +281,7 @@ function signalTile(v, opts = {}) {
   const vars = currentVariables();
   const state = vars[v];
   const unit = unitOf(v);
+  const row = (opts.rows || []).find((r) => r.variable === v) || null;
   const cells = catalogCellsForVariable(v);
   const liveCells = cellsForVariable(v, currentCells());
   const horizons = cells.map((c) => c.horizon_hours).sort((a, b) => a - b);
@@ -263,10 +301,19 @@ function signalTile(v, opts = {}) {
   const stale = age !== null && age > maxAge;
   const fresh = (S.freshVariables[v] || 0) > Date.now() - 900 && !S.anchor;
   const series = currentSeries()[v] || [];
-  return `<button type="button" class="tile${fresh ? ' fresh' : ''}${opts.compact ? ' compact' : ''}" data-act="open-metric" data-variable="${esc(v)}" aria-label="Open ${esc(label(v))} chart">
+  // the same flag, the same words and the same deep red as the indicator list
+  const key = row ? flagOf(row) : 'unsupplied';
+  const flag = FLAG[key];
+  const abnormal = !!row && row.attention.kind === 'outside';
+  const projected = !!row && !abnormal && row.forecasts.some((f) => f.projected);
+  const flagLine = `<div class="tile-flag flag-${key}"><i class="mk" aria-hidden="true">${flag.mark}</i>${flag.text}`
+    + `${row && row.range ? ` <span class="why">${esc(fmtNum(row.range.low))}–${esc(fmtNum(row.range.high))} ${esc(row.range.unit)}</span>` : ''}</div>`
+    + (projected ? `<div class="tile-proj"><i class="mk" aria-hidden="true">${PROJECTED[row.projectedSide].mark}</i>${PROJECTED[row.projectedSide].text}</div>` : '');
+  return `<button type="button" class="tile${fresh ? ' fresh' : ''}${opts.compact ? ' compact' : ''}${abnormal ? ' abnormal' : ''}${projected ? ' projected' : ''}" data-act="open-metric" data-variable="${esc(v)}" aria-label="Open ${esc(label(v))} chart, ${esc(flag.full)}">
     ${fresh ? '<span class="newv">● new value</span>' : ''}
     <div class="t">${esc(label(v))}</div>
     <div class="v">${esc(fmtNum(state.value))}<small>${esc(state.unit)}</small></div>
+    ${flagLine}
     <div class="d">${esc(fmtClinical(state.effective_time))} · age <span class="${stale ? 'stale' : ''}">${esc(fmtAge(age))}${stale ? ' · beyond ' + maxAge + ' h forward-fill' : ''}</span> · ${esc(state.count)} obs</div>
     <div class="spark-label">${OBSERVED_HISTORY}</div>
     ${sparkline(series.map((p) => ({ value: p.value })), 240, 44)}
@@ -274,7 +321,8 @@ function signalTile(v, opts = {}) {
     <span class="open">Open chart →</span>
   </button>`;
 }
-function signalRow(v) {
+function signalRow(v, rows) {
+  const row = (rows || []).find((r) => r.variable === v) || null;
   const state = currentVariables()[v];
   const unit = unitOf(v);
   const cells = catalogCellsForVariable(v);
@@ -286,8 +334,10 @@ function signalRow(v) {
   }
   const age = ageHours(state.effective_time, clinicalNow());
   const fresh = (S.freshVariables[v] || 0) > Date.now() - 900 && !S.anchor;
-  return `<button type="button" class="row${fresh ? ' fresh' : ''}" data-act="open-metric" data-variable="${esc(v)}" aria-label="Open ${esc(label(v))} chart">
-    <div><div class="t">${esc(label(v))}</div><div class="d">${esc(fmtClinical(state.effective_time))} · age ${esc(fmtAge(age))} · ${esc(state.count)} obs</div></div>
+  const key = row ? flagOf(row) : 'unsupplied';
+  const abnormal = !!row && row.attention.kind === 'outside';
+  return `<button type="button" class="row${fresh ? ' fresh' : ''}${abnormal ? ' abnormal' : ''}" data-act="open-metric" data-variable="${esc(v)}" aria-label="Open ${esc(label(v))} chart, ${esc(FLAG[key].full)}">
+    <div><div class="t">${esc(label(v))}</div><div class="d"><span class="flag flag-${key}"><i class="mk" aria-hidden="true">${FLAG[key].mark}</i>${FLAG[key].text}</span> · ${esc(fmtClinical(state.effective_time))} · age ${esc(fmtAge(age))}</div></div>
     ${sparkline((currentSeries()[v] || []).map((p) => ({ value: p.value })), 96, 24)}
     <div class="v">${esc(fmtNum(state.value))}<small> ${esc(state.unit)}</small></div>
     <div class="fc">${esc(horizons)}</div>
@@ -310,11 +360,13 @@ function evidenceTable(variables, title) {
 export function renderWorkspace() {
   const host = el('workspace');
   if (!host) return;
+  if (S.report) { renderReport(host); mountReportAnatomy(); return; }
   if (S.metric) { renderMetric(host); return; }
-  if (S.view === 'signals') { renderSignals(host); return; }
-  if (S.view === 'cells') { renderAllCells(host); return; }
+  if (S.view === 'data') { renderDataView(host); return; }
+  if (S.view === 'ward') { renderWardWorkspace(host); return; }
   const spec = S.view === 'functions' ? workspaceFor('function', S.selectedFunction) : workspaceFor('organ', S.selectedOrgan);
   if (!spec) { host.innerHTML = '<p class="empty-note">Loading…</p>'; return; }
+  const rows = indicatorRows();
   const vars = currentVariables();
   const observed = [...spec.primary, ...spec.secondary, ...spec.related].filter((v) => vars[v]).length;
   const cells = [...spec.primary, ...spec.secondary].flatMap((v) => catalogCellsForVariable(v)).length;
@@ -322,133 +374,140 @@ export function renderWorkspace() {
     ? (spec.functions.length ? `Functions: ${spec.functions.map((f) => `<button class="disc" type="button" data-act="goto-function" data-function="${esc(f.id)}">${esc(f.label)}</button>`).join(' · ')}` : 'No functional group attributes a variable to this organ')
     : (spec.organs.length ? `Anatomy: ${spec.organs.map((o) => `<button class="disc" type="button" data-act="goto-organ" data-organ="${esc(o.id)}">${esc(o.label)}</button>`).join(' · ')}` : '');
   const secondaryBlock = spec.secondary.length
-    ? `<button class="disc" type="button" data-act="toggle-secondary" aria-expanded="${S.showSecondary}">${S.showSecondary ? 'Hide' : 'Show'} ${spec.secondary.length} more mapped signal${spec.secondary.length === 1 ? '' : 's'} ${S.showSecondary ? '⌃' : '⌄'}</button>${S.showSecondary ? `<div class="rows">${spec.secondary.map(signalRow).join('')}</div>` : ''}`
+    ? `<button class="disc" type="button" data-act="toggle-secondary" aria-expanded="${S.showSecondary}">${S.showSecondary ? 'Hide' : 'Show'} ${spec.secondary.length} more mapped signal${spec.secondary.length === 1 ? '' : 's'} ${S.showSecondary ? '⌃' : '⌄'}</button>${S.showSecondary ? `<div class="rows">${variablesByAttention(spec.secondary, rows).map((v) => signalRow(v, rows)).join('')}</div>` : ''}`
     : '';
   host.innerHTML = `
     <div class="ws-h"><h2>${esc(spec.label)}</h2><span class="sub">${observed} of ${spec.primary.length + spec.secondary.length + spec.related.length} mapped signals observed · ${cells ? cells + ' forecast cell' + (cells === 1 ? '' : 's') : 'observations only · no runtime cell'}${S.anchor ? ' · frozen at historical anchor' : ''}${spec.module ? ` · module <span class="mono">${esc(spec.module)}</span>` : ''}</span><span class="fn">${links}</span></div>
     <div class="sec">Primary indicators${spec.primaryFunction ? ` · <span class="soft">${esc(spec.primaryFunction.label)}</span>` : ''}</div>
-    ${spec.primary.length ? `<div class="tiles">${spec.primary.map((v) => signalTile(v)).join('')}</div>` : '<p class="empty-note">No primary indicator is attributed here in the approved map. Nothing is invented.</p>'}
+    ${spec.primary.length ? `<div class="tiles">${variablesByAttention(spec.primary, rows).map((v) => signalTile(v, { rows })).join('')}</div>` : '<p class="empty-note">No primary indicator is attributed here in the approved map. Nothing is invented.</p>'}
     ${secondaryBlock}
-    ${spec.related.length ? `<div class="sec">Related indicators · <span class="soft">${esc(spec.relatedNote)}</span></div><div class="rows">${spec.related.map(signalRow).join('')}</div>` : ''}
+    ${spec.related.length ? `<div class="sec">Related indicators · <span class="soft">${esc(spec.relatedNote)}</span></div><div class="rows">${variablesByAttention(spec.related, rows).map((v) => signalRow(v, rows)).join('')}</div>` : ''}
     ${evidenceTable([...spec.primary, ...spec.secondary], spec.label)}
     <p class="foot">Grouping is navigation and explanation only; it never states that an organ or function is normal or abnormal. Persistence is a baseline fallback, not a prediction · intervals are null · causal_claim_allowed: false.</p>`;
 }
 
 /* ── metric workspace (level 3) ─────────────────────────────────────────── */
-function forecastMarkers(variable) {
-  const run = currentRun();
-  if (!run) return [];
-  const cutoff = new Date(run.input_cutoff).getTime();
-  return cellsForVariable(variable, currentCells()).map((c) => ({
-    cell: c.cell, horizon_hours: c.horizon_hours, due_ms: cutoff + c.horizon_hours * 3600000,
-    forecast_point: c.forecast_point, status: c.status, source_model: c.source_model, run_id: run.run_id,
-    fallback_reason: c.fallback_reason, target: c.target,
-  }));
+/** Signed change of a forecast against the observation its cell actually used.
+ *  No basis, no delta: nothing is guessed from a neighbouring point. */
+function deltaText(f) {
+  if (!f.basis || !Number.isFinite(f.forecast_point) || !Number.isFinite(f.basis.value)) return '';
+  const d = f.forecast_point - f.basis.value;
+  const sign = d > 0 ? '+' : d < 0 ? '−' : '±';
+  // the difference carries the same precision as the values it is taken from
+  const decimals = Math.max(...[f.forecast_point, f.basis.value].map((v) => (fmtNum(v).split('.')[1] || '').length));
+  const abs = fmtNum(Math.abs(d), decimals);
+  const pct = f.basis.value !== 0 ? ` (${sign}${(Math.abs(d) / Math.abs(f.basis.value) * 100).toFixed(1)}%)` : '';
+  return `${sign}${abs}${pct}`;
+}
+
+/** Last observed against each horizon, from the same run the chart draws. */
+function comparisonSummary(t, v) {
+  const unit = unitOf(v);
+  const basis = t.forecasts.map((f) => f.basis).find(Boolean);
+  const lastPoint = t.points.length ? t.points[t.points.length - 1] : null;
+  const observed = basis || lastPoint;
+  const observedNote = basis ? 'the observation this run used' : (lastPoint ? 'latest in view' : '');
+  const rows = [];
+  rows.push(`<div class="cmp-row head"><span class="k">Last observed</span><span class="v mono">${observed ? `${esc(fmtNum(observed.value))} <small>${esc(unit)}</small>` : '—'}</span><span class="d">${observed ? esc(`${fmtClinical(new Date(observed.ms).toISOString())} · ${observedNote}`) : 'no observation yet'}</span></div>`);
+  if (t.kind === 'no-run') rows.push(`<div class="cmp-row"><span class="k">Forecast</span><span class="v na">${TRAJECTORY.noRun}</span><span class="d"></span></div>`);
+  else if (t.kind === 'none') rows.push(`<div class="cmp-row"><span class="k">Forecast</span><span class="v na">${TRAJECTORY.noModel}</span><span class="d">observations only</span></div>`);
+  else t.forecasts.forEach((f) => {
+    if (f.status === 'model' && Number.isFinite(f.forecast_point)) {
+      rows.push(`<div class="cmp-row" data-status="model"><span class="k">${f.horizon_hours}h forecast</span><span class="v mono">${esc(fmtNum(f.forecast_point))} <small>${esc(unit)}</small></span><span class="d mono">${f.basis ? esc(deltaText(f)) : 'no basis · delta not computed'}</span></div>`);
+    } else if (f.status === 'persistence' && Number.isFinite(f.forecast_point)) {
+      rows.push(`<div class="cmp-row" data-status="persistence"${isAbstained(f) ? ' data-abstained="true"' : ''}><span class="k">${f.horizon_hours}h baseline</span><span class="v mono">${esc(fmtNum(f.forecast_point))} <small>${esc(unit)}</small></span><span class="d">${isAbstained(f) ? `${esc(forecastLabel(f))} · ` : ''}${TRAJECTORY.baselineOnly}</span></div>`);
+    } else {
+      rows.push(`<div class="cmp-row" data-status="${esc(f.status)}"><span class="k">${f.horizon_hours}h</span><span class="v na">${TRAJECTORY.unavailable}</span><span class="d">${esc(unavailableReason(f.status, f.fallback_reason))}</span></div>`);
+    }
+  });
+  return `<section class="compare" aria-label="Comparison summary"><h3>Comparison summary</h3>${rows.join('')}<p class="note">Change is measured against the observation each forecast cell used. It is a difference, not a clinical judgement. A persistence baseline repeats that observation and is not a model forecast.</p></section>`;
+}
+
+/** The chart's pixel width: the workspace minus its own and the card's padding, so
+ *  the SVG draws at true text size instead of scaling a fixed box. */
+function chartWidth(host) {
+  const cs = window.getComputedStyle(host);
+  const inner = host.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+  const narrow = window.innerWidth < 768;
+  return Math.max(280, Math.floor(inner - (narrow ? 18 : 34)));
 }
 
 export function renderMetric(host) {
   const v = S.metric;
   const state = currentVariables()[v];
-  const series = (currentSeries()[v] || []).map((p) => ({ ms: new Date(p.effective_time).getTime(), value: p.value, resource_id: p.resource_id, version_id: p.version_id, received_at: p.received_at }));
   const run = currentRun();
-  const cutoffMs = run ? new Date(run.input_cutoff).getTime() : null;
-  const forecasts = forecastMarkers(v);
-  const horizonsAvail = Array.from(new Set(catalogCellsForVariable(v).map((c) => c.horizon_hours))).sort((a, b) => a - b);
-  const fresh = (S.freshVariables[v] || 0) > Date.now() - 900 && !S.anchor && series.length ? series[series.length - 1].ms : null;
-  const narrow = window.innerWidth < 768;
-  const chart = bigChart({ points: series, forecasts, cutoff_ms: cutoffMs, unit: unitOf(v), label: label(v), axis: timeAxis(), onset_ms: onsetMs(),
-    window: S.chartWindow, horizons: S.chartHorizons, fresh_ms: fresh, frozen: !!S.anchor,
-    width: narrow ? 640 : 980, height: narrow ? 400 : 360 });
-  const back = S.view === 'functions' ? `${esc((workspaceFor('function', S.selectedFunction) || {}).label || 'Function')}` : `${esc((workspaceFor('organ', S.selectedOrgan) || {}).label || 'Organ')}`;
+  const t = trajectoryFor(v, S.chartHorizons);
+  const fresh = (S.freshVariables[v] || 0) > Date.now() - 900 && !S.anchor && t.points.length ? t.points[t.points.length - 1].ms : null;
+  const width = chartWidth(host);
+  const height = Math.round(Math.min(380, Math.max(300, width * 0.32)));
+  const headline = S.anchor ? TRAJECTORY.snapshot : TRAJECTORY.liveHead;
+  const chart = trajectoryChart({ traj: t, unit: unitOf(v), label: label(v), axis: timeAxis(), onset_ms: onsetMs(),
+    window: S.chartWindow, fresh_ms: fresh, width, height, headline });
+  const back = S.view === 'data' ? DATA_VIEW.title
+    : S.view === 'functions' ? `${esc((workspaceFor('function', S.selectedFunction) || {}).label || 'Function')}`
+      : `${esc((workspaceFor('organ', S.selectedOrgan) || {}).label || 'Organ')}`;
   const cellsHere = cellsForVariable(v, currentCells());
   const age = state ? ageHours(state.effective_time, clinicalNow()) : null;
-  const hasModel = forecasts.some((f) => f.status === 'model'), hasPers = forecasts.some((f) => f.status === 'persistence');
   const runs = S.runs.filter((r) => r.status === 'completed' && (!S.session || r.epoch === S.session.epoch)).slice().reverse();
   const anchorIdx = S.anchor ? runs.findIndex((r) => r.run_id === S.anchor.run.run_id) : runs.length - 1;
+  const source = run
+    ? `${OBSERVED_HISTORY} from the ledger · forecast cells from run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · cutoff ${esc(fmtClinical(run.input_cutoff))}`
+    : `${OBSERVED_HISTORY} from the ledger · ${TRAJECTORY.noRun}`;
+  const modeNote = S.anchor ? "frozen at this run's cutoff" : (S.session && S.session.status === 'running' ? 'live follow' : 'paused: not following');
+  const badge = `<span class="head-badge ${S.anchor ? 'snapshot' : 'live'}" data-head="${S.anchor ? 'snapshot' : 'live'}">${headline}</span>`;
+  // what the observation says about its own value, in the same words as the data view
+  const att = observationAttention(state);
+  const attKey = att.kind === 'outside' ? (att.side || 'outside') : att.kind === 'within' ? 'within' : att.kind === 'unit' ? 'unit' : att.kind === 'unsupplied' ? 'unsupplied' : null;
+  const attLine = attKey ? `<span class="att-line st-${attKey}"><i class="mk" aria-hidden="true">${STATUS_MARK[attKey]}</i>${RANGE[attKey]}${att.range ? ` · ${esc(fmtNum(att.range.low))}–${esc(fmtNum(att.range.high))} ${esc(att.range.unit)} supplied with the observation` : ''}</span>` : '';
   host.innerHTML = `
     <div class="crumb"><button class="disc" type="button" data-act="close-metric">← ${back}</button><span>›</span><span>${esc(label(v))}</span></div>
     <div class="metric-h">
-      <div><h2>${esc(label(v))}</h2><div class="note">${esc(unitOf(v))}${cellsHere.length ? ` · ${cellsHere.length} forecast cell${cellsHere.length === 1 ? '' : 's'}` : ` · ${NO_FORECAST_MODEL} · observations only`}${S.anchor ? ' · frozen at historical anchor' : (S.session && S.session.status === 'running' ? ' · live follow' : ' · paused: not following')}</div></div>
+      <div><h2>${esc(label(v))}</h2><div class="note">${esc(unitOf(v))}${cellsHere.length ? ` · ${cellsHere.length} forecast cell${cellsHere.length === 1 ? '' : 's'}` : ` · ${NO_FORECAST_MODEL} · observations only`}</div>${attLine}</div>
       ${state ? `<div class="big">${esc(fmtNum(state.value))}<small>${esc(state.unit)}</small></div>
       <dl class="kv"><dt>Effective</dt><dd>${esc(fmtClinical(state.effective_time))}</dd><dt>Received</dt><dd>${esc(fmtReceived(state.received_at) || '—')}</dd><dt>Age</dt><dd>${esc(fmtAge(age))}</dd><dt>Observations</dt><dd>${esc(state.count)}</dd></dl>` : '<div class="note">No observation yet for this signal.</div>'}
-      <div class="chips-col">
-        <div class="chips"><span class="note">Window</span>${[['recent', 'recent 12h'], ['full', 'full stream']].map(([k, l]) => `<button class="chip" type="button" data-act="chart-window" data-window="${k}" aria-pressed="${S.chartWindow === k}">${l}</button>`).join('')}<button class="chip" type="button" data-act="anchor-live" aria-pressed="${!S.anchor}"${S.anchor ? '' : ' disabled'}>${S.anchor ? 'return to live head' : 'live head'}</button></div>
-        ${horizonsAvail.length ? `<div class="chips"><span class="note">Horizons</span><button class="chip" type="button" data-act="chart-horizon" data-horizon="all" aria-pressed="${!S.chartHorizons}">all</button>${horizonsAvail.map((h) => `<button class="chip" type="button" data-act="chart-horizon" data-horizon="${h}" aria-pressed="${!!(S.chartHorizons && S.chartHorizons.has(h))}">${h}h</button>`).join('')}</div>` : ''}
-      </div>
     </div>
-    <div class="metric-grid">
-      <div>
-        <div class="chart-wrap">${chart.empty ? '<p class="empty-note">Nothing to plot yet: no observation of this signal has been delivered. Nothing is imputed.</p>' : chart.svg}<div class="chart-tip" id="chartTip" role="status" hidden></div></div>
-        ${chart.empty ? '' : chartLegend(hasModel, hasPers)}
-        <p class="foot">Every observed point is a ledger row; every forecast point is a persisted run. ${chart.window_points < chart.total_points ? `Showing ${chart.window_points} of ${chart.total_points} points (recent window).` : ''} ${POINT_ONLY_NOTE}</p>
-        ${runs.length > 1 ? `<div class="scrub"><label for="runScrub" class="note">Scrub run history</label><input id="runScrub" type="range" min="0" max="${runs.length - 1}" value="${Math.max(0, anchorIdx)}" data-act="scrub-run" aria-label="Select a past model run as the historical anchor"><span class="mono note">${anchorIdx >= 0 ? esc(fmtClinical(runs[anchorIdx].input_cutoff)) : ''} · ${S.anchor ? 'historical anchor' : 'live head'}</span></div>` : ''}
+    <section class="traj" aria-label="${TRAJECTORY.title}">
+      <div class="traj-head">
+        <div><h3>${TRAJECTORY.title}</h3><span class="note">${source} · ${esc(modeNote)}</span></div>
+        ${badge}
       </div>
-      <div class="metric-side">
-        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${statusChip(c.status)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button></div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? UPDATING_FORECAST + ' No run yet for this session.' : NO_FORECAST_MODEL + ': this signal has no target × horizon cell in the pinned registry, so only observations are shown.'}</p>`}
-          ${cellsHere.some((c) => c.fallback_reason) ? `<p class="note">${esc(Array.from(new Set(cellsHere.map((c) => c.fallback_reason).filter(Boolean))).join(' · '))}</p>` : ''}</div>
+      <div class="chart-wrap">${chart.empty ? '<p class="empty-note">Nothing to plot yet: no observation of this signal has been delivered. Nothing is imputed.</p>' : chart.svg}<div class="chart-tip" id="chartTip" role="status" hidden></div></div>
+      ${chart.empty ? '' : chartLegend(t)}
+      <p class="foot">Every observed point is a ledger row; every forecast point is a persisted run. ${chart.window_points < chart.total_points ? `Showing ${chart.window_points} of ${chart.total_points} points (recent window).` : ''}</p>
+    </section>
+    <div class="traj-below">
+      ${comparisonSummary(t, v)}
+      <section class="traj-controls" aria-label="Chart controls">
+        <div class="chips"><span class="note">Window</span>${[['recent', 'recent 12h'], ['full', 'full stream']].map(([k, l]) => `<button class="chip" type="button" data-act="chart-window" data-window="${k}" aria-pressed="${S.chartWindow === k}">${l}</button>`).join('')}</div>
+        ${t.catalogHorizons.length ? `<div class="chips"><span class="note">Horizons</span><button class="chip" type="button" data-act="chart-horizon" data-horizon="all" aria-pressed="${!S.chartHorizons}">all</button>${t.catalogHorizons.map((h) => `<button class="chip" type="button" data-act="chart-horizon" data-horizon="${h}" aria-pressed="${!!(S.chartHorizons && S.chartHorizons.has(h))}">${h}h</button>`).join('')}</div>` : ''}
+        ${runs.length > 1 ? `<div class="scrub"><label for="runScrub" class="note">Run history</label><input id="runScrub" type="range" min="0" max="${runs.length - 1}" value="${Math.max(0, anchorIdx)}" data-act="scrub-run" aria-label="Select a past model run as the historical snapshot"><span class="mono note">${anchorIdx >= 0 ? esc(fmtClinical(runs[anchorIdx].input_cutoff)) : ''} · ${S.anchor ? 'historical snapshot' : 'live head'}</span></div>` : ''}
+        ${S.anchor ? '<button class="chip" type="button" data-act="anchor-live">Return to live head</button>' : ''}
+      </section>
+    </div>
+    <section class="run-details${S.runDetailsOpen ? ' open' : ''}" aria-label="Run details and provenance">
+      <button class="h" type="button" data-act="toggle-run-details" aria-expanded="${S.runDetailsOpen}"><b>Run details &amp; provenance</b><span class="note">${run ? `run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · ${esc(run.runtime_mode)} · ${cellsHere.length} cell${cellsHere.length === 1 ? '' : 's'}` : TRAJECTORY.noRun}</span><span class="x">${S.runDetailsOpen ? 'Hide' : 'Show'} ${S.runDetailsOpen ? '⌃' : '⌄'}</span></button>
+      ${S.runDetailsOpen ? `<div class="run-details-body">
+        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${cellChip(c)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button>${c.target !== v ? `<span class="note derived">${esc(label(c.target))} · derived event, not drawn on this axis</span>` : ''}</div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? UPDATING_FORECAST + ' No run yet for this session.' : NO_FORECAST_MODEL + ': this signal has no target × horizon cell in the pinned registry, so only observations are shown.'}</p>`}
+          ${cellsHere.some((c) => c.fallback_reason) ? `<p class="note">${esc(Array.from(new Set(cellsHere.map((c) => c.fallback_reason).filter(Boolean))).join(' · '))}</p>` : ''}
+          <p class="note">${POINT_ONLY_NOTE}</p></div>
         ${run ? `<div class="side"><h3>Run</h3><dl class="kv"><dt>Run</dt><dd class="mono">${esc(run.run_id.slice(0, 8))}</dd><dt>Cutoff</dt><dd>${esc(fmtClinical(run.input_cutoff))}</dd><dt>Input</dt><dd>${esc(run.input_resource_count)} resources</dd><dt>Commit</dt><dd class="mono">${esc((run.model_commit || '').slice(0, 7))}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)}</dd><dt>Duration</dt><dd>${esc(run.duration_ms ?? '—')} ms</dd></dl><p class="note">causal_claim_allowed: false</p></div>` : ''}
         ${state ? `<div class="side"><h3>Latest observation</h3><dl class="kv"><dt>Resource</dt><dd class="mono">${esc(state.resource_id)} v${esc(state.version_id)}</dd></dl><button class="disc" type="button" data-act="prov-obs" data-variable="${esc(v)}">FHIR provenance ⌄</button></div>` : ''}
-      </div>
-    </div>`;
+      </div>` : ''}
+    </section>`;
 }
 
-/* ── all signals / all cells ────────────────────────────────────────────── */
-export function renderSignals(host) {
-  const vars = currentVariables();
-  const all = Object.keys(S.anatomy ? S.anatomy.variable_units : {});
-  const organsByVariable = {};
-  if (S.anatomy) S.anatomy.organs.forEach((o) => o.variables.forEach((v) => { (organsByVariable[v] = organsByVariable[v] || []).push(o.label); }));
-  const q = S.signalQuery.trim().toLowerCase();
-  let list = all.filter((v) => !q || label(v).toLowerCase().includes(q) || v.includes(q) || (organsByVariable[v] || []).join(' ').toLowerCase().includes(q));
-  const now = clinicalNow();
-  const sorters = {
-    name: (a, b) => label(a).localeCompare(label(b)),
-    organ: (a, b) => ((organsByVariable[a] || ['zz'])[0]).localeCompare((organsByVariable[b] || ['zz'])[0]) || label(a).localeCompare(label(b)),
-    latest: (a, b) => ((vars[b] || {}).effective_time || '').localeCompare((vars[a] || {}).effective_time || ''),
-    age: (a, b) => (ageHours((vars[a] || {}).effective_time, now) ?? 1e9) - (ageHours((vars[b] || {}).effective_time, now) ?? 1e9),
-  };
-  list.sort(sorters[S.signalSort] || sorters.organ);
-  const observed = list.filter((v) => vars[v]);
-  const unobserved = list.filter((v) => !vars[v]);
-  host.innerHTML = `
-    <div class="ws-h"><h2>All signals</h2><span class="sub">${observed.length} observed of ${all.length} mapped variables</span>
-      <span class="fn"><input class="field sm" type="search" placeholder="Search signal or organ" value="${esc(S.signalQuery)}" data-act="signal-query" aria-label="Search signals">
-      <span class="segmented"><button type="button" data-act="signal-sort" data-sort="organ" aria-pressed="${S.signalSort === 'organ'}">organ</button><button type="button" data-act="signal-sort" data-sort="name" aria-pressed="${S.signalSort === 'name'}">name</button><button type="button" data-act="signal-sort" data-sort="latest" aria-pressed="${S.signalSort === 'latest'}">latest</button><button type="button" data-act="signal-sort" data-sort="age" aria-pressed="${S.signalSort === 'age'}">age</button></span></span></div>
-    <div class="rows wide">${observed.map((v) => signalRow(v).replace('</button>', `<div class="d organs">${esc((organsByVariable[v] || ['systemic']).join(', '))}</div></button>`)).join('')}</div>
-    ${unobserved.length ? `<div class="sec">Mapped, nothing delivered · ${unobserved.length}</div><div class="rows wide dimmed">${unobserved.map((v) => signalRow(v)).join('')}</div>` : ''}`;
-}
-
+/* ── forecast evidence rows (organ and function workspaces) ─────────────── */
 function cellRow(c, extra = '') {
   const point = c.forecast_point === null || c.forecast_point === undefined ? '<span class="nullv">null</span>' : `<span class="pt">${esc(fmtNum(c.forecast_point))}</span>`;
   const observed = c.observed_value === null || c.observed_value === undefined ? '<span class="nullv">—</span>' : esc(fmtNum(c.observed_value));
   const age = c.measurement_age_hours === null || c.measurement_age_hours === undefined ? '' : ` <span class="why">age ${esc(fmtAge(c.measurement_age_hours))}</span>`;
-  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td>${statusChip(c.status)}<div class="why">${esc(FORECAST_NOTE[c.status] || '')}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
+  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td>${cellChip(c)}<div class="why">${esc(forecastNote(c))}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
 }
 function runFooter(run) {
   const note = run.runtime_mode === 'fixture'
     ? 'Runtime not attached: every cell is degraded with a null point. Nothing is fabricated.'
     : 'Persistence baseline = the patient\'s latest observed value; not a model prediction and not clinical validation. Intervals are null: this release bundles no patient-specific conformal artifact.';
   return `<p class="cells-foot">Run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · cutoff ${esc(fmtClinical(run.input_cutoff))} · ${esc(run.input_resource_count)} resources · commit <span class="mono">${esc((run.model_commit || '').slice(0, 7))}</span> · ${esc(note)} · causal_claim_allowed: false.</p>`;
-}
-
-export function renderAllCells(host) {
-  const run = currentRun();
-  const cells = currentCells();
-  const cap = S.capabilities;
-  const organsByVariable = {};
-  if (S.anatomy) S.anatomy.organs.forEach((o) => o.variables.forEach((v) => { (organsByVariable[v] = organsByVariable[v] || []).push(o.label); }));
-  let body;
-  if (S.lastRunFailed && !S.anchor) body = `<div class="fail-block"><b>Runtime failure · no current forecast</b><pre>${esc(S.lastRunFailed.error)}</pre><p class="why">The last completed run is not shown as current. Open it from run history as a historical anchor.</p></div>`;
-  else if (!run) body = '<p class="empty-note">No model run yet. Runs are scheduled only when a new relevant observation arrives; a burst of events is coalesced into one run.</p>';
-  else {
-    const groups = {};
-    cells.forEach((c) => { (groups[c.horizon_hours] = groups[c.horizon_hours] || []).push(c); });
-    const rows = Object.keys(groups).map(Number).sort((a, b) => a - b).map((h) => `<tr class="horizon-h"><td colspan="7">${h} h horizon · ${groups[h].length} cells</td></tr>` +
-      groups[h].map((c) => cellRow(c, `<td class="why">${esc((organsByVariable[c.target === 'hypoxemia_event' ? 'o2sat' : c.target] || ['systemic']).join(', '))}</td>`)).join('')).join('');
-    body = `<div class="scroll-x"><table class="cells-table"><thead><tr><th>Cell</th><th>Observed</th><th>Point forecast</th><th>Status</th><th>Source</th><th>Organs</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${runFooter(run)}`;
-  }
-  const counts = run && run.summary ? `model ${run.summary.model_cells} · persistence ${run.summary.persistence_cells} · missing ${run.summary.missing_cells} · degraded ${run.summary.degraded_cells}` : '';
-  host.innerHTML = `<div class="ws-h"><h2>All forecast cells</h2><span class="sub">${esc(cap ? cap.catalog_cells : cells.length)} in the pinned registry · ${esc(counts)} · registry <span class="mono">${esc((cap && cap.registry_sha256 || '').slice(0, 12))}</span> · audit view</span></div>${body}`;
 }
 
 /* ── lower panel: run history + feed ────────────────────────────────────── */
@@ -482,7 +541,7 @@ export function renderDrawer() {
   if (d.kind === 'cell') {
     const c = d.cell, run = d.run;
     body.innerHTML = `<div class="prov"><div class="h-sec">Cell ${esc(c.cell)}</div>
-      <dl class="kv"><dt>Status</dt><dd>${statusChip(c.status)}</dd><dt>Point forecast</dt><dd class="mono">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))} ${esc(c.unit || '')}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>Interval</dt><dd>lower ${esc(String(c.lower))} · upper ${esc(String(c.upper))} · ${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
+      <dl class="kv"><dt>Status</dt><dd>${cellChip(c)}</dd><dt>Point forecast</dt><dd class="mono">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))} ${esc(c.unit || '')}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>Interval</dt><dd>lower ${esc(String(c.lower))} · upper ${esc(String(c.upper))} · ${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
       <div class="h-sec">Run</div>
       <dl class="kv"><dt>Run id</dt><dd class="mono">${esc(run.run_id)}</dd><dt>Input cutoff</dt><dd class="mono">${esc(run.input_cutoff)}</dd><dt>Watermark</dt><dd class="mono">${esc(run.input_watermark || '—')}</dd><dt>Input</dt><dd class="mono">${esc(run.input_resource_count)} resources · sha256 ${esc((run.input_hash || '').slice(0, 16))}…</dd><dt>Model commit</dt><dd class="mono">${esc(run.model_commit)}</dd><dt>Registry</dt><dd class="mono">${esc(run.registry_sha256)}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)} · attached ${esc(String(rt.runtime_attached))}</dd><dt>Duration</dt><dd class="mono">${esc(run.duration_ms ?? '—')} ms</dd></dl>
       <div class="h-sec">Point history for ${esc(c.cell)}</div>
@@ -512,5 +571,6 @@ export function renderAll(anatomyBuilt) {
   const producing = !!(run && run.summary && (run.summary.model_cells > 0 || run.summary.persistence_cells > 0));
   if (anatomyBuilt) anatomyBuilt.update({ selected: S.selectedOrgan, byOrgan: organSummary(),
     organEvents: currentOrganEvents(), streamNow: clinicalNow(), runtimeProducing: producing,
-    frozen: !!S.anchor, paused: !!(S.session && S.session.status !== 'running') });
+    frozen: !!S.anchor, paused: !!(S.session && S.session.status !== 'running'),
+    attention: organAttentionMap() });
 }

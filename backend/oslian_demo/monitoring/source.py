@@ -111,6 +111,12 @@ class MockFhirSource:
 
 RETROSPECTIVE_EPOCH = "2014-01-01T00:00:00Z"   # replay convention: case time is hours since ICU admission
 RETROSPECTIVE_SOURCE_SYSTEM = "retrospective-eicu-crd-demo-2.0.1"
+# Searched in order. The single-stay document stays first so that asking for no
+# particular case gets the same stay it always did.
+RETRO_CASE_PATHS = (
+    FIXTURE_DIR / "retrospective_eicu_demo_case.json",
+    FIXTURE_DIR / "retrospective_eicu_ward_cases.json",
+)
 # (variable -> LOINC code, UCUM unit) for the public case's canonical columns; every pair is a
 # mapping.py rule, so the converted resources go through the same registry as the synthetic feed.
 _RETRO_CODES = {
@@ -118,6 +124,15 @@ _RETRO_CODES = {
     "creatinine": ("2160-0", "mg/dL"), "glucose": ("2345-7", "mg/dL"), "potassium": ("2823-3", "mmol/L"),
     "sodium": ("2951-2", "mmol/L"), "heart_rate": ("8867-4", "/min"), "respiratory_rate": ("9279-1", "/min"),
     "o2sat": ("59408-5", "%"), "map": ("8478-0", "mm[Hg]"), "temperature": ("8310-5", "Cel"),
+    # Added with the per-stay ward cases. Every pair below is copied from an
+    # existing rule in mapping.py, not invented for these cases -- chloride in
+    # particular is one of the six the ward board bands on, and a case that
+    # dropped it would show a stay the board had already read differently.
+    "chloride": ("2075-0", "mmol/L"), "calcium": ("17861-6", "mg/dL"),
+    "magnesium": ("19123-9", "mg/dL"), "phosphate": ("2777-1", "mg/dL"),
+    "albumin": ("1751-7", "g/dL"), "lactate": ("2524-7", "mmol/L"),
+    "ph": ("2744-1", "[pH]"), "hemoglobin": ("718-7", "g/dL"),
+    "platelets": ("777-3", "10*3/uL"), "wbc": ("6690-2", "10*3/uL"),
 }
 _RETRO_VITALS = {"heart_rate", "respiratory_rate", "o2sat", "map", "temperature", "urine_output"}
 
@@ -134,12 +149,29 @@ class RetrospectiveCaseSource:
 
     source_system = RETROSPECTIVE_SOURCE_SYSTEM
 
-    def __init__(self, path: Path | None = None):
-        self.path = path or (FIXTURE_DIR / "retrospective_eicu_demo_case.json")
-        document = json.loads(self.path.read_text(encoding="utf-8"))
-        if document.get("schema_version") != "oslian.retrospective-cases.v1" or document.get("retrospective") is not True:
-            raise ValueError("unsupported retrospective case fixture")
-        self.case = document["cases"][0]
+    def __init__(self, path: Path | None = None, case_id: str | None = None):
+        # Without a case id this is exactly what it was: the first case of the
+        # single-stay document. With one it looks through every case document,
+        # so a row on the ward board opens the stay it names.
+        paths = [path] if path else list(RETRO_CASE_PATHS)
+        self.case = None
+        for candidate in paths:
+            if not candidate.exists():
+                continue
+            document = json.loads(candidate.read_text(encoding="utf-8"))
+            if (document.get("schema_version") != "oslian.retrospective-cases.v1"
+                    or document.get("retrospective") is not True):
+                raise ValueError("unsupported retrospective case fixture")
+            for case in document["cases"]:
+                if case_id is None or str(case["id"]) == case_id:
+                    self.case, self.path = case, candidate
+                    break
+            if self.case is not None:
+                break
+        if self.case is None:
+            # Fail closed: a case id nobody has is a broken link, not a reason to
+            # quietly open somebody else's stay.
+            raise KeyError(f"no retrospective case with id {case_id!r}")
         self.fixture_version = f"retrospective:{self.case['id']}"
         self.patient_id = str(self.case["id"])
         self.encounter_id = f"{self.case['id']}-icu-stay"
@@ -224,6 +256,10 @@ class RetrospectiveCaseSource:
             "time_axis": "hours_since_admission", "epoch": RETROSPECTIVE_EPOCH, "synthetic": False,
             "retrospective": True, "display_name": self.case.get("display_name"),
             "title": self.case.get("title"), "case_source": self.case.get("case_source"),
+            # The key that reopens this exact stay, so a caller never has to
+            # build the string itself.
+            "case_id": self.patient_id, "case_key": f"retrospective:{self.patient_id}",
+            "care_unit": self.case.get("care_unit"),
             "provenance": f"{meta.get('dataset')} {meta.get('version')} · {meta.get('deidentification')} · {meta.get('license')}",
             "context": {k: context.get(k) for k in ("age", "gender", "unit_type", "source_admission_label")},
             "rows": [{"row": i + 1, "hours": float(e["observation"]["hours_since_onset"]),
@@ -244,8 +280,35 @@ class RetrospectiveCaseSource:
 
 SOURCES: dict[str, type] = {"synthetic": MockFhirSource, "retrospective": RetrospectiveCaseSource}
 
+# "retrospective:eicu-demo-1234567" opens that stay; "retrospective" alone keeps
+# opening the one it always did. The suffix rides on the source key rather than
+# becoming a second parameter because a session is already identified by its
+# source, and a per-case source key makes one session per stay fall out of the
+# existing get-or-create rule with nothing else to change.
+SOURCE_KEY_SEPARATOR = ":"
+
+
+def split_source_key(key: str) -> tuple[str, str | None]:
+    base, separator, case_id = str(key).partition(SOURCE_KEY_SEPARATOR)
+    return base, (case_id if separator and case_id else None)
+
+
+def is_known_source_key(key: str) -> bool:
+    base, case_id = split_source_key(key)
+    if base not in SOURCES:
+        return False
+    return case_id is None or base == "retrospective"
+
 
 def make_source(key: str = "synthetic"):
+    base, case_id = split_source_key(key)
+    if base not in SOURCES:
+        raise KeyError(key)
+    if case_id is not None:
+        if base != "retrospective":
+            raise KeyError(key)
+        return SOURCES[base](case_id=case_id)
+    key = base
     if key not in SOURCES:
         raise KeyError(key)
     return SOURCES[key]()

@@ -9,6 +9,8 @@ import { connectEvents, getJSON, postJSON } from './api.js';
 import { S, applyEvent, applySnapshotOrgans, organStateFrom, resetSessionState } from './store.js';
 import { buildAnatomy } from './anatomy.js';
 import { renderAll, renderDrawer, renderWorkspace, fmtClinical, fmtReceived, label } from './render.js';
+import { openReport } from './report.js';
+import { fmtNum } from './format.js';
 
 let anatomyBuilt = null;
 let channel = null;
@@ -34,6 +36,7 @@ function paint() {
   renderTimer = 0;
   lastRenderAt = performance.now();
   renderAll(anatomyBuilt);
+  restoreWardPosition();
 }
 
 function scheduleRender() {
@@ -77,6 +80,8 @@ async function openSession(mode) {
   if (channel) { channel.close(); channel = null; }
   resetSessionState();
   S.mode = mode;
+  // Throws on a rejected source key; openWardStay relies on that to report a
+  // broken link instead of leaving the reader on a session that never opened.
   const session = await postJSON('/api/demo-streams', { source: mode });
   S.sessionId = session.session_id;
   S.session = session;
@@ -100,8 +105,14 @@ async function boot() {
   S.anatomy = anatomy;
   S.organLayout = organLayout;
   S.functions = functions;
-  if (params.mode && S.sources.some((s) => s.source_key === params.mode)) S.mode = params.mode;
-  if (params.view && ['anatomy', 'functions', 'signals', 'cells'].includes(params.view)) S.view = params.view;
+  // A ward stay is opened as `retrospective:<case id>`; the sources listing only
+  // carries the two base keys, so the prefixed form is matched on its base.
+  const knownMode = (m) => S.sources.some((s) => s.source_key === String(m).split(':')[0]);
+  if (params.mode && knownMode(params.mode)) S.mode = params.mode;
+  // `signals` and `cells` were the two views Signals & forecasts replaced; an old link still lands
+  const LEGACY_VIEWS = { signals: 'data', cells: 'data' };
+  const view = LEGACY_VIEWS[params.view] || params.view;
+  if (view && ['anatomy', 'functions', 'data', 'ward'].includes(view)) S.view = view;
   if (params.organ && anatomy.organs.some((o) => o.id === params.organ)) S.selectedOrgan = params.organ;
   if (params.function && functions.groups.some((g) => g.id === params.function)) S.selectedFunction = params.function;
   anatomyBuilt = buildAnatomy(document.getElementById('anatomyHost'), anatomy.organs, organLayout, selectOrgan);
@@ -109,10 +120,14 @@ async function boot() {
   if (params.metric && anatomy.variable_units[params.metric]) S.metric = params.metric;
   if (params.run) await anchorRun(params.run);
   if (params.lower === '1') S.lowerOpen = true;
+  if (params.patient) S.wardPatient = params.patient;
+  if (S.view === 'ward') openWard();
   scheduleRender();
 }
 
-/* #stream?mode=retrospective&view=functions&function=renal_urinary&organ=kidneys&metric=creatinine&run=<id> */
+/* #stream?mode=retrospective&view=functions&function=renal_urinary&organ=kidneys&metric=creatinine&run=<id>
+ * #stream?view=ward&patient=<ward row id>   -- a row links the same way an organ does
+ * #stream?view=data&mode=retrospective:<case id>  -- one ward stay's own Signals & forecasts */
 function hashParams() {
   const hash = String(window.location.hash || '');
   const query = hash.indexOf('?') >= 0 ? hash.slice(hash.indexOf('?') + 1) : '';
@@ -131,6 +146,65 @@ function openChannel() {
       scheduleStreamRender();
     },
   });
+}
+
+/* Fetched the first time the view is opened, not during boot: the ward shares
+ * nothing with the session, so it must not delay the stream and must still work
+ * when the runtime is unattached. */
+async function loadWard() {
+  try {
+    S.wardError = null;
+    S.ward = await getJSON('/api/ward');
+  } catch (e) {
+    S.ward = null;
+    S.wardError = e.message;
+  }
+  scheduleRender();
+}
+
+function openWard() { if (!S.ward && !S.wardError) loadWard(); }
+
+/* Leaving the ward keeps where the reader was. The board, the selected row and
+ * the open bands stay in the store (nothing in a session reset touches them);
+ * the scroll positions are noted here and put back on the ward's next paint. */
+function rememberWardPosition() {
+  if (S.view !== 'ward') return;
+  const list = document.getElementById('railList');
+  S.wardScroll = { rail: list ? list.scrollTop : 0, page: window.scrollY || 0 };
+}
+function restoreWardPosition() {
+  if (S.view !== 'ward' || !S.wardScroll || !S.ward) return;
+  const list = document.getElementById('railList');
+  if (list) list.scrollTop = S.wardScroll.rail;
+  window.scrollTo(0, S.wardScroll.page);
+  S.wardScroll = null;
+}
+function switchView(next) {
+  if (!next || next === S.view) { S.metric = null; scheduleRender(); return; }
+  rememberWardPosition();
+  S.view = next;
+  S.metric = null;
+  if (next === 'ward') openWard();
+  scheduleRender();
+}
+
+/* Open one ward stay in the stream view.
+ *
+ * The board is left in the store, so going back to it costs no request and the
+ * order is exactly where the reader left it. A case id nobody has answers 404,
+ * and that surfaces as an error rather than silently opening somebody else. */
+async function openWardStay(patientId) {
+  if (!patientId) return;
+  try {
+    S.error = null;
+    rememberWardPosition();
+    await openSession(`retrospective:${patientId}`);
+    S.view = 'anatomy';
+    S.metric = null;
+  } catch (e) {
+    S.error = `Could not open this stay — ${e.message}`;
+  }
+  scheduleRender();
 }
 
 function selectOrgan(id) { S.selectedOrgan = id; S.view = 'anatomy'; S.metric = null; S.showSecondary = false; scheduleRender(); }
@@ -184,7 +258,8 @@ async function openObservationProvenance(variable, resourceId, versionId) {
   if (S.drawer && S.drawer.kind === 'observation' && S.drawer.variable === variable) { S.drawer.raw = raw; renderDrawer(); }
 }
 
-/* chart tooltips: hover and keyboard focus alike; click opens provenance */
+/* chart tooltips: hover and keyboard focus alike; click opens provenance. The tip
+ * is clamped inside the chart card on every side, so it never leaves the chart. */
 function showTip(target) {
   const tip = document.getElementById('chartTip');
   const wrap = target.closest('.chart-wrap');
@@ -193,14 +268,20 @@ function showTip(target) {
   const when = fmtClinical(new Date(Number(d.ms)).toISOString());
   const value = Number(d.value);
   const unit = S.anatomy ? (S.anatomy.variable_units[S.metric] || '') : '';
-  tip.innerHTML = d.kind === 'observed'
-    ? `<b>${when}</b> · observed<br><span class="mono">${value} ${unit}</span> · ${d.resource} v${d.version}${d.received ? '<br>received ' + fmtReceived(d.received) : ''}<br><u>click for FHIR provenance</u>`
-    : `<b>${when}</b> · ${d.horizon}h ${d.status === 'persistence' ? 'last value carried forward · not a model prediction' : 'model forecast'}<br><span class="mono">${value} ${unit}</span> · ${d.source}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
+  if (d.kind === 'observed') {
+    tip.innerHTML = `<b>${when}</b> · observed<br><span class="mono">${fmtNum(value)} ${unit}</span> · ${d.resource} v${d.version}${d.received ? '<br>received ' + fmtReceived(d.received) : ''}<br><u>click for FHIR provenance</u>`;
+  } else {
+    const what = d.status === 'persistence' ? 'baseline only · last value carried forward · not a model forecast' : 'model forecast';
+    const basis = d.basisValue !== undefined ? `<br>basis ${fmtNum(Number(d.basisValue))} ${unit} at ${fmtClinical(new Date(Number(d.basisMs)).toISOString())}` : '';
+    tip.innerHTML = `<b>${when}</b> · ${d.horizon}h ${what}<br><span class="mono">${fmtNum(value)} ${unit}</span> · ${d.source}${basis}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
+  }
   const r = target.getBoundingClientRect(), w = wrap.getBoundingClientRect();
   tip.hidden = false;
-  const left = Math.min(Math.max(8, r.left - w.left + r.width / 2 - 110), w.width - 230);
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  const left = Math.min(Math.max(4, r.left - w.left + r.width / 2 - tw / 2), Math.max(4, w.width - tw - 4));
+  const above = r.top - w.top - th - 10;
   tip.style.left = `${left}px`;
-  tip.style.top = `${Math.max(4, r.top - w.top - tip.offsetHeight - 10)}px`;
+  tip.style.top = `${above >= 4 ? above : Math.min(r.bottom - w.top + 10, Math.max(4, w.height - th - 4))}px`;
 }
 function hideTip() { const tip = document.getElementById('chartTip'); if (tip) tip.hidden = true; }
 
@@ -220,7 +301,14 @@ document.addEventListener('click', (e) => {
   else if (act === 'reset') control('reset');
   else if (act === 'speed') control('speed', { speed: Number(t.getAttribute('data-speed')) });
   else if (act === 'mode') { const m = t.getAttribute('data-mode'); if (m !== S.mode) openSession(m); }
-  else if (act === 'view') { S.view = t.getAttribute('data-view'); S.metric = null; scheduleRender(); }
+  else if (act === 'view') switchView(t.getAttribute('data-view'));
+  else if (act === 'select-ward-patient') { S.wardPatient = t.getAttribute('data-patient'); scheduleRender(); }
+  else if (act === 'open-ward-stay') openWardStay(t.getAttribute('data-patient'));
+  else if (act === 'ward-band') {
+    const key = t.getAttribute('data-band');
+    S.wardOpenBands = { ...S.wardOpenBands, [key]: t.getAttribute('aria-expanded') !== 'true' };
+    scheduleRender();
+  }
   else if (act === 'select-organ') selectOrgan(t.getAttribute('data-organ'));
   else if (act === 'select-function') selectFunction(t.getAttribute('data-function'));
   else if (act === 'goto-organ') selectOrgan(t.getAttribute('data-organ'));
@@ -236,24 +324,53 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'toggle-secondary') { S.showSecondary = !S.showSecondary; scheduleRender(); }
   else if (act === 'toggle-evidence') { S.evidenceOpen = !S.evidenceOpen; scheduleRender(); }
+  else if (act === 'toggle-run-details') { S.runDetailsOpen = !S.runDetailsOpen; scheduleRender(); }
   else if (act === 'toggle-lower') { S.lowerOpen = !S.lowerOpen; scheduleRender(); }
-  else if (act === 'signal-sort') { S.signalSort = t.getAttribute('data-sort'); scheduleRender(); }
+  else if (act === 'data-sort') { S.dataSort = t.getAttribute('data-sort'); scheduleRender(); }
+  else if (act === 'forecast-horizon') { S.forecastHorizon = Number(t.getAttribute('data-horizon')); scheduleRender(); }
+  // the report is a snapshot: opening it freezes the data, and only Refresh re-takes it
+  else if (act === 'report-open') { S.report = openReport(null); scheduleRender(); }
+  else if (act === 'report-refresh') { S.report = openReport(S.report); scheduleRender(); }
+  else if (act === 'report-close') { S.report = null; scheduleRender(); }
+  else if (act === 'report-print') window.print();
+  else if (act === 'report-horizon') { S.report = { ...S.report, horizon: Number(t.getAttribute('data-horizon')) }; scheduleRender(); }
+  // one row unfolded at a time: opening another closes the last, so the list never balloons
+  else if (act === 'data-expand') { const v = t.getAttribute('data-variable'); S.dataExpanded = S.dataExpanded === v ? null : v; scheduleRender(); }
+  else if (act === 'data-unobserved') { S.dataShowUnobserved = !S.dataShowUnobserved; scheduleRender(); }
+  else if (act === 'data-other') { S.dataShowOther = !(t.getAttribute('aria-expanded') === 'true'); scheduleRender(); }
   else if (act === 'anchor-run') anchorRun(t.getAttribute('data-run'));
   else if (act === 'anchor-live') { S.anchor = null; S.drawer = null; scheduleRender(); }
   else if (act === 'prov-cell') openCellProvenance(t.getAttribute('data-cell'));
   else if (act === 'prov-obs') openObservationProvenance(t.getAttribute('data-variable'));
   else if (act === 'drawer-close') { S.drawer = null; renderDrawer(); }
 });
+/* The report builder's own controls: radios, checkboxes and the picker. They
+ * change the report the reader is looking at, never the frozen snapshot in it. */
+document.addEventListener('change', (e) => {
+  const t = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!t || !S.report) return;
+  const act = t.getAttribute('data-act');
+  if (act === 'report-scope') { S.report = { ...S.report, scope: t.value }; scheduleRender(); }
+  else if (act === 'report-toggle') { S.report = { ...S.report, [t.getAttribute('data-section')]: t.checked }; scheduleRender(); }
+  else if (act === 'report-pick') {
+    const v = t.getAttribute('data-variable');
+    const picked = new Set(S.report.indicators);
+    if (t.checked) picked.add(v); else picked.delete(v);
+    S.report = { ...S.report, indicators: [...picked] };
+    scheduleRender();
+  }
+});
+
 document.addEventListener('input', (e) => {
   const t = e.target.closest ? e.target.closest('[data-act]') : null;
   if (!t) return;
   const act = t.getAttribute('data-act');
-  if (act === 'signal-query') {
-    S.signalQuery = t.value;
+  if (act === 'data-query') {
+    S.dataQuery = t.value;
     const host = document.getElementById('workspace');
     const pos = t.selectionStart;
     renderWorkspace();
-    const again = host && host.querySelector('[data-act="signal-query"]');
+    const again = host && host.querySelector('[data-act="data-query"]');
     if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (_) { /* ignore */ } }
   } else if (act === 'scrub-run') {
     const runs = S.runs.filter((r) => r.status === 'completed' && (!S.session || r.epoch === S.session.epoch)).slice().reverse();
@@ -270,11 +387,24 @@ document.addEventListener('focusout', (e) => { const pt = e.target.closest ? e.t
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (S.drawer) { S.drawer = null; renderDrawer(); }
+    else if (S.report) { S.report = null; scheduleRender(); }
     else if (S.metric) { S.metric = null; scheduleRender(); }
+    else if (S.dataExpanded) { S.dataExpanded = null; scheduleRender(); }
     return;
   }
   const pt = e.target.closest ? e.target.closest('.chart-pt') : null;
-  if (pt && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pt.click(); }
+  if (pt && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pt.click(); return; }
+  // a table row that acts as a button (Signals & forecasts) opens on Enter or Space too
+  const rowBtn = e.target.closest ? e.target.closest('[role="button"][data-act]') : null;
+  if (rowBtn && rowBtn.tagName !== 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); rowBtn.click(); }
+});
+
+// the chart is drawn at the workspace's real width, so a resize redraws it
+let resizeTimer = 0;
+window.addEventListener('resize', () => {
+  if (!S.metric) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { hideTip(); scheduleRender(); }, 120);
 });
 
 // while running, the simulated clock and ages advance between events

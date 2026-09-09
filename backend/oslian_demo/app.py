@@ -5,6 +5,7 @@ but this app object:
 
     medication.routes   Medication Safety — symbolic candidate ranking
     monitoring.api      Monitoring — synthetic FHIR R4 stream and replay
+    monitoring.ward     Ward attention order — observations only, no runtime
 
 The browser assets are not package data: Flask serves the sibling ``frontend/``
 tree as both its static folder and its template folder, so the front end stays
@@ -20,6 +21,7 @@ from flask import Flask, render_template
 from .config import AppConfig, FRONTEND_DIR
 from .medication import routes as medication_routes
 from .monitoring.api import StreamService, create_blueprint as create_monitoring_blueprint
+from .monitoring.ward import create_blueprint as create_ward_blueprint
 
 
 def create_app(config: AppConfig | None = None, stream_service: StreamService | None = None) -> Flask:
@@ -35,6 +37,7 @@ def create_app(config: AppConfig | None = None, stream_service: StreamService | 
 
     app.register_blueprint(medication_routes.bp)
     app.register_blueprint(create_monitoring_blueprint(service))
+    app.register_blueprint(create_ward_blueprint())
 
     @app.get("/")
     def index():

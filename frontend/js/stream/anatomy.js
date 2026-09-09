@@ -39,7 +39,12 @@ const PULSE_MS = 900;
 /* Each state is a halo drawn around the organ's own outline plus a light wash
  * inside it. The halo is the blurred alpha with the organ itself cut back out,
  * so the artwork underneath stays legible at every zoom: the response reads as
- * the organ lighting up, never as the organ being repainted. */
+ * the organ lighting up, never as the organ being repainted.
+ *
+ * Every figure defines its own filters under its own ids and publishes them to
+ * its own CSS as custom properties, so two figures on one page (the monitoring
+ * rail and the report's overview) never share an id and neither depends on the
+ * other having been built. */
 const fx = (id, r, g, b, blur) =>
   `<filter id="${id}" x="-30%" y="-30%" width="160%" height="160%">` +
   `<feColorMatrix type="matrix" values="0 0 0 0 ${r}  0 0 0 0 ${g}  0 0 0 0 ${b}  0 0 0 1 0" result="t"/>` +
@@ -48,11 +53,20 @@ const fx = (id, r, g, b, blur) =>
   '<feComponentTransfer in="t" result="wash"><feFuncA type="linear" slope="0.10"/></feComponentTransfer>' +
   '<feMerge><feMergeNode in="halo"/><feMergeNode in="halo"/><feMergeNode in="wash"/></feMerge></filter>';
 
-const FILTERS = fx('fxTeal', 0.153, 0.392, 0.369, 3.2)
-  + fx('fxOxide', 0.612, 0.231, 0.149, 3.2)
-  + fx('fxAmber', 0.706, 0.510, 0.180, 2.8);
+/* name -> (r, g, b, blur). `danger` is deep red: at least one current observed
+ * result on this organ is outside the interval its own observation supplied.
+ * `amber` is the other claim - a model forecast leaving that interval - and the
+ * two never share a colour. The CSS custom property each one is published under
+ * is `--fx-<name>`. */
+const RESPONSES = {
+  teal: [0.153, 0.392, 0.369, 3.2],
+  oxide: [0.612, 0.231, 0.149, 3.2],
+  amber: [0.706, 0.510, 0.180, 2.8],
+  danger: [0.549, 0.114, 0.094, 3.4],
+};
 
-let uid = 0;
+let figureSeq = 0;
+let clipSeq = 0;
 
 function svgEl(name, attrs) {
   const el = document.createElementNS(NS, name);
@@ -66,12 +80,12 @@ function assetUrl(file) {
 
 /** One sprite: a group carrying the manifest's transform, and an untransformed
  *  <image> inside it, optionally clipped in the asset's own coordinates. */
-function sprite(defs, sp, cls) {
+function sprite(defs, sp, cls, prefix) {
   const g = svgEl('g', { transform: sp.transform, class: cls });
   const img = svgEl('image', { href: assetUrl(sp.asset), x: 0, y: 0, width: sp.vw, height: sp.vh });
   img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', assetUrl(sp.asset));
   if (sp.clip_d || sp.clip_rect) {
-    const id = `oc${++uid}`;
+    const id = `${prefix}-clip-${++clipSeq}`;
     const clip = svgEl('clipPath', { id, clipPathUnits: 'userSpaceOnUse' });
     clip.appendChild(sp.clip_d
       ? svgEl('path', { d: sp.clip_d })
@@ -87,12 +101,20 @@ function sprite(defs, sp, cls) {
 export function buildAnatomy(host, organs, layout, onSelect) {
   host.innerHTML = '';
   const known = new Map(organs.map((o) => [o.id, o]));
+  // this figure's own namespace: every id it writes starts here, so a second
+  // figure on the same page collides with nothing and needs nothing from the first
+  const prefix = `anatomy-${++figureSeq}`;
   const root = svgEl('svg', {
-    viewBox: layout.frame.viewBox, role: 'group',
+    viewBox: layout.frame.viewBox, role: 'group', class: 'anatomy-figure', id: prefix,
     'aria-label': 'Interactive anatomy. Organs are buttons; arrow keys move between them, Enter selects.',
   });
+  // this figure's own filters, and the custom properties its own CSS reads them
+  // through: the stylesheet never names an id, so it cannot point at another figure
   const defs = svgEl('defs');
-  defs.innerHTML = FILTERS;
+  defs.innerHTML = Object.entries(RESPONSES)
+    .map(([name, [r, g, b, blur]]) => fx(`${prefix}-fx-${name}`, r, g, b, blur)).join('');
+  root.setAttribute('style', Object.keys(RESPONSES)
+    .map((name) => `--fx-${name}: url(#${prefix}-fx-${name})`).join('; '));
   root.appendChild(defs);
 
   const bp = layout.baseplate;
@@ -120,7 +142,7 @@ export function buildAnatomy(host, organs, layout, onSelect) {
   root.appendChild(hitLayer);
 
   byZ.forEach((o) => {
-    if (o.art) (o.over_vessels ? artFront : artBack).appendChild(sprite(defs, o.art, 'art'));
+    if (o.art) (o.over_vessels ? artFront : artBack).appendChild(sprite(defs, o.art, 'art', prefix));
   });
 
   // one container per canonical organ; a paired organ has one entry per side and
@@ -130,7 +152,7 @@ export function buildAnatomy(host, organs, layout, onSelect) {
   byZ.forEach((o) => {
     if (!o.fx) return;
     const g = svgEl('g', { class: 'organ-fx', 'data-organ': o.organ, 'data-side': o.side });
-    g.appendChild(sprite(defs, o.fx, 'fx'));
+    g.appendChild(sprite(defs, o.fx, 'fx', prefix));
     fxLayer.appendChild(g);
     (nodes[o.organ] || (nodes[o.organ] = { fx: [], hits: [], label: known.get(o.organ).label,
                                            anchor: o.anchor, missing: false })).fx.push(g);
@@ -183,7 +205,7 @@ export function buildAnatomy(host, organs, layout, onSelect) {
     const node = target && nodes[target];
     if (!node || !node.anchor) { pill.setAttribute('visibility', 'hidden'); return; }
     const info = summary[target] || {};
-    const text = `${node.label}${info.signals != null ? ` · ${info.signals} signal${info.signals === 1 ? '' : 's'}` : ''}`
+    const text = `${node.label}${info.attention && info.attention.abnormal ? ` · ${info.attention.abnormal} outside range` : (info.signals != null ? ` · ${info.signals} signal${info.signals === 1 ? '' : 's'}` : '')}`
       + (node.missing ? ' · no visual asset' : '');
     const [x, y] = node.anchor;
     const t = pill.querySelector('text');
@@ -205,7 +227,14 @@ export function buildAnatomy(host, organs, layout, onSelect) {
   return {
     nodes,
     order,
-    /** state: { selected, byOrgan, organEvents, streamNow, frozen, paused } */
+    id: prefix,
+    /** Every filter this figure defines, so a caller can prove they resolve here. */
+    filterIds: Object.keys(RESPONSES).map((name) => `${prefix}-fx-${name}`),
+    /** Take the figure out of the document; nothing else on the page depends on it. */
+    destroy() { host.innerHTML = ''; },
+    /** state: { selected, byOrgan, organEvents, streamNow, frozen, paused, attention }
+     *  `attention` is organAttentionState() per organ id, computed once in the store.
+     *  The figure draws it and decides nothing itself. */
     update(state) {
       selected = state.selected;
       summary = state.byOrgan || {};
@@ -216,18 +245,25 @@ export function buildAnatomy(host, organs, layout, onSelect) {
         const ev = events[id];
         const ageH = ev && !Number.isNaN(nowMs) ? (nowMs - Date.parse(ev.at)) / 3600000 : Infinity;
         const active = ev && ageH >= 0 && ageH <= ACTIVE_HOURS;
-        // "attention" is the runtime status of this organ's forecast cells - persistence,
-        // missing or degraded - and never a statement about the patient. It is only
-        // meaningful while the runtime is producing forecasts at all.
-        const attention = !!state.runtimeProducing && info.cells > 0 && info.boundaryCells === info.cells;
+        // What this organ is showing is the indicators' own statement, aggregated once
+        // in the store: a current result outside the range its observation supplied
+        // (deep red), else a model forecast projected outside one (amber), else new
+        // data (the existing teal pulse). One state at a time, worst first, and a
+        // selected organ keeps whichever it has.
+        const att = (state.attention || {})[id] || null;
         const isSelected = state.selected === id;
         const cls = ['organ-state'];
-        if (active) cls.push('state-active');
-        if (attention) cls.push('state-attention');
+        if (att && att.state === 'abnormal') cls.push('state-abnormal');
+        else if (att && att.state === 'projected') cls.push('state-projected');
+        else if (active) cls.push('state-active');
         if (state.frozen) cls.push('frozen');
+        const says = !att ? ''
+          : att.abnormal ? `, ${att.abnormal} observed result${att.abnormal === 1 ? '' : 's'} outside supplied range`
+            : att.projected ? `, ${att.projected} forecast${att.projected === 1 ? '' : 's'} projected outside supplied range`
+              : att.fresh ? ', new observation' : '';
         const name = `${node.label}: ${info.signals} observed signal${info.signals === 1 ? '' : 's'}, `
           + (info.cells ? `${info.cells} forecast cell${info.cells === 1 ? '' : 's'}` : 'no runtime cell')
-          + (node.missing ? ', no visual asset' : '');
+          + says + (node.missing ? ', no visual asset' : '');
         node.fx.forEach((g) => { g.setAttribute('class', `organ-fx ${cls.join(' ')}`); });
         node.hits.forEach(({ rect, title }) => {
           rect.setAttribute('class', `organ-hit ${cls.join(' ')}`);

@@ -32,11 +32,11 @@ from .anatomy import anatomy_document
 from .eventlog import DELIVERY_LIVE, DELIVERY_REPLAY, StreamEventLogger
 from .functions import functions_document
 from .mapping import registry_document
-from .repository import Repository
+from .repository import Repository, ResourceVersionConflict
 from .session import SPEEDS, SessionManager, StreamSession
-from .source import SOURCES, make_source
-from .timeline import (delivered_timeline, organ_state, organ_state_for_run, run_timeline, series,
-                       variable_state)
+from .source import SOURCES, is_known_source_key, make_source
+from .timeline import (attach_observation_statements, delivered_timeline, organ_state, organ_state_for_run,
+                       run_timeline, series, variable_state)
 from .wholebody import RuntimeConfig, WholeBodyRuntime
 
 SSE_EVENT_TYPES = (
@@ -79,13 +79,25 @@ def create_blueprint(service: StreamService) -> Blueprint:
     def create_stream():
         body = request.get_json(silent=True) or {}
         source_key = str(body.get("source") or "synthetic")
-        if source_key not in SOURCES:
-            return jsonify({"error": f"unknown source; expected one of {sorted(SOURCES)}"}), 400
-        session, created = service.sessions.get_or_create(source_key)
+        if not is_known_source_key(source_key):
+            return jsonify({"error": f"unknown source; expected one of {sorted(SOURCES)}, "
+                                     f"optionally as 'retrospective:<case id>'"}), 400
+        try:
+            session, created = service.sessions.get_or_create(source_key)
+        except KeyError as exc:
+            # A case id nobody has is a broken link, and the caller gets told
+            # which one rather than a server error.
+            return jsonify({"error": str(exc).strip('"')}), 404
+        except ResourceVersionConflict as exc:
+            return jsonify({"error": str(exc), "source_system": exc.source_system, "resource_type": exc.resource_type,
+                            "resource_id": exc.resource_id, "version_id": exc.version_id}), 409
         return jsonify(session.state()), (201 if created else 200)
 
     @bp.get("/api/demo-streams/sources")
     def list_sources():
+        # The two base sources only. A per-stay case is opened by passing
+        # "retrospective:<case id>" here, not by listing forty more sources --
+        # the ward board is where a reader picks a stay.
         return jsonify({"sources": [make_source(key).describe() for key in SOURCES]})
 
     @bp.post("/api/demo-streams/<session_id>/step")
@@ -180,7 +192,10 @@ def create_blueprint(service: StreamService) -> Blueprint:
                 "latest_run_id": latest_run["run_id"] if latest_run else None,
             },
             "runtime": service.runtime.provenance(),
-            "variables": variable_state(timeline, latest_clinical),
+            # each latest observation also carries what it says about itself (its
+            # interpretation and reference range, when the source supplied them)
+            "variables": attach_observation_statements(
+                service.repo, session.source.source_system, variable_state(timeline, latest_clinical)),
             # organ routing for what was already delivered, so a reload restores the
             # same organ states the events had produced; resolved by the same map
             "organs": organ_state(timeline, latest_clinical),
@@ -210,9 +225,10 @@ def create_blueprint(service: StreamService) -> Blueprint:
             return jsonify({"patient_id": patient_id, "variable": variable, "cutoff": cutoff,
                             "series": series(timeline, variable)})
         variables = sorted({r["variable"] for r in timeline})
+        state = variable_state(timeline, cutoff or (timeline[-1]["effective_time"] if timeline else None))
         return jsonify({"patient_id": patient_id, "cutoff": cutoff, "count": len(timeline),
                         "series": {v: series(timeline, v) for v in variables},
-                        "state": variable_state(timeline, cutoff or (timeline[-1]["effective_time"] if timeline else None))})
+                        "state": attach_observation_statements(service.repo, session.source.source_system, state)})
 
     @bp.get("/api/patients/<patient_id>/forecasts")
     def patient_forecasts(patient_id: str):

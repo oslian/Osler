@@ -35,11 +35,22 @@
 .PARAMETER Port
     HTTP port. Falls back to $env:OSLIAN_PORT, then 5000.
 
+.PARAMETER Database
+    SQLite ledger path. Falls back to $env:OSLIAN_STREAM_DB, then var\oslian_stream.sqlite3.
+    A relative path is taken from the current directory. The parent directory is
+    created when missing; an existing ledger is never deleted or overwritten.
+
 .EXAMPLE
     .\scripts\start-demo.ps1
 
 .EXAMPLE
     .\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
+
+.EXAMPLE
+    .\scripts\start-demo.ps1 -Database .\var\oslian_stream_ranges_v2.sqlite3
+
+.EXAMPLE
+    .\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -Python C:\path\to\python.exe -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
 #>
 [CmdletBinding()]
 param(
@@ -48,7 +59,8 @@ param(
     [string] $ReleasePython,
     [string] $ReleasePythonPath,
     [string] $Python,
-    [int]    $Port
+    [int]    $Port,
+    [string] $Database
 )
 
 $ErrorActionPreference = 'Stop'
@@ -85,6 +97,20 @@ if ($listener) {
 
 $varDir = Join-Path $root 'var'
 if (-not (Test-Path $varDir)) { New-Item -ItemType Directory -Path $varDir | Out-Null }
+
+# ---- ledger ----------------------------------------------------------------
+# Explicit -Database first, then OSLIAN_STREAM_DB, then the default under var/.
+# The path is resolved the way the server will read it (relative to the current
+# directory), its parent is created when missing, and an existing file is left
+# exactly as it is: a ledger is append-only and is never deleted or replaced here.
+$Database = Resolve-Setting $Database 'OSLIAN_STREAM_DB' (Join-Path $varDir 'oslian_stream.sqlite3')
+if (-not [IO.Path]::IsPathRooted($Database)) {
+    $Database = Join-Path (Get-Location).Path $Database
+}
+$Database = [IO.Path]::GetFullPath($Database)
+$ledgerDir = Split-Path -Parent $Database
+if (-not (Test-Path $ledgerDir)) { New-Item -ItemType Directory -Path $ledgerDir -Force | Out-Null }
+$env:OSLIAN_STREAM_DB = $Database
 
 $env:PYTHONPATH = Join-Path $root 'backend'
 $env:PYTHONUTF8 = '1'
@@ -130,6 +156,6 @@ if ($Mode -eq 'release') {
 
 Write-Host "mode             : $Mode"
 Write-Host "frontend         : $(Join-Path $root 'frontend')"
-Write-Host "ledger           : $(Join-Path $varDir 'oslian_stream.sqlite3')"
+Write-Host "ledger           : $env:OSLIAN_STREAM_DB$(if (Test-Path $env:OSLIAN_STREAM_DB) { ' (existing)' } else { ' (new)' })"
 Write-Host "open             : http://127.0.0.1:$Port"
 & $pythonExe -m oslian_demo

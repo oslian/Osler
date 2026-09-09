@@ -3,7 +3,8 @@
  * Draws on the tokens in app.css. Colour roles (do not widen):
  *   teal    — research provenance and the brief "new data arrived" pulse
  *   blue    — forecast points and the observed-series accent
- *   oxide   — actions, selected organ, the model-input cutoff rule
+ *   oxide   — actions and the selected organ
+ *   graphite— the model-input cutoff rule: a boundary in time, not an alert
  *   caution — persistence / missing / degraded boundaries only; never a
  *             clinical status
  * Motion: 180–250 ms controls; one 800–900 ms pulse on data arrival; a 600 ms
@@ -53,10 +54,13 @@
 .counts .p, .counts .x, .counts .d { color: var(--caution-text); }
 
 /* ── anchor band + view bar ──────────────────────────────────────────── */
-.anchor-band { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px var(--gutter); background: var(--graphite); color: #FCFAF5; font-size: 12.5px; }
-.anchor-band .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #C9B48A; }
+.anchor-band { display: flex; align-items: center; gap: 14px 24px; flex-wrap: wrap; padding: 10px var(--gutter); background: var(--graphite); color: #FCFAF5; font-size: 12.5px; }
+.anchor-band .anchor-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 320px; }
+.anchor-band .eyebrow { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #C9B48A; }
+.anchor-band .anchor-line { font-size: 13px; }
+.anchor-band .anchor-detail { font-size: 11.5px; color: #B9BFBB; }
 .anchor-band .mono { color: #FCFAF5; }
-.anchor-band .btn { margin-left: auto; height: 30px; color: #FCFAF5; border-color: #6C7479; background: transparent; }
+.anchor-band .btn { margin-left: auto; height: 32px; color: #FCFAF5; border-color: #6C7479; background: transparent; }
 .anchor-band .btn:hover { background: #2A3237; }
 .anchor-band[hidden] { display: none; }
 .view-bar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 12px var(--gutter); }
@@ -65,56 +69,63 @@
 
 /* ── main layout: rail + workspace ───────────────────────────────────── */
 .stream-main { display: grid; grid-template-columns: 372px minmax(0, 1fr); align-items: start; min-height: 60vh; }
-.stream-main[data-view="signals"], .stream-main[data-view="cells"] { grid-template-columns: minmax(0, 1fr); }
-.stream-main[data-view="signals"] .rail, .stream-main[data-view="cells"] .rail { display: none; }
+.stream-main[data-view="data"] { grid-template-columns: minmax(0, 1fr); }
+.stream-main[data-view="data"] .rail { display: none; }
 .rail { background: var(--surface); border-right: 1px solid var(--divider); padding: 18px 18px 24px var(--gutter); min-height: 60vh; }
 .rail-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .rail-head .meta { font-size: 12px; color: var(--ink-2); }
 .anatomy-host { padding: 0 6px; }
-.anatomy-host svg { display: block; width: 100%; height: auto; max-height: 600px; margin: 0 auto; }
-.stream-main[data-view="functions"] .anatomy-host { display: none; }
+.anatomy-host .anatomy-figure { max-height: 600px; margin: 0 auto; }
+.stream-main[data-view="functions"] .anatomy-host,
+.stream-main[data-view="ward"] .anatomy-host { display: none; }
 .stream-main.metric-open { grid-template-columns: 128px minmax(0, 1fr); }
 .stream-main.metric-open .rail { padding: 14px 10px; }
 .stream-main.metric-open .rail-list, .stream-main.metric-open .rail-head .h-sec { display: none; }
 .stream-main.metric-open .rail-head .meta { display: block; width: 100%; text-align: center; font-size: 11.5px; }
 .stream-main.metric-open .anatomy-host { padding: 0; }
-.stream-main.metric-open .anatomy-host svg { max-height: 340px; }
-/* All signals and All forecast cells hide the rail entirely, so the collapsed
-   128px anatomy column above must not be reserved for it: the chart takes the
-   full width instead of being squeezed beside an empty first column. Anatomy
-   and Functions keep their rail and are untouched. */
-.stream-main[data-view="signals"].metric-open,
-.stream-main[data-view="cells"].metric-open { grid-template-columns: minmax(0, 1fr); }
+.stream-main.metric-open .anatomy-host .anatomy-figure { max-height: 340px; }
+/* Signals & forecasts hides the rail entirely, so the collapsed 128px anatomy
+   column above must not be reserved for it: the chart takes the full width
+   instead of being squeezed beside an empty first column. Anatomy and Functions
+   keep their rail and are untouched. */
+.stream-main[data-view="data"].metric-open { grid-template-columns: minmax(0, 1fr); }
+/* a report is a document, not a workspace: it takes the width and drops the rail */
+.stream-main.report-open { grid-template-columns: minmax(0, 1fr); }
+.stream-main.report-open .rail { display: none; }
 
 /* anatomy figure states
    The figure is the LadyofHats baseplate plus the detailed organ artwork, placed by
    organ-layout.json. A state never touches a transform: it only turns on that organ's
    own overlay copy, which an SVG filter recolours by the organ's alpha. The artwork
    underneath is never recoloured and never moves. */
-.anatomy-host .baseplate { pointer-events: none; }
-.anatomy-host .organ-art, .anatomy-host .organ-fx-layer { pointer-events: none; }
-.anatomy-host .organ-fx { opacity: 0; transition: opacity 220ms ease; }
-.anatomy-host .organ-fx.state-active { opacity: 1; filter: url(#fxTeal); }
-.anatomy-host .organ-fx.state-attention { opacity: .55; filter: url(#fxAmber); }
-.anatomy-host .organ-fx.state-active.state-attention { opacity: 1; filter: url(#fxAmber); }
-.anatomy-host .organ-fx.selected { opacity: 1; filter: url(#fxOxide); }
-.anatomy-host .organ-fx.pulse { animation: organ-pulse 900ms ease-out; }
+/* Every rule below is scoped to the figure itself, never to the box it sits in:
+   the same <svg> is mounted in the monitoring rail and in the printed report, and
+   it has to look the same in both. Scoping the click targets' `fill: transparent`
+   to an ancestor was what painted solid black rectangles over the head and torso
+   of the report's copy - an SVG <rect> fills black by default. */
+.anatomy-figure { display: block; width: 100%; height: auto; }
+.anatomy-figure .baseplate { pointer-events: none; }
+.anatomy-figure .organ-art, .anatomy-figure .organ-fx-layer { pointer-events: none; }
+.anatomy-figure .organ-fx { opacity: 0; transition: opacity 220ms ease; }
+.anatomy-figure .organ-fx.state-active { opacity: 1; filter: var(--fx-teal); }
+.anatomy-figure .organ-fx.selected { opacity: 1; filter: var(--fx-oxide); }
+.anatomy-figure .organ-fx.pulse { animation: organ-pulse 900ms ease-out; }
 @keyframes organ-pulse { 0% { opacity: 1; transform: none; } 45% { opacity: .55; } 100% { opacity: 1; } }
 
 /* hit areas: invisible, but focusable and hoverable */
-.anatomy-host .organ-hit { fill: transparent; stroke: none; cursor: pointer; outline: none; pointer-events: all; }
-.anatomy-host .organ-hit:hover { fill: rgba(156, 59, 38, .07); }
-.anatomy-host .organ-hit:focus-visible { fill: rgba(39, 100, 94, .10); stroke: var(--teal); stroke-width: 1.4; stroke-dasharray: 4 3; }
-.anatomy-host .organ-hit.selected { stroke: #9C3B26; stroke-width: 1.2; stroke-dasharray: 5 3; }
+.anatomy-figure .organ-hit { fill: transparent; stroke: none; cursor: pointer; outline: none; pointer-events: all; }
+.anatomy-figure .organ-hit:hover { fill: rgba(156, 59, 38, .07); }
+.anatomy-figure .organ-hit:focus-visible { fill: rgba(39, 100, 94, .10); stroke: var(--teal); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.anatomy-figure .organ-hit.selected { stroke: #9C3B26; stroke-width: 1.2; stroke-dasharray: 5 3; }
 
 /* frozen (historical anchor) and paused keep the figure readable: the response layer
    loses chroma, the artwork itself is untouched */
-.anatomy-host .organ-fx.frozen { filter: saturate(.55) url(#fxTeal); }
-.anatomy-host .organ-fx.frozen.selected { filter: url(#fxOxide); }
-.stream-main.paused .anatomy-host .organ-fx.pulse { animation: none; }
-.anatomy-host .organ-pill rect { fill: var(--graphite); }
-.anatomy-host .organ-pill text { fill: #FCFAF5; font: 11px var(--sans); }
-.stream-main.frozen .anatomy-host .baseplate { filter: saturate(.75); }
+.anatomy-figure .organ-fx.frozen { filter: saturate(.55) var(--fx-teal); }
+.anatomy-figure .organ-fx.frozen.selected { filter: var(--fx-oxide); }
+.stream-main.paused .anatomy-figure .organ-fx.pulse { animation: none; }
+.anatomy-figure .organ-pill rect { fill: var(--graphite); }
+.anatomy-figure .organ-pill text { fill: #FCFAF5; font: 11px var(--sans); }
+.stream-main.frozen .anatomy-figure .baseplate { filter: saturate(.75); }
 .rail-list .noart { font-size: 10.5px; color: var(--ink-2); border: 1px solid var(--divider); border-radius: 3px; padding: 0 4px; margin-left: 6px; white-space: nowrap; }
 
 /* rail list (organs or functions) */
@@ -226,24 +237,37 @@
 .fail-block pre { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; color: var(--ink); }
 
 /* ── metric workspace ─────────────────────────────────────────────────── */
+/* Reading order top to bottom: name and current value · live/snapshot state ·
+   the patient trajectory · the comparison summary · window and horizon
+   controls · run details and provenance, folded. */
 .crumb { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 8px; }
-.metric-h { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; margin-bottom: 4px; }
+.metric-h { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; margin-bottom: 14px; }
 .metric-h h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
 .big { font-family: var(--mono); font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; }
 .big small { font-size: 14px; color: var(--ink-2); margin-left: 6px; font-weight: 400; }
 .metric-h .kv { grid-template-columns: auto auto; gap: 2px 14px; font-size: 12px; }
 .metric-h .kv dt { color: var(--ink-2); } .metric-h .kv dd { font-family: var(--mono); }
-.chips-col { margin-left: auto; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-.chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.chip { height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--divider); border-radius: var(--radius);
-  font-family: var(--mono); font-size: 11.5px; background: var(--surface); color: var(--ink); cursor: pointer; transition: background 180ms ease; }
-.chip[aria-pressed="true"] { background: var(--graphite); color: #FCFAF5; border-color: var(--graphite); }
-.chip:disabled { opacity: .6; cursor: default; }
-.metric-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; margin-top: 12px; }
-.chart-wrap { position: relative; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: 14px 16px 10px; }
+.head-badge { display: inline-flex; align-items: center; gap: 7px; height: 24px; padding: 0 9px; font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; border-radius: var(--radius); white-space: nowrap; }
+.head-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.head-badge.live { color: var(--teal); border: 1px solid var(--teal); }
+.head-badge.snapshot { color: #FCFAF5; background: var(--graphite); border: 1px solid var(--graphite); }
+.head-badge.snapshot::before { border-radius: 0; }
+.traj { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: 14px 16px 12px; }
+.traj-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 10px; }
+.traj-head h3 { font-size: 14px; font-weight: 600; }
+.traj-head .note { display: block; margin-top: 2px; }
+.traj .foot { margin-top: 8px; }
+.chart-wrap { position: relative; }
 .bigchart { display: block; width: 100%; height: auto; }
 .bigchart .ct { font: 11px var(--mono); fill: var(--ink-2); }
 .bigchart .cl { font: 11px var(--sans); }
+.bigchart .cl.fc { font-weight: 500; }
+.bigchart .rg-t { font: 500 10.5px var(--mono); letter-spacing: .12em; fill: var(--ink); }
+.bigchart .rg-t.future { fill: var(--blue); }
+.bigchart .rg-s { font: 11px var(--sans); fill: var(--ink-2); }
+.bigchart .cutoff-l { font: 600 11.5px var(--sans); fill: var(--ink); }
+.bigchart .cutoff-s { font: 10.5px var(--mono); fill: var(--ink-2); }
 .chart-pt { cursor: pointer; outline: none; }
 .chart-pt:focus-visible circle, .chart-pt:focus-visible polygon, .chart-pt:focus-visible rect { stroke: var(--teal); stroke-width: 2.5; }
 .chart-pt .fresh-ring { animation: ring-in 800ms ease-out; }
@@ -252,19 +276,46 @@
   border-radius: 2px; line-height: 1.45; pointer-events: none; }
 .chart-tip .mono { color: #D8DCD8; }
 .chart-tip[hidden] { display: none; }
-.chart-legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.chart-legend { display: flex; gap: 8px 20px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
 .chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
-.lg-band { width: 12px; height: 12px; background: var(--app-bg); border: 1px solid var(--divider); display: inline-block; }
-.scrub { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-.scrub input[type="range"] { flex: 1; accent-color: var(--oxide); }
-.metric-side { display: flex; flex-direction: column; gap: 14px; }
-.side { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: 14px 16px; }
+.chart-legend .lg-note { flex-basis: 100%; font-size: 11.5px; }
+.lg-band { width: 12px; height: 12px; background: #EDF2F7; border: 1px solid #D6E0EA; display: inline-block; }
+.traj-below { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.compare { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: 12px 16px; }
+.compare h3, .traj-controls h3 { font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+.cmp-row { display: grid; grid-template-columns: 110px minmax(90px, auto) minmax(0, 1fr); gap: 4px 14px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--divider-soft); font-size: 12.5px; }
+.cmp-row:last-of-type { border-bottom: 0; }
+.cmp-row.head { border-bottom: 1px solid var(--divider); }
+.cmp-row .k { color: var(--ink-2); }
+.cmp-row .v { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-row .v small { font-size: 11px; color: var(--ink-2); }
+.cmp-row .v.na { font-family: var(--sans); font-size: 12.5px; color: var(--ink-2); white-space: normal; }
+.cmp-row .d { font-size: 11.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.cmp-row .d.mono { color: var(--ink); font-variant-numeric: tabular-nums; }
+.cmp-row[data-status="model"] .k { color: var(--blue); }
+.compare .note { margin-top: 8px; font-size: 11.5px; }
+.traj-controls { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border: 1px solid var(--divider); border-radius: var(--radius); background: var(--surface); }
+.chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chip { height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--divider); border-radius: var(--radius);
+  font-family: var(--mono); font-size: 11.5px; background: var(--surface); color: var(--ink); cursor: pointer; transition: background 180ms ease; }
+.chip[aria-pressed="true"] { background: var(--graphite); color: #FCFAF5; border-color: var(--graphite); }
+.chip:disabled { opacity: .6; cursor: default; }
+.scrub { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.scrub input[type="range"] { flex: 1 1 140px; min-width: 0; accent-color: var(--graphite); }
+.run-details { margin-top: 16px; border: 1px solid var(--divider); background: var(--surface); border-radius: var(--radius); }
+.run-details .h { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; padding: 10px 14px; font-family: var(--sans); font-size: 12.5px; color: var(--ink);
+  background: none; border: 0; text-align: left; cursor: pointer; }
+.run-details .h b { font-weight: 600; }
+.run-details .h .x { margin-left: auto; color: var(--blue); white-space: nowrap; }
+.run-details-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 0 14px 14px; }
+.side { background: var(--app-bg); border: 1px solid var(--divider-soft); border-radius: var(--radius); padding: 12px 14px; }
 .side h3 { font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
 .side .kv { grid-template-columns: 90px 1fr; gap: 3px 12px; font-size: 12px; }
 .hz { display: grid; grid-template-columns: 40px 1fr auto auto; gap: 6px 10px; font-size: 12.5px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--divider-soft); }
 .hz .h { font-family: var(--mono); color: var(--ink-2); }
 .hz .pt { font-family: var(--mono); font-weight: 500; color: var(--blue); }
 .hz .pt.null { color: var(--null); font-weight: 400; }
+.hz .derived { grid-column: 1 / -1; font-size: 11px; }
 
 /* ── lower panel ─────────────────────────────────────────────────────── */
 .lower-panel { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 var(--gutter); padding: 22px var(--gutter) 36px; border-top: 1px solid var(--divider); }
@@ -299,6 +350,241 @@
 .hist { list-style: none; }
 .hist li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--divider-soft); }
 
+/* ── attention tokens ───────────────────────────────────────────────────
+   Two different claims, two different colours, and each one also carries a mark
+   and a word, so nothing depends on colour alone (WCAG 2.2 SC 1.4.1) and a
+   black-and-white print loses nothing.
+
+     observed-abnormal   a measured result outside the interval its own
+                         observation supplied. Deep red, and only ever this.
+     projected-attention a model point forecast that leaves the same interval.
+                         Amber, hollow, dashed, counted apart, never an alert.
+
+   Both pass WCAG AA on their own tint and on the page ground:
+     #8C1D18 on #FBF0EE 8.2:1 · on #FCFAF5 8.7:1
+     #7A4E08 on #FAF3E4 6.4:1 · on #FCFAF5 6.9:1                              */
+:root {
+  --observed-abnormal: #8C1D18;
+  --observed-abnormal-bg: #FBF0EE;
+  --observed-abnormal-edge: #C9756D;
+  --projected-attention: #7A4E08;
+  --projected-attention-bg: #FAF3E4;
+  --projected-attention-edge: #C9A45C;
+  --range-band: #E7EDE4;
+}
+
+/* ── Signals & forecasts: the indicator list ────────────────────────────
+   A result list: the indicator's name is the entry point and the first column,
+   the result and its flag sit together the way a report prints them, and the
+   forecast is one column compared at one horizon the reader chooses. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mk { font-style: normal; font-family: var(--mono); font-size: 11.5px; line-height: 1; display: inline-block; min-width: 11px; text-align: center; }
+.why { display: block; font-size: 11px; color: var(--ink-2); line-height: 1.35; }
+
+.att-summary { list-style: none; display: flex; gap: 6px 20px; flex-wrap: wrap; margin: 4px 0 10px; font-size: 12px; color: var(--ink-2); }
+.att-summary li { display: inline-flex; align-items: center; gap: 5px; }
+.att-summary b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.data-controls .field.sm { width: 190px; }
+
+.horizon-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 14px;
+  padding: 8px 12px; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); }
+.horizon-bar .segmented button { height: 28px; padding: 0 12px; font-family: var(--mono); font-size: 12px; }
+
+.ind-section { margin-bottom: 20px; }
+.sec-h { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.sec-h h3 { font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.attention-section .sec-h h3 { color: var(--observed-abnormal); }
+.empty-note.quiet { padding: 10px 0; font-size: 12.5px; }
+
+.ind-scroll { overflow-x: auto; }
+.ind-table { width: 100%; border-collapse: collapse; }
+.ind-table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-2); padding: 6px 14px 6px 0;
+  border-bottom: 1px solid var(--ink); white-space: nowrap; }
+.ind-table td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--divider-soft); font-size: 12.5px; vertical-align: top; }
+.ind-table td:last-child, .ind-table th:last-child { padding-right: 0; }
+
+.ind-row { cursor: pointer; transition: background 180ms ease; }
+.ind-row:hover { background: var(--app-bg); }
+.ind-row:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.ind-row.open { background: var(--surface); }
+.ind-row.open td { border-bottom-color: transparent; }
+/* the indicator name is the entry point: it is the largest text in the row */
+.ind-row .ind .t { display: block; font-size: 14px; font-weight: 600; letter-spacing: -0.005em; }
+.ind-row .ind .d { display: block; font-size: 11px; color: var(--ink-2); margin-top: 1px; }
+.ind-row .result { white-space: nowrap; }
+.ind-row .result .v { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; }
+.ind-row .result .u { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-left: 4px; }
+.ind-row .rng { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.ind-row .rng.na, .ind-row .prev.na, .ind-row .fc.na { font-family: var(--sans); font-size: 12px; color: var(--ink-2); white-space: normal; }
+.ind-row .prev { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ind-row .prev small { font-size: 10.5px; color: var(--ink-2); }
+.ind-row .fc { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ind-row .fc.model { color: var(--blue); font-weight: 600; }
+.ind-row .fc.carried { color: var(--caution-text); font-family: var(--sans); font-size: 12px; white-space: normal; }
+.ind-row .updated { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+.new-dot { display: inline-flex; align-items: center; margin-left: 6px; }
+.new-dot i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); display: block; }
+
+/* the flag: a mark, a word, and colour only as a repeat of both */
+.flag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; color: var(--ink-2); }
+.flag-above, .flag-below, .flag-outside { color: var(--observed-abnormal); font-weight: 700; letter-spacing: .02em; }
+.flag-within { color: var(--ink-2); }
+.flag-unsupplied, .flag-unit, .flag-none { color: var(--ink-2); }
+.proj { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--projected-attention); font-weight: 600; }
+
+/* a current result outside its supplied range: deep red, a rule down the row,
+   a pale tint - and never a solid red row, which would drown the reading */
+.ind-row.abnormal { background: var(--observed-abnormal-bg); }
+.ind-row.abnormal:hover { background: #F7E7E4; }
+.ind-row.abnormal td:first-child { box-shadow: inset 4px 0 0 var(--observed-abnormal); padding-left: 12px; }
+.ind-row.abnormal .ind .t { color: var(--observed-abnormal); font-weight: 700; }
+.ind-row.abnormal .result .v { color: var(--observed-abnormal); font-weight: 700; }
+.ind-row.projected { background: var(--projected-attention-bg); }
+.ind-row.projected td:first-child { box-shadow: inset 4px 0 0 var(--projected-attention-edge); padding-left: 12px; }
+
+/* ── one indicator, opened in place ─────────────────────────────────────── */
+.ind-detail td { padding: 0 0 16px; background: var(--surface); border-bottom: 1px solid var(--divider); }
+.detail-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding: 12px 16px 6px; }
+.detail-head h3 { font-size: 17px; font-weight: 600; }
+.detail-head .detail-value { font-family: var(--mono); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+.detail-head .detail-value small { font-size: 12px; color: var(--ink-2); margin-left: 5px; }
+.detail-head .why { display: inline; }
+.ind-row.abnormal + .ind-detail .detail-value { color: var(--observed-abnormal); }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px 28px; padding: 4px 16px 0; }
+.detail-grid h4 { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 8px 0 4px; }
+.detail-grid p.why { margin-top: 3px; line-height: 1.5; }
+.detail-cells { width: 100%; border-collapse: collapse; font-size: 12px; }
+.detail-cells th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-2); padding: 3px 10px 3px 0; border-bottom: 1px solid var(--divider); }
+.detail-cells td { padding: 4px 10px 4px 0; border-bottom: 1px solid var(--divider-soft); vertical-align: top; }
+.detail-cells td.v { font-family: var(--mono); white-space: nowrap; }
+.detail-cells td.v.model { color: var(--blue); font-weight: 600; }
+.detail-cells tr[data-compared="true"] { background: var(--app-bg); }
+.detail-cells tr[data-projected] td.v.model { color: var(--projected-attention); }
+.detail-chart { position: relative; padding: 10px 16px 0; }
+/* The drawing scales into the width it is given and its viewBox fixes the height
+   -- width and height are never both forced, so the SVG is never stretched. Past
+   this width a wider window would only make the panel taller, pushing the
+   forecast cells and the trajectory link off the screen, so it stops here and
+   centres. The cap matches INLINE_MAX_WIDTH in chart.js. */
+.detail-chart .bigchart[data-context="inline-detail"] { display: block; width: 100%; max-width: 1500px; height: auto; margin: 0 auto; }
+.ind-detail .chart-legend { padding: 0 16px; max-width: 1532px; margin-left: auto; margin-right: auto; }
+.detail-prov { margin: 8px 16px 0; font-size: 12px; }
+.detail-prov summary { cursor: pointer; color: var(--ink-2); }
+.detail-prov .kv { grid-template-columns: 120px 1fr; gap: 2px 12px; font-size: 11.5px; margin-top: 6px; }
+.detail-actions { padding: 10px 16px 0; }
+.bigchart .rg-s { font: 11px var(--sans); fill: var(--ink-2); }
+.lg-range { width: 14px; height: 10px; background: var(--range-band); border: 1px dashed #C4D0BE; display: inline-block; }
+
+.other-toggle { display: none; align-items: center; gap: 8px; width: 100%; margin: 4px 0 8px; padding: 9px 12px;
+  font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--divider); border-radius: var(--radius); cursor: pointer; text-align: left; }
+.other-toggle:hover { border-color: var(--ink-2); }
+.other-toggle .chev { margin-left: auto; color: var(--ink-2); }
+.unobserved { margin-top: 8px; }
+.unobserved-toggle { font-size: 12.5px; }
+.unobserved-list { list-style: none; columns: 3; column-gap: 24px; margin-top: 8px; }
+.unobserved-list li { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 12px; break-inside: avoid; }
+.unobserved-list .t { font-weight: 600; } .unobserved-list .d { color: var(--ink-2); font-size: 11.5px; }
+
+/* the organ tile and row speak the same words as the list */
+.tile-flag { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11.5px; color: var(--ink-2); }
+.tile-flag.flag-above, .tile-flag.flag-below, .tile-flag.flag-outside { color: var(--observed-abnormal); font-weight: 700; }
+.tile-flag .why { display: inline; font-family: var(--mono); }
+.tile-proj { display: flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 11.5px; color: var(--projected-attention); font-weight: 600; }
+.tile.abnormal { border-color: var(--observed-abnormal-edge); background: var(--observed-abnormal-bg); box-shadow: inset 4px 0 0 var(--observed-abnormal); }
+.tile.abnormal .v { color: var(--observed-abnormal); }
+.tile.projected { border-color: var(--projected-attention-edge); background: var(--projected-attention-bg); }
+.row.abnormal { box-shadow: inset 3px 0 0 var(--observed-abnormal); background: var(--observed-abnormal-bg); }
+.row.abnormal .v { color: var(--observed-abnormal); font-weight: 600; }
+.row .flag { display: inline-flex; }
+
+/* the organ rail, in attention order */
+.rail-list button.organ-row .needs { display: inline-block; margin-left: 6px; padding: 0 5px; font-family: var(--mono);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--observed-abnormal); border: 1px solid var(--observed-abnormal); border-radius: 2px; }
+.rail-list button.organ-row .n.attn { color: var(--observed-abnormal); font-weight: 600; }
+.rail-list button.organ-row .n.proj { color: var(--projected-attention); font-weight: 600; }
+.rail-list button.organ-row .why { grid-column: 1 / -1; margin-top: 1px; }
+.rail-list button.organ-row[data-attention="abnormal"] i { background: var(--observed-abnormal); border-color: var(--observed-abnormal); }
+.rail-list button.organ-row[data-attention="projected"] i { background: var(--projected-attention-bg); border-color: var(--projected-attention); }
+
+/* the figure: the state a selected organ has is the state it keeps */
+/* A state a figure has is a state it keeps: these come after `.selected`, so a
+   selected abnormal organ stays deep red and the selection shows as the ring on
+   its hit area instead. */
+.anatomy-figure .organ-fx.state-projected, .anatomy-figure .organ-fx.state-projected.frozen { opacity: 1; filter: var(--fx-amber); }
+.anatomy-figure .organ-fx.state-abnormal, .anatomy-figure .organ-fx.state-abnormal.frozen { opacity: 1; filter: var(--fx-danger); }
+.anatomy-figure .organ-hit.state-abnormal.selected { stroke: var(--observed-abnormal); stroke-width: 1.6; stroke-dasharray: 5 3; }
+.anatomy-figure .organ-hit.state-projected.selected { stroke: var(--projected-attention); stroke-width: 1.6; stroke-dasharray: 5 3; }
+
+/* ── report builder and the report document ─────────────────────────────
+   The builder is the screen control; the article below it is what prints. */
+.report-builder { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 18px; }
+.builder-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.builder-head h2 { font-size: 18px; font-weight: 600; }
+.builder-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.builder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 24px; }
+.builder-grid fieldset { border: 0; padding: 0; min-width: 0; }
+.builder-grid legend { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 6px; }
+.builder-grid label { display: flex; align-items: baseline; gap: 7px; font-size: 12.5px; padding: 2px 0; }
+.builder-grid .why { margin-top: 2px; }
+.scope-picker { max-height: 168px; overflow-y: auto; margin-top: 6px; padding: 6px 8px; background: var(--app-bg); border: 1px solid var(--divider-soft); }
+.scope-picker .pick { font-size: 12px; }
+
+.report { background: var(--surface); border: 1px solid var(--divider); padding: 26px 30px 30px; max-width: 1100px; }
+.report-head h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+.report-boundary { margin-top: 3px; font-size: 11.5px; color: var(--ink-2); line-height: 1.45; }
+.report-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 14px; margin: 12px 0 0;
+  padding-top: 10px; border-top: 1px solid var(--divider); font-size: 12px; }
+.report-meta dt { font-weight: 600; color: var(--ink-2); }
+.report-meta dd { margin: 0; }
+.report-section { margin-top: 22px; }
+.report-section h2 { font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding-bottom: 4px; border-bottom: 1px solid var(--ink); }
+.report-note { margin-top: 6px; font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
+.report .quiet { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+.report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+.report-table th[scope="col"] { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-2);
+  padding: 5px 10px 5px 0; border-bottom: 1px solid var(--ink); white-space: nowrap; }
+.report-table td, .report-table th[scope="row"] { text-align: left; padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--divider-soft); vertical-align: top; }
+.report-table th[scope="row"] { font-weight: 600; }
+.report-table th[scope="row"] .d, .report-table td .d { display: block; font-weight: 400; font-size: 10.5px; color: var(--ink-2); }
+.report-table .v { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.report-table.compact td, .report-table.compact th[scope="row"] { padding-top: 3px; padding-bottom: 3px; }
+/* Deep red marks one thing: a measured value that is outside the interval its own
+   observation supplied, and the flag that says so. A previous value and a change
+   are neutral ink - a change of +1.00 towards the interval and one away from it
+   look the same here, because deciding between them would be a judgement this
+   page does not make. The cells are named, so the rule cannot drift onto a
+   neighbour the way an nth-child rule would. */
+.report-table tr.abnormal { background: var(--observed-abnormal-bg); }
+.report-table tr.abnormal .indicator-name { box-shadow: inset 3px 0 0 var(--observed-abnormal); padding-left: 9px; color: var(--observed-abnormal); }
+.report-table tr.abnormal .current-result { color: var(--observed-abnormal); font-weight: 700; }
+.report-table .previous-result, .report-table .result-change { color: var(--ink); font-weight: 400; }
+.report-table .forecast-result.model { color: var(--blue); font-weight: 600; }
+.report-table .forecast-result.projected { color: var(--projected-attention); font-weight: 600; }
+.report-chart { margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--divider-soft); background: var(--app-bg); }
+.report-chart figcaption { font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
+.report-chart .bigchart { display: block; width: 100%; height: auto; }
+.report-anatomy { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px 26px; margin-top: 12px; align-items: start; }
+.report-figure .anatomy-figure { max-height: 420px; }
+.organ-notes { columns: 2; column-gap: 22px; }
+.organ-note { break-inside: avoid; margin-bottom: 8px; }
+.organ-note h4 { font-size: 12px; font-weight: 600; }
+.organ-note ul { list-style: none; margin-top: 2px; }
+.organ-note li { font-size: 11.5px; line-height: 1.45; padding-left: 10px; position: relative; }
+.organ-note li::before { content: "•"; position: absolute; left: 0; }
+.organ-note li.abnormal { color: var(--observed-abnormal); font-weight: 600; }
+.organ-note li.projected { color: var(--projected-attention); }
+.organ-note li.quiet { color: var(--ink-2); }
+.report-foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--ink); }
+.report-foot h2 { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border: 0; padding: 0; margin-top: 12px; }
+.report-foot ul { list-style: disc; margin: 6px 0 0 18px; }
+.report-foot li { font-size: 11.5px; line-height: 1.5; margin-bottom: 3px; }
+.report-id { margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--ink-2); }
+
 /* ── responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 1365px) {
   .stream-strip { grid-template-columns: minmax(0, 1fr) auto; }
@@ -308,8 +594,6 @@
   .rail-list button { grid-template-columns: 12px 1fr; }
   .rail-list .n { grid-column: 2; white-space: normal; }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .metric-grid { grid-template-columns: minmax(0, 1fr); }
-  .metric-side { flex-direction: row; flex-wrap: wrap; } .metric-side .side { flex: 1 1 260px; }
 }
 @media (max-width: 1023px) {
   .stream-strip { grid-template-columns: 1fr; }
@@ -317,7 +601,9 @@
   .cmd-clocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stream-main, .stream-main.metric-open { grid-template-columns: minmax(0, 1fr); }
   .rail { border-right: 0; border-bottom: 1px solid var(--divider); min-height: 0; padding: 12px var(--gutter); }
-  .anatomy-host, .stream-main.metric-open .anatomy-host { display: none; }
+  /* the rail's figure only: the report's anatomy overview is a document element
+     and keeps its own size on narrow paper */
+  .rail .anatomy-host, .stream-main.metric-open .rail .anatomy-host { display: none; }
   .rail-list { display: flex; gap: 8px; overflow-x: auto; border-top: 0; margin-top: 8px; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
   .stream-main.metric-open .rail-list { display: flex; }
   .stream-main.metric-open .rail-head .h-sec { display: block; }
@@ -333,6 +619,13 @@
   .lower-panel { grid-template-columns: 1fr; }
   .lower-panel > section + section { padding-left: 0; border-left: 0; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--divider); }
   .view-bar .right { margin-left: 0; }
+
+  .ind-table th:nth-child(5), .ind-table td.prev-cell { display: none; }
+  .data-controls .field.sm { width: 100%; }
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .unobserved-list { columns: 2; }
+  .report-anatomy { grid-template-columns: minmax(0, 1fr); }
+  .organ-notes { columns: 1; }
 }
 @media (max-width: 767px) {
   .tiles { grid-template-columns: 1fr; }
@@ -340,14 +633,115 @@
   .transport .btn, .segmented button { height: 44px; }
   .metric-h { gap: 14px; }
   .big { font-size: 32px; }
-  .chips-col { margin-left: 0; align-items: flex-start; }
   .workspace { padding: 14px var(--gutter) 28px; }
-  .chart-wrap { overflow-x: auto; padding: 10px 8px 8px; }
-  .bigchart { min-width: 600px; }
+  /* the chart is drawn at the column's own width: one column, no sideways scroll */
+  .traj { padding: 10px 8px 8px; }
+  .traj-head { margin-bottom: 6px; }
+  .traj-below { grid-template-columns: minmax(0, 1fr); }
+  .cmp-row { grid-template-columns: 96px minmax(0, 1fr); }
+  .cmp-row .d { grid-column: 1 / -1; }
+  .chart-tip { max-width: 220px; }
   .view-bar .segmented.sans { width: 100%; } .view-bar .segmented.sans button { flex: 1 1 0; padding: 0 6px; font-size: 12px; }
+
+  /* the table becomes one card per indicator: same order, same words, same colours */
+  .ind-table, .ind-table tbody, .ind-table tr, .ind-table td { display: block; width: auto; }
+  .ind-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .ind-scroll { overflow: visible; }
+  .ind-row { border: 1px solid var(--divider); border-radius: var(--radius); background: var(--surface);
+    padding: 10px 12px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+  .ind-row td { border: 0; padding: 0; }
+  .ind-row .ind { grid-column: 1; grid-row: 1; }
+  .ind-row .result { grid-column: 2; grid-row: 1; text-align: right; }
+  .ind-row .flag-cell { grid-column: 1 / -1; margin-top: 4px; }
+  .ind-row .range-cell, .ind-row .prev-cell, .ind-row .fc-cell, .ind-row .updated { grid-column: 1 / -1; margin-top: 3px; }
+  .ind-table th:nth-child(5), .ind-table td.prev-cell { display: block; }
+  .ind-row .range-cell::before { content: "Reference range · "; font-size: 11px; color: var(--ink-2); }
+  .ind-row .prev-cell::before { content: "Previous · "; font-size: 11px; color: var(--ink-2); }
+  .ind-row .fc-cell::before { content: "Forecast · "; font-size: 11px; color: var(--ink-2); }
+  .ind-row .rng, .ind-row .prev, .ind-row .fc { display: inline; white-space: normal; }
+  .ind-row .why { display: inline; margin-left: 6px; }
+  .ind-row.abnormal td:first-child { box-shadow: none; padding-left: 0; }
+  .ind-row.abnormal { box-shadow: inset 4px 0 0 var(--observed-abnormal); }
+  /* Needs attention is always open on a phone; the ordinary results fold away
+     behind a button, so the page opens on what is worth reading first. */
+  .other-toggle { display: flex; }
+  .ind-section[data-open="false"] .ind-scroll { display: none; }
+  .ind-detail td { padding: 0 0 12px; }
+  .detail-head, .detail-grid, .detail-chart, .detail-actions, .detail-prov { padding-left: 10px; padding-right: 10px; }
+  /* the full trajectory page: one column, the chart at the column's own width */
+  .traj { padding: 10px 8px 8px; }
+  .traj-head { margin-bottom: 6px; }
+  .traj-below { grid-template-columns: minmax(0, 1fr); }
+  .cmp-row { grid-template-columns: 96px minmax(0, 1fr); }
+  .cmp-row .d { grid-column: 1 / -1; }
+  .chart-tip { max-width: 220px; }
+  .unobserved-list { columns: 1; }
+  .report { padding: 14px 12px 18px; }
+  .report-meta { grid-template-columns: minmax(0, 1fr); }
+  .report-meta dt { margin-top: 5px; }
+  .builder-actions { margin-left: 0; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .anatomy-host .organ-fx.pulse { animation: none; }
+  .anatomy-figure .organ-fx.pulse { animation: none; }
   .tile.fresh .v, .row.fresh .v, .chart-pt .fresh-ring, .stat.run-flow i { animation: none; }
-  .anatomy-host .organ-fx, .segmented button, .rail-list button, .tile, .row, .chip, .rail-list .bar i { transition: none; }
+  .anatomy-figure .organ-fx, .segmented button, .rail-list button, .tile, .row, .ind-row, .chip, .rail-list .bar i { transition: none; }
+}
+
+/* ── print ──────────────────────────────────────────────────────────────
+   Only the report is printed. The page chrome, the builder and every control
+   go; the document keeps its own header, repeats the table head after a break
+   and never splits a result across two pages. Colour is a repeat of the marks
+   and the words, so a black-and-white copy reads the same. */
+@media print {
+  @page { size: A4 landscape; margin: 11mm 12mm 13mm; }
+  .app-bar, .boundary, .stream-strip, .anchor-band, .view-bar, .rail, .lower-panel, .drawer, .dev-tools,
+  .data-controls, .att-summary, .horizon-bar, .report-builder, .unobserved-toggle, .unobserved-list,
+  .detail-actions, .traj-controls, .run-details .h .x, .chart-tip { display: none !important; }
+  .stream-main, .stream-main.metric-open { display: block; }
+  .workspace { padding: 0; }
+  .report { border: 0; padding: 0; max-width: none; background: none; }
+  .report-head h1 { font-size: 17px; }
+  .report-boundary, .report-note, .report-foot li { font-size: 9.5px; }
+  .report-meta { font-size: 10px; gap: 1px 10px; }
+  /* Paper is filled before it is broken: no section claims a page of its own, and
+     a section continues on the page below whenever the room is there. What may not
+     break is a unit of meaning - a result row, a chart, the body overview, the
+     limitations - and a heading always travels with the block it introduces. */
+  .report-section { margin-top: 12px; break-inside: auto; break-before: auto; }
+  .report-section h2, .report-foot h2 { font-size: 11.5px; break-after: avoid; page-break-after: avoid; }
+  .report-note, .report-head { break-after: avoid; }
+  .report-table thead { break-after: avoid; }
+  .page-break { break-before: auto; page-break-before: auto; }
+  .report-table { font-size: 9.5px; margin-top: 6px; }
+  .report-table thead { display: table-header-group; }
+  .report-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .report-table td, .report-table th { padding: 3px 8px 3px 0; }
+  .report-chart, .organ-note, .report-foot { break-inside: avoid; }
+  /* the body overview is one unit down to the sentence under it: splitting the
+     figure from its notes, or the notes from what they mean, reads as two things */
+  .anatomy-section { break-inside: avoid; page-break-inside: avoid; }
+  /* two charts to a row: readable at this size and half the paper */
+  .report-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .report-chart { margin: 0; padding: 4px 6px; }
+  .report-chart figcaption { font-size: 10px; margin-bottom: 2px; }
+  .report-chart .chart-legend { display: none; }
+  /* the paper is narrower than the tablet breakpoint, so the overview says here
+     what it looks like rather than inheriting a phone layout */
+  .report-anatomy { grid-template-columns: 165px minmax(0, 1fr); gap: 6px 14px; margin-top: 6px; }
+  .report-figure .anatomy-figure { max-height: 205px; }
+  .organ-notes { columns: 4; column-gap: 12px; }
+  .organ-note { margin-bottom: 4px; }
+  .organ-note h4 { font-size: 9.5px; }
+  .organ-note li { font-size: 9px; line-height: 1.3; }
+  .report-foot { margin-top: 12px; padding-top: 6px; }
+  .report-foot ul { margin-top: 3px; }
+  .report-foot li { margin-bottom: 1px; }
+  .report-table tr.abnormal { background: #F4E3E0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* on paper too, only the measured value that is outside its interval and the
+     flag beside it are red; a previous value and a change stay neutral */
+  .report-table tr.abnormal .indicator-name, .report-table tr.abnormal .current-result,
+  .flag-above, .flag-below, .flag-outside { color: #7A1512 !important; }
+  .report-table .previous-result, .report-table .result-change { color: #171A1C !important; }
+  .proj, .organ-note li.projected { color: #6B4407 !important; }
+  .report-id { font-size: 8.5px; }
 }

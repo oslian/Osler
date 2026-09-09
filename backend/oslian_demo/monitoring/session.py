@@ -21,10 +21,10 @@ import uuid
 from .fhir import now_iso, now_utc, iso
 from .ingest import Ingestor
 from .eventlog import LOG_OFF, StreamEventLogger
-from .repository import Repository
+from .repository import ResourceVersionConflict, Repository
 from .routing import variable_routing
 from .source import ClinicalDataSource, make_source
-from .timeline import build_model_input, delivered_timeline, variable_state
+from .timeline import build_model_input, delivered_timeline, variable_state, observation_statements
 from .wholebody import RuntimeUnavailable, WholeBodyRuntime
 
 SPEEDS = (1.0, 5.0, 20.0)
@@ -443,7 +443,8 @@ class StreamSession:
         }
         if not result.accepted:
             self.bus.emit(self.session_id, "fhir.resource.rejected", {
-                **envelope, "validation_issues": list(result.validation_issues)})
+                **envelope, "validation_issues": list(result.validation_issues),
+                "version_conflict": result.version_conflict})
             return
         self.bus.emit(self.session_id, "fhir.resource.accepted", {
             **envelope,
@@ -475,10 +476,19 @@ class StreamSession:
         values = [{**row, "organ_ids": list(routing.organs_for(row["variable"])),
                    "functional_group_ids": list(routing.functions_for(row["variable"]))}
                   for row in result.canonical]
+        # A version supersedes when this session already delivered an earlier one
+        # of the same resource; a first delivery is a first delivery whatever its
+        # version number says, so a fixture revision can renumber without
+        # pretending every value is an amendment.
+        earlier = [v for v in self.repo.delivered_versions(self.session_id, self.epoch, "Observation", result.resource_id)
+                   if v != result.version_id]
         self.bus.emit(self.session_id, "observation.normalized", {
             "event_id": event_id, "resource_id": result.resource_id, "version_id": result.version_id,
             "effective_time": result.effective_time, "received_at": received_at,
-            "values": values, "superseding": result.version_id != "1",
+            "values": values, "superseding": bool(earlier),
+            # the observation's own statements (interpretation, referenceRange), so the
+            # live state carries them the moment the value arrives
+            **observation_statements(event.resource),
             # union across this resource's values: what the motion renderer animates
             "organ_ids": sorted({o for v in values for o in v["organ_ids"]}),
             "functional_group_ids": sorted({f for v in values for f in v["functional_group_ids"]})})
@@ -573,20 +583,44 @@ class SessionManager:
                 # the playback thread did not survive a restart; resume is explicit
                 repo.update_session(record["session_id"], status=STATUS_PAUSED, updated_at=now_iso())
                 record["status"] = STATUS_PAUSED
-            source = self._source_for_system(record["source_system"])
+            source = self._source_for_record(record)
             if source is None:
                 continue   # a session whose source no longer exists stays in the ledger but is not resurrected
             self._sessions[record["session_id"]] = StreamSession(repo, self.bus, source, runtime, record)
 
-    def _source_for_system(self, source_system: str):
+    def _source_for_record(self, record):
+        """Rebuild the source a stored session was created from.
+
+        Matching on the source system alone was unambiguous while each system
+        had exactly one source behind it. A per-stay retrospective case breaks
+        that: forty cases share one system, so the scan would hand every
+        restored session the first case it found, and a session opened on one
+        stay would come back after a restart as somebody else. The patient has
+        to match as well, and a case that only its own id can reach is asked for
+        by that id.
+        """
+        system, patient = record["source_system"], record["patient_id"]
+        # A session is bound to the fixture revision it was opened on. Resuming it
+        # onto a revised fixture would deliver new content after old, and the
+        # timeline would mix the two; such a session stays in the ledger, paused,
+        # and a new session on the revised fixture starts from its first event.
+        revision = record.get("fixture_version")
         for key in ("synthetic", "retrospective"):
             try:
                 source = self._source_factory(key)
             except Exception:  # noqa: BLE001
                 continue
-            if source.source_system == source_system:
-                return source
-        return None
+            if source.source_system == system and source.patient_id == patient:
+                return source if not revision or source.fixture_version == revision else None
+        try:
+            source = self._source_factory(f"retrospective:{patient}")
+        except Exception:  # noqa: BLE001
+            return None
+        # Fail closed rather than restore a session onto the wrong stay: a source
+        # whose system does not match the record is not the one it was made from.
+        if source.source_system != system:
+            return None
+        return source if not revision or source.fixture_version == revision else None
 
     def get(self, session_id: str) -> StreamSession | None:
         return self._sessions.get(session_id)
@@ -603,7 +637,12 @@ class SessionManager:
                 return self._sessions[existing["session_id"]], False
             ingestor = Ingestor(self.repo, source.source_system)
             bootstrap_id = f"bootstrap:{source.patient_id}"
-            ingestor.ingest_bundle(source.initial_bundle(), received_at=now_iso(), event_id=bootstrap_id)
+            for result in ingestor.ingest_bundle(source.initial_bundle(), received_at=now_iso(), event_id=bootstrap_id):
+                if result.version_conflict:
+                    # a fixture edited without a version bump: refuse to open a
+                    # session on it rather than serve a mixed ledger
+                    raise ResourceVersionConflict(source.source_system, result.resource_type,
+                                                  str(result.resource_id), str(result.version_id))
             session_id = uuid.uuid4().hex[:12]
             record = {
                 "session_id": session_id, "patient_id": source.patient_id, "source_system": source.source_system,

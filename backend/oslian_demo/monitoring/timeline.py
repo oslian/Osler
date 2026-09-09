@@ -58,8 +58,79 @@ def variable_state(timeline: list[dict], now: str | None) -> dict[str, dict[str,
             "version_id": latest["version_id"],
             "age_hours": age,
             "count": item["count"],
+            # the value as the source stated it, before unit conversion: a reference
+            # range the observation supplies is written in this unit, not the canonical one
+            "input_value": (None if latest.get("input_value") is None else float(latest["input_value"])),
+            "input_unit": latest.get("input_unit"),
+            # the mapping's own word for how canonical came from stated: "identity" means
+            # the same number under another unit name, which is what lets a forecast in
+            # the canonical unit be read against a range stated in the observation's unit
+            "derivation": latest.get("derivation"),
         }
     return out
+
+
+def _quantity_value(quantity: Any) -> float | None:
+    if not isinstance(quantity, dict):
+        return None
+    value = quantity.get("value")
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _quantity_unit(quantity: Any) -> str | None:
+    if not isinstance(quantity, dict):
+        return None
+    unit = quantity.get("unit") or quantity.get("code")
+    return unit if isinstance(unit, str) else None
+
+
+def observation_statements(resource: dict | None) -> dict[str, Any]:
+    """What an Observation says about its own value, passed through unchanged in meaning.
+
+    Two FHIR elements can carry that statement: ``interpretation`` (the source's
+    own coded reading, for example ``H`` or ``N`` from v3-ObservationInterpretation)
+    and ``referenceRange`` (the interval the source compared the value against,
+    in the unit the source used). Both are returned as lists, empty when the
+    observation carries neither. Nothing here decides whether a value is normal:
+    that decision is the observation's own statement or nobody's, and the page
+    that reads these fields says "Range not supplied" when both lists are empty.
+    """
+    out: dict[str, Any] = {"interpretation": [], "reference_range": []}
+    if not isinstance(resource, dict):
+        return out
+    for concept in resource.get("interpretation") or []:
+        if not isinstance(concept, dict):
+            continue
+        # the concept's own text travels with each code: a fixture-derived reading
+        # names itself there, and a reader of the state can tell it from a source's
+        provenance = concept.get("text") if isinstance(concept.get("text"), str) else None
+        for coding in concept.get("coding") or []:
+            if isinstance(coding, dict) and isinstance(coding.get("code"), str):
+                out["interpretation"].append({"system": coding.get("system"), "code": coding["code"],
+                                              "display": coding.get("display"), "provenance": provenance})
+    for item in resource.get("referenceRange") or []:
+        if not isinstance(item, dict):
+            continue
+        low, high = item.get("low"), item.get("high")
+        out["reference_range"].append({
+            "low": _quantity_value(low), "low_unit": _quantity_unit(low),
+            "high": _quantity_value(high), "high_unit": _quantity_unit(high),
+            "text": item.get("text") if isinstance(item.get("text"), str) else None,
+            # a range qualified by population or age applies to some patients only;
+            # the reader of this field decides whether it applies, never this code
+            "applies_to": bool(item.get("appliesTo")),
+            "age": bool(item.get("age")),
+        })
+    return out
+
+
+def attach_observation_statements(repo: Repository, source_system: str,
+                                  variables: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Join each variable's latest raw Observation back on, for its own statements."""
+    for state in variables.values():
+        raw = repo.raw_by_reference(source_system, "Observation", state["resource_id"], state["version_id"])
+        state.update(observation_statements(raw["resource"] if raw else None))
+    return variables
 
 
 def organ_state(timeline: list[dict], now: str | None) -> dict[str, dict[str, Any]]:

@@ -140,6 +140,15 @@ $env:PYTHONPATH = "backend"
 python -m oslian_demo
 ```
 
+To run against a ledger of your own choosing (a fresh one, or one kept apart
+for a demo), pass `-Database`. The parent directory is created when missing; an
+existing ledger is never deleted or overwritten, and the start banner prints the
+ledger actually in use:
+
+```powershell
+.\scripts\start-demo.ps1 -Database .\var\oslian_stream_ranges_v2.sqlite3
+```
+
 ---
 
 ## Initialising the model runtime
@@ -160,6 +169,12 @@ Then:
 
 ```powershell
 .\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
+```
+
+With its own ledger as well:
+
+```powershell
+.\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -Python C:\path\to\python.exe -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
 ```
 
 The release worker needs an interpreter that can import the checkout with
@@ -337,7 +352,7 @@ never hold a real key.
 |---|---|---|
 | `OSLIAN_HOST` | bind address | `127.0.0.1` |
 | `OSLIAN_PORT` | HTTP port | `5000` |
-| `OSLIAN_STREAM_DB` | SQLite ledger path | `var/oslian_stream.sqlite3` |
+| `OSLIAN_STREAM_DB` | SQLite ledger path (`start-demo.ps1 -Database` takes precedence) | `var/oslian_stream.sqlite3` |
 | `OSLIAN_STREAM_LOG` | `events`, `off` | `events` |
 | `OSLIAN_STREAM_LOG_FORMAT` | `pretty`, `json` | `pretty` |
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
@@ -384,7 +399,17 @@ Stop-Process -Id <pid>
 ```
 
 SQLite leaves `-wal` and `-shm` files beside the ledger in `var/`; that is normal.
-To begin from an empty ledger, stop the server and delete `var/oslian_stream.sqlite3*`.
+To begin from an empty ledger, start with `-Database` pointing at a new file, or
+stop the server and delete `var/oslian_stream.sqlite3*`.
+
+The ledger keeps one content per resource id and version. A fixture revision
+that changes a resource's content also raises its `meta.versionId`, so an older
+ledger accepts the revised stream as new versions; a session opened on an
+earlier fixture revision is left paused in the ledger rather than resumed onto
+the new one. A resource that arrives with an id and version the ledger already
+holds under different content is refused with a *resource version conflict*
+(the stream event names the source system, resource type, id and version; the
+session-creation route answers 409) instead of being served from the old copy.
 
 ---
 

@@ -20,7 +20,7 @@ SOURCE = "synthetic-fhir-r4"
 def _session(repo, session_id="s1"):
     repo.create_session({
         "session_id": session_id, "patient_id": "syn-pat-0001", "source_system": SOURCE,
-        "fixture_version": "synthetic_patient_v1", "status": "idle", "speed": 1.0, "epoch": 1, "cursor": 0,
+        "fixture_version": MockFhirSource().fixture_version, "status": "idle", "speed": 1.0, "epoch": 1, "cursor": 0,
         "sim_elapsed_seconds": 0.0, "last_event_sequence": 0, "created_at": now_iso(), "updated_at": now_iso()})
 
 
@@ -182,23 +182,25 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(len(self.repo.canonical_for_raw(first.raw_id)), 1)
 
     def test_amended_version_supersedes_without_overwriting(self):
-        v1 = self.events["syn-obs-potassium-h12@1"].resource
-        v2 = self.events["syn-obs-potassium-h12@2"].resource
+        # fixture revision 2 renumbered the potassium (1 -> 3, 2 -> 4, past every
+        # version its id had used): the amendment is still exactly one above the value it corrects
+        v1 = self.events["syn-obs-potassium-h12@3"].resource
+        v2 = self.events["syn-obs-potassium-h12@4"].resource
         self.deliver(v1)
         timeline = delivered_timeline(self.repo, "s1", 1)
         k = [r for r in timeline if r["resource_id"] == "syn-obs-potassium-h12"]
         self.assertEqual(len(k), 1)
-        self.assertEqual(k[0]["version_id"], "1")
+        self.assertEqual(k[0]["version_id"], "3")
         self.assertAlmostEqual(k[0]["value"], 5.9)
         self.deliver(v2)
         timeline = delivered_timeline(self.repo, "s1", 1)
         k = [r for r in timeline if r["resource_id"] == "syn-obs-potassium-h12"]
         self.assertEqual(len(k), 1)
-        self.assertEqual(k[0]["version_id"], "2")
+        self.assertEqual(k[0]["version_id"], "4")
         self.assertEqual(k[0]["observation_status"], "amended")
         self.assertAlmostEqual(k[0]["value"], 4.4)
-        self.assertIsNotNone(self.repo.raw_by_reference(SOURCE, "Observation", "syn-obs-potassium-h12", "1"))
-        self.assertIsNotNone(self.repo.raw_by_reference(SOURCE, "Observation", "syn-obs-potassium-h12", "2"))
+        self.assertIsNotNone(self.repo.raw_by_reference(SOURCE, "Observation", "syn-obs-potassium-h12", "3"))
+        self.assertIsNotNone(self.repo.raw_by_reference(SOURCE, "Observation", "syn-obs-potassium-h12", "4"))
 
     def test_entered_in_error_removes_resource_from_timeline(self):
         self.deliver(self.events["syn-obs-temperature-h26@1"].resource)
@@ -208,7 +210,7 @@ class LedgerTests(unittest.TestCase):
         self.assertFalse(any(r["resource_id"] == "syn-obs-temperature-h26" for r in delivered_timeline(self.repo, "s1", 1)))
 
     def test_out_of_order_arrival_is_placed_by_clinical_time(self):
-        late = self.events["syn-obs-lactate-h18@1"].resource        # effective 18 h, arrives after 20 h vitals
+        late = self.events["syn-obs-lactate-h18@2"].resource        # effective 18 h, arrives after 20 h vitals
         self.deliver(self.events["syn-obs-heart_rate-h20@1"].resource)
         self.deliver(late)
         timeline = delivered_timeline(self.repo, "s1", 1)
@@ -216,7 +218,7 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(order, ["syn-obs-lactate-h18", "syn-obs-heart_rate-h20"])
         model_input = build_model_input(timeline, "2026-03-15T02:00:00.000Z", "2026-03-14T06:00:00.000Z")
         self.assertIn("18.000000,lactate", model_input.csv_text)
-        self.assertIn("Observation/syn-obs-lactate-h18/_history/1", model_input.resource_refs)
+        self.assertIn("Observation/syn-obs-lactate-h18/_history/2", model_input.resource_refs)
 
     def test_no_future_leak_past_input_cutoff(self):
         self.deliver(self.events["syn-obs-heart_rate-h02@1"].resource)

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from . import fhir, mapping
-from .repository import Repository
+from .repository import Repository, ResourceVersionConflict
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,7 @@ class IngestResult:
     effective_time: str | None = None
     patient_id: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+    version_conflict: bool = False   # refused: this id and version already hold different content
 
 
 class Ingestor:
@@ -46,12 +47,19 @@ class Ingestor:
 
     def ingest_resource(self, resource: dict[str, Any], *, received_at: str, event_id: str) -> IngestResult:
         resource_type = str(resource.get("resourceType"))
-        if resource_type == "Patient":
-            return self._ingest_patient(resource, received_at, event_id)
-        if resource_type == "Encounter":
-            return self._ingest_encounter(resource, received_at, event_id)
-        if resource_type == "Observation":
-            return self._ingest_observation(resource, received_at, event_id)
+        try:
+            if resource_type == "Patient":
+                return self._ingest_patient(resource, received_at, event_id)
+            if resource_type == "Encounter":
+                return self._ingest_encounter(resource, received_at, event_id)
+            if resource_type == "Observation":
+                return self._ingest_observation(resource, received_at, event_id)
+        except ResourceVersionConflict as exc:
+            # Fail closed: nothing of this resource enters the ledger or the
+            # timeline, and the caller is told exactly which identity clashed.
+            return IngestResult(False, None, resource_type, exc.resource_id, exc.version_id,
+                                validation_issues=(str(exc),), version_conflict=True,
+                                patient_id=fhir.reference_id(resource, "subject") if resource_type != "Patient" else resource.get("id"))
         return IngestResult(False, None, resource_type, resource.get("id"), None,
                             validation_issues=(f"unsupported resourceType {resource_type}",))
 

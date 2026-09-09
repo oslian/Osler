@@ -16,9 +16,29 @@ import json
 import random
 
 from ..config import FIXTURE_DIR
+from .reference_ranges import DEMO_REFERENCE_RANGES, INTERPRETATION_PROVENANCE, provenance_document
 
 FIXTURE_PATH = FIXTURE_DIR / "synthetic_patient_v1.json"
-FIXTURE_VERSION = "synthetic_patient_v1"
+# Revision history of this fixture. A resource whose content changes between
+# revisions gets a new meta.versionId (one higher than it carried), because a
+# ledger keeps one content per (id, version) and refuses a second. Unchanged
+# resources keep their version, so an old ledger accepts them idempotently.
+#   r1  the original stream
+#   r2  laboratory observations for the eight variables in reference_ranges
+#       carry Observation.referenceRange and a derived interpretation
+#       (versionId 1 -> 2; the potassium at 12 h, whose id had used 1 and 2,
+#       goes 1 -> 3 and its amendment 2 -> 4); the bicarbonate drift ends at
+#       21 rather than 23
+FIXTURE_REVISION = 2
+FIXTURE_VERSION = f"synthetic_patient_v1.r{FIXTURE_REVISION}"
+REVISION_NOTES = [
+    "r1: the original stream (fixture_version synthetic_patient_v1).",
+    "r2: laboratory observations of the eight variables listed under reference_ranges.supplied carry "
+    "Observation.referenceRange and a derived Observation.interpretation, and the bicarbonate drift ends at "
+    "21 mmol/L rather than 23; every such resource carries a meta.versionId higher than any version its id "
+    "had in r1 (1 -> 2; the potassium at 12 h, whose id had used 1 and 2, goes 1 -> 3 with its amendment "
+    "2 -> 4) so no (id, version) ever names two contents. Unchanged resources keep their version.",
+]
 SOURCE_SYSTEM = "synthetic-fhir-r4"
 PATIENT_ID = "syn-pat-0001"
 ENCOUNTER_ID = "syn-enc-0001"
@@ -39,7 +59,10 @@ LABS = {
     "creatinine": ("2160-0", "Creatinine [Mass/volume] in Serum or Plasma", "mg/dL", 1.5, 1.2, 0.05, 2),
     "potassium": ("2823-3", "Potassium [Moles/volume] in Serum or Plasma", "mmol/L", 4.6, 4.1, 0.12, 1),
     "sodium": ("2951-2", "Sodium [Moles/volume] in Serum or Plasma", "mmol/L", 137, 139, 0.8, 0),
-    "bicarbonate": ("1963-8", "Bicarbonate [Moles/volume] in Serum or Plasma", "mmol/L", 19, 23, 0.6, 0),
+    # Ends at 21 rather than 23 so the last value of the synthetic stream still sits
+    # under the supplied 23–29 mmol/L interval: the demo then shows one value below
+    # its range at the live head as well as during the replay. Synthetic drift only.
+    "bicarbonate": ("1963-8", "Bicarbonate [Moles/volume] in Serum or Plasma", "mmol/L", 19, 21, 0.6, 0),
     "chloride": ("2075-0", "Chloride [Moles/volume] in Serum or Plasma", "mmol/L", 104, 105, 0.9, 0),
     "bun": ("3094-0", "Urea nitrogen [Mass/volume] in Serum or Plasma", "mg/dL", 32, 26, 1.2, 0),
     "hemoglobin": ("718-7", "Hemoglobin [Mass/volume] in Blood", "g/dL", 10.4, 10.1, 0.15, 1),
@@ -82,6 +105,27 @@ def _observation(obs_id: str, version: str, status: str, category: str, code: st
     resource["issued"] = _ts(effective_hours + issued_minutes / 60.0)
     resource.update(extra)
     return resource
+
+
+def _lab_version(variable: str, base: str = "1", taken: int = 1) -> str:
+    """The version a laboratory observation carries in this revision.
+
+    A resource whose content revision 2 changed must carry a version higher than
+    ANY version that identity had in revision 1, not merely one higher than its
+    own: the amended potassium's identity had already used versions 1 and 2, so
+    its corrected value starts at 3 and its amendment at 4. `taken` is how many
+    versions revision 1 used for the id."""
+    return str(int(base) + taken) if variable in DEMO_REFERENCE_RANGES else base
+
+
+def _statements(variable: str, value: float) -> dict:
+    """The reference interval the demo supplies for `variable`, and the interpretation
+    derived from it, as FHIR elements; nothing for a variable with no adopted interval.
+    The interpretation is arithmetic on the supplied interval and says so."""
+    rr = DEMO_REFERENCE_RANGES.get(variable)
+    if rr is None:
+        return {}
+    return {"referenceRange": [rr.fhir_reference_range()], "interpretation": [rr.fhir_interpretation(value)]}
 
 
 def _quantity(value: float, unit: str, unit_code: str | None = None) -> dict:
@@ -160,15 +204,18 @@ def build(seed: int = 20260314) -> dict:
                     "data_absent_reason")
                 continue
             if variable == "potassium" and step == 12:
-                add(h, _observation(f"syn-obs-{variable}-h{step:02d}", "1", "final", "laboratory", code, display, h,
-                                    22, valueQuantity=_quantity(5.9, "mmol/L", "mmol/L")), "amended_v1")
+                # revision 1 used versions 1 and 2 of this id (value, then amendment)
+                add(h, _observation(f"syn-obs-{variable}-h{step:02d}", _lab_version(variable, taken=2), "final", "laboratory", code,
+                                    display, h, 22, valueQuantity=_quantity(5.9, "mmol/L", "mmol/L"),
+                                    **_statements(variable, 5.9)), "amended_v1")
                 continue
             if variable == "lactate" and step == 18:
-                add(h, _observation(f"syn-obs-{variable}-h{step:02d}", "1", "final", "laboratory", code, display, h,
-                                    35, valueQuantity=_quantity(value, "mmol/L", "mmol/L")), "out_of_order")
+                add(h, _observation(f"syn-obs-{variable}-h{step:02d}", _lab_version(variable), "final", "laboratory", code,
+                                    display, h, 35, valueQuantity=_quantity(value, "mmol/L", "mmol/L"),
+                                    **_statements(variable, value)), "out_of_order")
                 continue
-            add(h, _observation(f"syn-obs-{variable}-h{step:02d}", "1", "final", "laboratory", code, display, h,
-                                22, valueQuantity=_quantity(value, unit, unit)))
+            add(h, _observation(f"syn-obs-{variable}-h{step:02d}", _lab_version(variable), "final", "laboratory", code,
+                                display, h, 22, valueQuantity=_quantity(value, unit, unit), **_statements(variable, value)))
     # unmapped code: body height charted once
     add(2.0, _observation("syn-obs-height-h02", "1", "final", "vital-signs", "8302-2", "Body height", 2.0, 1,
                           valueQuantity=_quantity(171.0, "cm", "cm")), "unmapped_code")
@@ -202,10 +249,12 @@ def build(seed: int = 20260314) -> dict:
     # amended potassium at 12 h: version 2 corrects the value
     k12 = next(r for h, r, _ in clinical if r["id"] == "syn-obs-potassium-h12")
     amended = json.loads(json.dumps(k12))
-    amended["meta"] = {"versionId": "2", "lastUpdated": _ts(12.0 + 95 / 60.0)}
+    # the amendment stays one version above the value it corrects, whatever revision that is
+    amended["meta"] = {"versionId": str(int(k12["meta"]["versionId"]) + 1), "lastUpdated": _ts(12.0 + 95 / 60.0)}
     amended["status"] = "amended"
     amended["issued"] = _ts(12.0 + 95 / 60.0)
     amended["valueQuantity"] = _quantity(4.4, "mmol/L", "mmol/L")
+    amended.update(_statements("potassium", 4.4))   # the corrected value gets its own reading
     insert_after(lambda rid: rid == "syn-obs-heart_rate-h14", {"scenario": "amended_v2", "resource": amended}, 2.0)
     # out-of-order: the 18 h lactate arrives after the 20 h vitals
     lactate_index = next(i for i, e in enumerate(events) if e["resource"]["id"] == "syn-obs-lactate-h18")
@@ -253,6 +302,8 @@ def build(seed: int = 20260314) -> dict:
     return {
         "schema": "oslian.synthetic-fhir-stream.v1",
         "fixture_version": FIXTURE_VERSION,
+        "revision": FIXTURE_REVISION,
+        "revision_notes": REVISION_NOTES,
         "synthetic": True,
         "phi": False,
         "generated_by": "oslian_demo/monitoring/build_synthetic_fixture.py",
@@ -264,7 +315,12 @@ def build(seed: int = 20260314) -> dict:
             "All identifiers are synthetic (syn-*). No real patient data was used.",
             "Clinical timestamps are fixed inside each resource; arrival_offset_seconds is the demo delivery schedule at 1x.",
             "Scenarios: duplicate_delivery, amended_v2, out_of_order, missing_ucum_unit, data_absent_reason, unmapped_code, entered_in_error_v2, fahrenheit_unit_conversion, mmol_unit_conversion, bp_panel_components, volume_over_period.",
+            "Laboratory observations carry Observation.referenceRange from the cited public reference in reference_ranges "
+            "(see reference_ranges.supplied for source, URL, unit and applicability) and an Observation.interpretation "
+            f"that is {INTERPRETATION_PROVENANCE}: arithmetic on that interval, never a laboratory or clinician reading. "
+            "Variables listed under reference_ranges.not_supplied carry neither, on purpose.",
         ],
+        "reference_ranges": provenance_document(),
         "initial_bundle": bundle,
         "events": events,
     }

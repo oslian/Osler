@@ -8,7 +8,8 @@ import unittest
 from oslian_demo.monitoring import anatomy
 from oslian_demo.monitoring.timeline import ModelInput
 from oslian_demo.monitoring.wholebody import (
-    RuntimeConfig, RuntimeUnavailable, WholeBodyRuntime, load_contract_fixture, normalize_release_cells,
+    RuntimeConfig, RuntimeUnavailable, WholeBodyRuntime, head_abstained, load_contract_fixture,
+    normalize_release_cells,
 )
 
 FIXTURE_CONFIG = RuntimeConfig("fixture", None, "python", None)
@@ -44,7 +45,13 @@ class ContractFixtureTests(unittest.TestCase):
         state = {"glucose": {"count": 5}}
         cells = normalize_release_cells(self.sample_cells, state, self.catalog)
         self.assertEqual(len(cells), len(self.catalog))
-        expected_model = sum(1 for c in self.catalog.values() if c["can_move"])
+        # can_move is the catalog's capability bit; a head that declined to move still
+        # carries it, so the expected count comes from the sample's own rows.
+        expected_model = sum(
+            1 for c in self.sample_cells
+            if c.get("can_move")
+            and not head_abstained(str(c.get("source_model") or ""), c.get("forecast_point"), c.get("observed_value"))
+        )
         self.assertEqual(sum(1 for c in cells if c["status"] == "model"), expected_model)
         self.assertEqual(sum(1 for c in cells if c["status"] == "persistence"), len(self.catalog) - expected_model)
         for cell in cells:
@@ -54,14 +61,40 @@ class ContractFixtureTests(unittest.TestCase):
             self.assertFalse(cell["causal_claim_allowed"])
             self.assertEqual(cell["interval_status"], "not_bundled_for_this_runtime_cell")
             if cell["status"] == "persistence":
-                self.assertEqual(cell["source_model"], "patient_persistence_anchor")
                 self.assertAlmostEqual(cell["forecast_point"], cell["observed_value"])
                 self.assertTrue(cell["fallback_reason"])
+                if cell["fallback_reason"] == "shared_jepa_head_abstained":
+                    self.assertEqual(cell["source_model"], "unified_shared_jepa_target_head")
+                else:
+                    self.assertEqual(cell["source_model"], "patient_persistence_anchor")
             if cell["status"] == "model":
                 self.assertIn(cell["source_model"], {"frozen_whole_body_jepa", "unified_shared_jepa_target_head"})
                 self.assertIsNone(cell["fallback_reason"])
         glucose = next(c for c in cells if c["cell"] == "glucose@1h")
         self.assertEqual(glucose["ledger_observation_count"], 5)
+
+    def test_a_shared_head_that_declined_to_move_is_not_badged_as_a_model_prediction(self):
+        raw = copy.deepcopy(self.sample_cells)
+        target = next(c for c in raw if c["cell"] == "chloride@12h")
+        self.assertEqual(target["source_model"], "unified_shared_jepa_target_head")
+        # The release zeroes a sub-threshold delta and returns current + 0.
+        target.update({"forecast_point": target["observed_value"], "can_move": True, "fallback_reason": None})
+        cells = normalize_release_cells(raw, {}, self.catalog)
+        chloride = next(c for c in cells if c["cell"] == "chloride@12h")
+        self.assertEqual(chloride["status"], "persistence")
+        self.assertEqual(chloride["fallback_reason"], "shared_jepa_head_abstained")
+        # The head that declined stays on the record; only the badge changes.
+        self.assertEqual(chloride["source_model"], "unified_shared_jepa_target_head")
+
+    def test_a_frozen_backbone_forecast_equal_to_the_observation_stays_a_model_prediction(self):
+        # hypoxemia_event is binary: predicting 0.0 on an observed 0.0 is a real
+        # forecast, and the frozen path carries no abstention threshold.
+        event = next(c for c in self.sample_cells if c["cell"] == "hypoxemia_event@1h")
+        self.assertEqual(event["source_model"], "frozen_whole_body_jepa")
+        self.assertEqual(event["forecast_point"], event["observed_value"])
+        cells = normalize_release_cells(copy.deepcopy(self.sample_cells), {}, self.catalog)
+        got = next(c for c in cells if c["cell"] == "hypoxemia_event@1h")
+        self.assertEqual(got["status"], "model")
 
     def test_missing_target_history_is_missing_not_invented(self):
         raw = copy.deepcopy(self.sample_cells)

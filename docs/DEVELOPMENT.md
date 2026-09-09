@@ -39,6 +39,10 @@ Rules the package keeps:
 # start against the locked model release
 .\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\overlay
 
+# either mode on a ledger of your own (created if missing, never overwritten)
+.\scripts\start-demo.ps1 -Database .\var\oslian_stream_ranges_v2.sqlite3
+.\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\overlay
+
 # the whole demo suite
 .\scripts\test-demo.ps1
 
@@ -70,6 +74,14 @@ package.
 | `tests/test_stream_functions_retro.py` | the functional-group document and the retrospective source |
 | `tests/test_stream_eventlog.py` | the two console stages and structural redaction |
 | `tests/test_stream_ui_contract.py` | source-level UI contract, accessibility hooks, safety wording, frontend asset paths, anatomy asset rules, and a secret / local-path / PHI scan over the backend package and the frontend |
+| `tests/test_stream_trajectory.py` | the patient-trajectory chart, executed under Node: one time axis, the two regions, the four forecast states, the frozen historical snapshot, no interval band, accessible description, one-column phone layout. Skips with a reason when `node` is not on `PATH` |
+| `tests/test_stream_signals_view.py` | the indicator view-model, executed under Node: the flag read only from the observation's own interpretation or supplied range, current / previous / forecast as three comparisons, the forecast horizon, the reading order, one organ-attention rule behind the rail, the figure and the report, a report frozen when it is opened, and the charts' range band and single-observation rule. Skips without `node` |
+| `tests/test_stream_observation_statements.py` | the passthrough of each observation's `interpretation` and `referenceRange` onto the state and timeline documents; nothing decided server-side |
+| `tests/test_stream_resource_versions.py` | one content per (id, version): idempotent re-delivery, a differing payload refused with `ResourceVersionConflict`, a new version accepted, amendments still ordered, an old ledger meeting the revised fixture without a mixed timeline, ranges present from the first event |
+| `tests/test_reference_ranges.py` | the reference-range registry (one cited public source per interval), the fixture builder writing it into `Observation.referenceRange` with a derived, marked `interpretation`, the fixture reproducible byte for byte, and the state carrying it all through |
+| `tests/test_ward_ranking.py` | the ward attention order: bands from published cutpoints, order within a band, urine output reported and never ranked, fail-closed unscored stays |
+| `tests/test_ward_cases.py` | the retrospective per-stay cases behind the ward rows, opened by `retrospective:<case id>` |
+| `tests/test_ward_view.py` | the ward fixture and `/api/ward`: provenance, fail-closed, no runtime dependency |
 
 `test_stream_ui_contract.py` asserts against the source text of the page, the CSS
 and the ES modules. If you rename a module under `frontend/js/stream/`, add it to
@@ -121,9 +133,18 @@ compel one.
 ## Local runtime state
 
 `var/` holds the SQLite ledger and its `-wal` / `-shm` companions, and is
-git-ignored in full. To start from an empty ledger, stop the server and delete
-`var/oslian_stream.sqlite3*`; the next start recreates it and replays the fixture
-from the beginning.
+git-ignored in full. To start from an empty ledger, pass `-Database` with a new
+path, or stop the server and delete `var/oslian_stream.sqlite3*`; the next start
+recreates it and replays the fixture from the beginning.
+
+One (id, version) holds one content. `Repository.insert_raw()` returns the
+existing row for an identical resource, refuses a different one with
+`ResourceVersionConflict`, and inserts a new version normally. When a fixture
+revision changes a resource, the builder raises that resource's `meta.versionId`
+(see `FIXTURE_REVISION` and `REVISION_NOTES` in `build_synthetic_fixture.py`),
+and a stored session is resumed only onto the fixture revision it was opened on;
+`tests/test_stream_resource_versions.py` covers all of it, including an old
+ledger meeting the revised stream.
 
 ## What must not be committed to this branch
 
