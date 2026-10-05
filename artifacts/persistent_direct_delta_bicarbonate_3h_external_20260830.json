@@ -1,0 +1,341 @@
+{
+  "schema": "persistent_physiology_external_gate.v2",
+  "cell": "bicarbonate@3h",
+  "candidate_only": true,
+  "training": {
+    "development_database": "eICU",
+    "lockbox_database": "MIMIC-IV",
+    "development_rows": 20868,
+    "development_patients": 918,
+    "fit_rows": 16656,
+    "fit_patients": 734,
+    "residual_gate_rows": 4212,
+    "residual_gate_patients": 184,
+    "lockbox_rows": 16561,
+    "lockbox_patients": 984,
+    "fixed_training_seed": 20260829,
+    "epochs": 2,
+    "nowcast_pretrain_epochs": 0,
+    "candidate_uncertainty_gate": true,
+    "physiological_regime_gate": true,
+    "owner_organ_target_stage": true,
+    "target_focused_coupling_weight": 1.0,
+    "trained_nominal_horizons": [
+      3
+    ],
+    "development_label_contract": {
+      "target": "bicarbonate",
+      "actual_delta_hours": [
+        2.0,
+        4.0
+      ],
+      "target_tolerance_hours": 1.0,
+      "labels_before": 3779,
+      "labels_retained": 2027,
+      "labels_rejected": 1752,
+      "future_values_already_zero_weight": 4052
+    },
+    "validation_label_contract": {
+      "target": "bicarbonate",
+      "actual_delta_hours": [
+        2.0,
+        4.0
+      ],
+      "target_tolerance_hours": 1.0,
+      "labels_before": 3895,
+      "labels_retained": 1982,
+      "labels_rejected": 1913,
+      "future_values_already_zero_weight": 4282
+    },
+    "treatment_context": {
+      "fields": [
+        "hist_bicarbonate_present",
+        "hist_fluids_present",
+        "hist_ventilation_present"
+      ],
+      "representation": "anchor_pre_binary_presence",
+      "development_support": {
+        "bicarbonate": 0.04744105786085129,
+        "fluids": 0.7387387156486511,
+        "ventilation": 0.18549932539463043
+      },
+      "validation_support": {
+        "bicarbonate": 0.07233862578868866,
+        "fluids": 0.9583358764648438,
+        "ventilation": 0.18513375520706177
+      }
+    },
+    "base_losses": [
+      1.047580799635719,
+      0.9615145886645597,
+      0.3915647303356844
+    ],
+    "candidate_losses": [
+      1.373123989385717,
+      1.240947309662314,
+      0.36867676412358
+    ],
+    "expert_metadata": {
+      "bicarbonate@3h": {
+        "train_rows": 829,
+        "ridge_alpha": 10.0,
+        "normalized_residual_limit": 3.084670858383185
+      }
+    }
+  },
+  "gates": {
+    "development_residual_activation": {
+      "rows": 190,
+      "patients": 84,
+      "owner_organ_input_policy": true,
+      "physiological_regime_gate": {
+        "enabled": true,
+        "active_rows": 50,
+        "active_fraction": 0.2631578947368421
+      },
+      "patient_equalized_mae": {
+        "candidate": 0.4994874279059115,
+        "base": 0.5032987559125537
+      },
+      "relative_mae_gain": 0.0075726950680251506,
+      "minimum_relative_mae_gain": 0.001,
+      "paired_patient_bootstrap": {
+        "delta": -0.0038113280066422056,
+        "ci95": [
+          -0.014812316226639918,
+          0.007751009968065063
+        ],
+        "patients": 84,
+        "pass": false
+      },
+      "enabled": false,
+      "reason": "target residual failed untouched development patients"
+    },
+    "external_point_accuracy": {
+      "rows": 1403,
+      "patients": 532,
+      "patient_equalized_mae": {
+        "candidate": 0.412831348360033,
+        "base": 0.412831348360033,
+        "expert": 1.4832753983371771,
+        "persistence": 0.4201157994680387
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "patients": 532,
+          "pass": false
+        },
+        "expert": {
+          "delta": -1.0704440499771442,
+          "ci95": [
+            -1.1645719410124222,
+            -0.9826712428133486
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "persistence": {
+          "delta": -0.00728445110800571,
+          "ci95": [
+            -0.018123691099436772,
+            0.0038764333502998667
+          ],
+          "patients": 532,
+          "pass": false
+        }
+      },
+      "residual_policy": "exact owner-JEPA fallback",
+      "raw_candidate_patient_equalized_mae": 0.41795992674796206,
+      "physiological_regime_gate": {
+        "enabled": true,
+        "normal_range": [
+          22.0,
+          29.0
+        ],
+        "active_rows": 681,
+        "active_fraction": 0.48538845331432645
+      },
+      "pass": false
+    },
+    "candidate_specific_conformal": {
+      "calibration_patients": 266,
+      "test_patients": 266,
+      "normalized_radius": 0.8993209600448608,
+      "row_coverage": 0.922316384180791,
+      "patient_equalized_coverage": 0.9146812773692473,
+      "target_coverage_range": [
+        0.87,
+        0.93
+      ],
+      "pass": true
+    },
+    "anchor_masked_recovery": {
+      "history_policy": "anchor target hidden; strictly earlier target history retained",
+      "patient_equalized_mae": {
+        "candidate": 0.9431278015858024,
+        "base": 0.9966443609936457,
+        "population_center": 0.9494470446125457
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": -0.05351655940784324,
+          "ci95": [
+            -0.07132244071926698,
+            -0.03521299856483824
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "population_center": {
+          "delta": -0.006319243026743258,
+          "ci95": [
+            -0.027931358624963945,
+            0.015036277457917642
+          ],
+          "patients": 532,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    "all_history_masked_recovery": {
+      "history_policy": "target hidden from anchor and complete input history",
+      "patient_equalized_mae": {
+        "candidate": 0.9078188819733721,
+        "base": 0.9962536791143449,
+        "population_center": 0.9494470446125457
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": -0.08843479714097273,
+          "ci95": [
+            -0.10698841896855195,
+            -0.06982422312502784
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "population_center": {
+          "delta": -0.04162816263917357,
+          "ci95": [
+            -0.06302508881684966,
+            -0.02084374763290366
+          ],
+          "patients": 532,
+          "pass": true
+        }
+      },
+      "pass": true
+    },
+    "cross_organ_no_route_ablation": {
+      "candidate_patient_equalized_mae": 0.412831348360033,
+      "no_route_patient_equalized_mae": 0.41795992674796206,
+      "paired_patient_bootstrap": {
+        "delta": -0.005128578387929085,
+        "ci95": [
+          -0.010093903072402441,
+          1.6418930591269704e-05
+        ],
+        "patients": 532,
+        "pass": false
+      },
+      "relative_mae_gain": 0.012270502648024687,
+      "minimum_relative_mae_gain": 0.001,
+      "applicable": false,
+      "reason": "cross-organ recurrent edges are fail-closed; no edge is under test",
+      "pass": true
+    },
+    "cross_organ_input_ablation": {
+      "candidate_patient_equalized_mae": 0.42037098571882214,
+      "owner_only_patient_equalized_mae": 0.41795992674796206,
+      "paired_patient_bootstrap": {
+        "delta": 0.0024110589708600727,
+        "ci95": [
+          -0.007204006255877421,
+          0.011956176189075508
+        ],
+        "patients": 532,
+        "pass": false
+      },
+      "relative_mae_gain": -0.00576863669591462,
+      "minimum_relative_mae_gain": 0.001,
+      "pass": false
+    },
+    "owner_organ_point_accuracy": {
+      "input_policy": "complete target history plus variables assigned to the target's anatomical owner organ; every other organ is masked",
+      "patient_equalized_mae": {
+        "owner_only": 0.41795992674796206,
+        "candidate": 0.412831348360033,
+        "base_owner_only": 0.412831348360033,
+        "expert": 1.4832753983371771,
+        "persistence": 0.4201157994680387
+      },
+      "paired_patient_bootstrap": {
+        "candidate": {
+          "delta": 0.005128578387929085,
+          "ci95": [
+            -1.6418930591273092e-05,
+            0.01009390307240244
+          ],
+          "patients": 532,
+          "pass": false
+        },
+        "base_owner_only": {
+          "delta": 0.005128578387929085,
+          "ci95": [
+            -1.6418930591273092e-05,
+            0.01009390307240244
+          ],
+          "patients": 532,
+          "pass": false
+        },
+        "expert": {
+          "delta": -1.0653154715892152,
+          "ci95": [
+            -1.159884106013635,
+            -0.9760603408821985
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "persistence": {
+          "delta": -0.0021558727200766256,
+          "ci95": [
+            -0.015165112148340147,
+            0.010656009140053295
+          ],
+          "patients": 532,
+          "pass": false
+        }
+      },
+      "pass_vs_existing_references": false,
+      "pass_vs_unrestricted_whole_body": false,
+      "pass": false
+    },
+    "multi_step_consistency": {
+      "rows": 256,
+      "staged_vs_direct_body_max_abs": 0.0,
+      "staged_vs_direct_organ_max_abs": 0.0,
+      "all_states_finite": true,
+      "pass": true
+    },
+    "explicit_conservation": {
+      "applicable": false,
+      "reason": "No exact hidden-store conservation equality is defined for the bicarbonate point-forecast gate.",
+      "pass": true
+    },
+    "independent_untouched_lockbox": {
+      "pass": false,
+      "reason": "MIMIC-IV exposed the preceding candidate's masked-recovery and no-route failures, so this corrected architecture requires a new untouched database lockbox.",
+      "required_next": "HiRID, AmsterdamUMCdb, or another frozen independent cohort"
+    }
+  },
+  "full_release_promotion_pass": false,
+  "promotion_status": "candidate_only",
+  "causal_claim_allowed": false
+}

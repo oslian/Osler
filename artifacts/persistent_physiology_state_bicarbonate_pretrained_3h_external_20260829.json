@@ -1,0 +1,231 @@
+{
+  "schema": "persistent_physiology_external_gate.v1",
+  "cell": "bicarbonate@3h",
+  "candidate_only": true,
+  "training": {
+    "development_database": "eICU",
+    "lockbox_database": "MIMIC-IV",
+    "development_rows": 20852,
+    "development_patients": 916,
+    "lockbox_rows": 16561,
+    "lockbox_patients": 984,
+    "fixed_training_seed": 20260829,
+    "epochs": 2,
+    "target_focused_coupling_weight": 1.0,
+    "trained_nominal_horizons": [
+      3
+    ],
+    "development_label_contract": {
+      "target": "bicarbonate",
+      "actual_delta_hours": [
+        2.0,
+        4.0
+      ],
+      "labels_before": 7821,
+      "labels_retained": 2151,
+      "labels_rejected": 5670
+    },
+    "validation_label_contract": {
+      "target": "bicarbonate",
+      "actual_delta_hours": [
+        2.0,
+        4.0
+      ],
+      "labels_before": 8177,
+      "labels_retained": 2106,
+      "labels_rejected": 6071
+    },
+    "treatment_context": {
+      "fields": [
+        "hist_fluids_present",
+        "hist_diuretics_present",
+        "hist_vasopressor_present",
+        "hist_nephrotoxin_present"
+      ],
+      "representation": "anchor_pre_binary_presence",
+      "development_support": {
+        "fluids": 0.7387780547142029,
+        "diuretics": 0.30054670572280884,
+        "vasopressor": 0.0978323444724083,
+        "nephrotoxin": 0.21897180378437042
+      },
+      "validation_support": {
+        "fluids": 0.9583358764648438,
+        "diuretics": 0.2711188793182373,
+        "vasopressor": 0.39659440517425537,
+        "nephrotoxin": 0.379747599363327
+      }
+    },
+    "base_losses": [
+      1.9529048672744207,
+      1.935272441023872,
+      1.1407726946331205,
+      1.0868180621237982,
+      0.9858829776446024,
+      0.3694084258306594
+    ],
+    "candidate_losses": [
+      1.9370444360233487,
+      1.9190477476943106,
+      1.1313744357654028,
+      1.4539402893611364,
+      1.3202193067187356,
+      0.3412107200849624
+    ],
+    "expert_metadata": {
+      "bicarbonate@3h": {
+        "train_rows": 1016,
+        "ridge_alpha": 10.0,
+        "normalized_residual_limit": 3.1138987779617104
+      }
+    }
+  },
+  "gates": {
+    "external_point_accuracy": {
+      "rows": 1403,
+      "patients": 532,
+      "patient_equalized_mae": {
+        "candidate": 0.5415287902788785,
+        "base": 0.41787767965133,
+        "expert": 1.6110258132947566,
+        "persistence": 0.4201157994680387
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": 0.12365111062754842,
+          "ci95": [
+            0.104001606726092,
+            0.1428311756366944
+          ],
+          "patients": 532,
+          "pass": false
+        },
+        "expert": {
+          "delta": -1.0694970230158782,
+          "ci95": [
+            -1.1675554657978167,
+            -0.9797710893416597
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "persistence": {
+          "delta": 0.12141299081083975,
+          "ci95": [
+            0.09578254622253204,
+            0.1456204674668834
+          ],
+          "patients": 532,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    "candidate_specific_conformal": {
+      "calibration_patients": 266,
+      "test_patients": 266,
+      "normalized_radius": 1.1099128723144531,
+      "row_coverage": 0.9180790960451978,
+      "patient_equalized_coverage": 0.9196150653857421,
+      "target_coverage_range": [
+        0.87,
+        0.93
+      ],
+      "pass": true
+    },
+    "anchor_masked_recovery": {
+      "history_policy": "anchor target hidden; strictly earlier target history retained",
+      "patient_equalized_mae": {
+        "candidate": 0.8568394455298978,
+        "base": 0.9340945203925126,
+        "population_center": 0.9494470446125457
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": -0.07725507486261483,
+          "ci95": [
+            -0.10346425621231135,
+            -0.05268516374674902
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "population_center": {
+          "delta": -0.09260759908264797,
+          "ci95": [
+            -0.12585890751342546,
+            -0.05934455295082855
+          ],
+          "patients": 532,
+          "pass": true
+        }
+      },
+      "pass": true
+    },
+    "all_history_masked_recovery": {
+      "history_policy": "target hidden from anchor and complete input history",
+      "patient_equalized_mae": {
+        "candidate": 0.8598892952602609,
+        "base": 0.9343915144909397,
+        "population_center": 0.9494470446125457
+      },
+      "paired_patient_bootstrap": {
+        "base": {
+          "delta": -0.07450221923067886,
+          "ci95": [
+            -0.1012917106258648,
+            -0.04968277723357761
+          ],
+          "patients": 532,
+          "pass": true
+        },
+        "population_center": {
+          "delta": -0.08955774935228485,
+          "ci95": [
+            -0.12318708074552225,
+            -0.055796263516439445
+          ],
+          "patients": 532,
+          "pass": true
+        }
+      },
+      "pass": true
+    },
+    "cross_organ_no_route_ablation": {
+      "candidate_patient_equalized_mae": 0.5415287902788785,
+      "no_route_patient_equalized_mae": 0.5410242413233658,
+      "paired_patient_bootstrap": {
+        "delta": 0.0005045489555126743,
+        "ci95": [
+          0.0004381993806507803,
+          0.0005688334335538005
+        ],
+        "patients": 532,
+        "pass": false
+      },
+      "relative_mae_gain": -0.0009325810508573825,
+      "minimum_relative_mae_gain": 0.001,
+      "pass": false
+    },
+    "multi_step_consistency": {
+      "rows": 256,
+      "staged_vs_direct_body_max_abs": 0.0,
+      "staged_vs_direct_organ_max_abs": 0.0,
+      "all_states_finite": true,
+      "pass": true
+    },
+    "explicit_conservation": {
+      "explicit_urine_mass_balance_available": false,
+      "reason": "The lockbox has output events but no complete intake/store ledger for an exact urine mass-balance equality.",
+      "pass": false
+    },
+    "independent_untouched_lockbox": {
+      "pass": false,
+      "reason": "MIMIC-IV exposed the preceding candidate's masked-recovery and no-route failures, so this corrected architecture requires a new untouched database lockbox.",
+      "required_next": "HiRID, AmsterdamUMCdb, or another frozen independent cohort"
+    }
+  },
+  "full_release_promotion_pass": false,
+  "promotion_status": "candidate_only",
+  "causal_claim_allowed": false
+}
