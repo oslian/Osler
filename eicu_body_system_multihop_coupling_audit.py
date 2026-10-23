@@ -38,6 +38,7 @@ from eicu_body_system_coupling_audit import (
     summarize_reports,
 )
 from eicu_body_system_target_router import _fit_ridge
+from eicu_full_variable_coverage_audit import conformal_radius
 from eicu_sepsis_target_router import _feature_columns, _group_folds, _round, _subject_column, split_subjects
 
 
@@ -266,6 +267,7 @@ def _scope_report(
     seed: int,
     bootstrap_samples: int,
     active_only: bool,
+    interval: dict[str, object] | None = None,
 ) -> dict[str, object]:
     candidate = predictions["multihop_ridge"]
     baseline = predictions["direct_sepsis_renal_ridge"]
@@ -297,7 +299,71 @@ def _scope_report(
             seed=seed + 31,
             bootstrap_samples=bootstrap_samples,
         ),
+        "interval": interval,
     }
+
+
+def _interval_report(
+    calibration_truth: np.ndarray,
+    calibration_pred: np.ndarray,
+    test_truth: np.ndarray,
+    test_pred: np.ndarray,
+    *,
+    level: float,
+    min_calibration_rows: int,
+    min_test_rows: int,
+) -> dict[str, object]:
+    """Calibrate the multihop candidate on discovery OOF residuals only."""
+    calibration_truth = np.asarray(calibration_truth, dtype=np.float64)
+    calibration_pred = np.asarray(calibration_pred, dtype=np.float64)
+    test_truth = np.asarray(test_truth, dtype=np.float64)
+    test_pred = np.asarray(test_pred, dtype=np.float64)
+    cal_residual = np.abs(calibration_pred - calibration_truth)
+    test_residual = np.abs(test_pred - test_truth)
+    cal_residual = cal_residual[np.isfinite(cal_residual)]
+    test_residual = test_residual[np.isfinite(test_residual)]
+    radius = conformal_radius(cal_residual, level)
+    coverage = float((test_residual <= radius).mean()) if radius is not None and len(test_residual) else None
+    return {
+        "level": float(level),
+        "calibration_rows": int(len(cal_residual)),
+        "test_rows": int(len(test_residual)),
+        "radius": float(radius) if radius is not None else None,
+        "coverage": coverage,
+        "coverage_gate_passed": bool(
+            radius is not None
+            and len(cal_residual) >= int(min_calibration_rows)
+            and len(test_residual) >= int(min_test_rows)
+            and coverage is not None
+            and 0.87 <= coverage <= 0.93
+        ),
+    }
+
+
+def _crossfit_multihop_predictions(
+    discovery: pd.DataFrame,
+    target: str,
+    future_suffix: str,
+    direct_features: list[str],
+    multihop_features: list[str],
+    ridge_alpha: float,
+    seed: int,
+) -> np.ndarray:
+    """OOF predictions for conformal calibration; labels stay in discovery."""
+    predictions = np.full(len(discovery), np.nan, dtype=np.float64)
+    groups = discovery[_subject_column(discovery)].to_numpy(dtype=object)
+    folds = _group_folds(groups, seed=seed + 717, folds=3)
+    candidate_features = sorted(set(direct_features + multihop_features))
+    for train_idx, valid_idx in folds:
+        predictions[valid_idx] = _fit_ridge(
+            discovery.iloc[train_idx],
+            discovery.iloc[valid_idx],
+            target,
+            candidate_features,
+            ridge_alpha,
+            future_suffix,
+        )
+    return predictions
 
 
 def _target_reports(
@@ -310,6 +376,9 @@ def _target_reports(
     ridge_alpha: float,
     seed: int,
     bootstrap_samples: int,
+    conformal_level: float,
+    min_calibration_rows: int,
+    min_test_rows: int,
 ) -> dict[str, dict[str, object]]:
     train_target = _target_rows(train, target, future_suffix)
     heldout_target = _target_rows(heldout, target, future_suffix)
@@ -331,6 +400,16 @@ def _target_reports(
         ridge_alpha,
         seed,
     )
+    calibration_pred = _crossfit_multihop_predictions(
+        train_target,
+        target,
+        future_suffix,
+        direct_features,
+        multihop_features,
+        ridge_alpha,
+        seed,
+    )
+    calibration_truth = train_target[future].to_numpy(dtype=np.float64)
     target_report_features = {
         "feature_counts": {
             "direct": int(len(direct_features)),
@@ -350,6 +429,15 @@ def _target_reports(
         seed=seed,
         bootstrap_samples=bootstrap_samples,
         active_only=False,
+        interval=_interval_report(
+            calibration_truth,
+            calibration_pred,
+            truth,
+            predictions["multihop_ridge"],
+            level=conformal_level,
+            min_calibration_rows=min_calibration_rows,
+            min_test_rows=min_test_rows,
+        ),
     )
     active_column = _active_column(heldout_target)
     if active_column is not None and len(heldout_target):
@@ -368,6 +456,15 @@ def _target_reports(
         seed=seed + 100,
         bootstrap_samples=bootstrap_samples,
         active_only=True,
+        interval=_interval_report(
+            calibration_truth,
+            calibration_pred,
+            active_truth,
+            active_predictions["multihop_ridge"],
+            level=conformal_level,
+            min_calibration_rows=min_calibration_rows,
+            min_test_rows=min_test_rows,
+        ),
     )
     return {"all_windows": all_report, "active_only": active_report}
 
@@ -381,6 +478,9 @@ def split_report(
     discovery_fraction: float,
     ridge_alpha: float,
     bootstrap_samples: int,
+    conformal_level: float,
+    min_calibration_rows: int,
+    min_test_rows: int,
     group_column: str | None = None,
 ) -> dict[str, object]:
     group_column = group_column or _subject_column(frame)
@@ -414,6 +514,9 @@ def split_report(
             ridge_alpha,
             seed=seed + 1000 * index,
             bootstrap_samples=bootstrap_samples,
+            conformal_level=conformal_level,
+            min_calibration_rows=min_calibration_rows,
+            min_test_rows=min_test_rows,
         )
     return {
         "seed": int(seed),
@@ -435,6 +538,9 @@ def audit_spec(
     discovery_fraction: float,
     ridge_alpha: float,
     bootstrap_samples: int,
+    conformal_level: float,
+    min_calibration_rows: int,
+    min_test_rows: int,
 ) -> dict[str, object]:
     frame = pd.read_parquet(data_dir / str(spec["cohort"])).reset_index(drop=True)
     frame = _merge_mediator_future(frame, spec, data_dir=data_dir)
@@ -448,6 +554,9 @@ def audit_spec(
             discovery_fraction=discovery_fraction,
             ridge_alpha=ridge_alpha,
             bootstrap_samples=bootstrap_samples,
+            conformal_level=conformal_level,
+            min_calibration_rows=min_calibration_rows,
+            min_test_rows=min_test_rows,
         )
         for seed in seeds
     ]
@@ -461,6 +570,9 @@ def audit_spec(
             discovery_fraction=discovery_fraction,
             ridge_alpha=ridge_alpha,
             bootstrap_samples=bootstrap_samples,
+            conformal_level=conformal_level,
+            min_calibration_rows=min_calibration_rows,
+            min_test_rows=min_test_rows,
             group_column="hospitalid",
         )
     targets = tuple(str(target) for target in spec["targets"])
@@ -498,6 +610,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--discovery-fraction", type=float, default=0.67)
     parser.add_argument("--ridge-alpha", type=float, default=10.0)
     parser.add_argument("--bootstrap-samples", type=int, default=300)
+    parser.add_argument("--conformal-level", type=float, default=0.9)
+    parser.add_argument("--min-calibration-rows", type=int, default=200)
+    parser.add_argument("--min-test-rows", type=int, default=100)
     parser.add_argument("--specs", default="all", help="comma-separated multihop spec names or 'all'")
     return parser.parse_args()
 
@@ -515,6 +630,9 @@ def main() -> None:
             discovery_fraction=args.discovery_fraction,
             ridge_alpha=args.ridge_alpha,
             bootstrap_samples=args.bootstrap_samples,
+            conformal_level=args.conformal_level,
+            min_calibration_rows=args.min_calibration_rows,
+            min_test_rows=args.min_test_rows,
         )
         for spec in specs
     ]
@@ -524,7 +642,10 @@ def main() -> None:
             "baseline": "direct_first_hop_to_downstream_ridge",
             "candidate": "direct_baseline_plus_discovery_only_mediator_features",
             "placebo": "direct_baseline_plus_capacity_matched_random_features",
-            "pass_rule": "candidate must significantly beat both direct baseline and placebo on held-out patients",
+            "pass_rule": "candidate must significantly beat both direct baseline and placebo on held-out patients and its split-conformal interval must cover 0.87-0.93 on the same held-out scope",
+            "conformal_level": float(args.conformal_level),
+            "min_calibration_rows": int(args.min_calibration_rows),
+            "min_test_rows": int(args.min_test_rows),
         },
         "multihop_specs": results,
         "safety_boundary": {
@@ -542,7 +663,16 @@ def main() -> None:
     Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     concise = {
         spec["name"]: {
-            target: spec["random_patient_splits"]["summary"][target]["active_only"]["candidate_passes_both_count"]
+            target: {
+                "passes_both": spec["random_patient_splits"]["summary"][target]["active_only"]["candidate_passes_both_count"],
+                "conformal_passes": sum(
+                    bool(
+                        ((run.get("targets", {}).get(target, {}).get("active_only", {}).get("interval") or {})
+                         .get("coverage_gate_passed"))
+                    )
+                    for run in spec["random_patient_splits"]["runs"]
+                ),
+            }
             for target in spec["targets"]
         }
         for spec in results

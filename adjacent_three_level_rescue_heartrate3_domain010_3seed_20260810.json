@@ -1,0 +1,1902 @@
+{
+  "schema": "teacher_anchored_joint_jepa_audit.v5",
+  "status": "bounded_candidate_only",
+  "rows": 93504,
+  "subjects": 3287,
+  "hospitals": 12,
+  "modules": [
+    "heart",
+    "blood_vessels",
+    "lungs",
+    "kidneys",
+    "liver",
+    "pancreas",
+    "stomach",
+    "intestines",
+    "thyroid",
+    "adrenal_glands",
+    "bone_marrow",
+    "spleen",
+    "brain",
+    "skeletal_muscle"
+  ],
+  "targets": [
+    "heart_rate"
+  ],
+  "target_mode": "explicit",
+  "target_future_label_support": {
+    "heart_rate": {
+      "total_rows": 52771,
+      "total_subjects": 3115,
+      "evaluable_horizons": [
+        "3h"
+      ],
+      "support_limited_horizons": [],
+      "by_horizon": {
+        "3h": {
+          "rows": 52771,
+          "subjects": 3115,
+          "evaluable": true
+        }
+      }
+    }
+  },
+  "horizons": [
+    3
+  ],
+  "seeds": [
+    31,
+    43,
+    59
+  ],
+  "split_mode": "subject",
+  "architecture": {
+    "strict_adjacent_three_level_candidate": true,
+    "three_level_path": "system <-> organ <-> body",
+    "organ_layer_graph": "canonical_sparse_organ_to_organ",
+    "direct_system_body_path": false,
+    "validated_expert_projection_layer": "system",
+    "adjacent_training_schedule": "train_system_then_organ_then_body",
+    "matched_system_only_ablation_required": true,
+    "path_specific_matched_ablation_required": true,
+    "direct_organ_must_beat_system_only": true,
+    "body_mediated_must_beat_system_only": true,
+    "validated_router_teacher_anchor": true,
+    "zero_initialized_bounded_residual": true,
+    "three_level_latent_hierarchy": true,
+    "level_1_validated_system_experts": true,
+    "level_2_canonical_organ_latent_tokens": true,
+    "level_3_shared_whole_body_latent": true,
+    "target_heads_anchored_at_system_layer": true,
+    "shared_slow_context_latent": true,
+    "target_specific_fast_future_latent": true,
+    "target_horizon_sparse_experts": true,
+    "optional_target_specific_projection_residuals": true,
+    "target_specific_distributional_scale_heads": false,
+    "scale_loss_detached_from_physiology_context": true,
+    "two_stage_point_then_scale_training": true,
+    "matched_no_expert_ablation_required": true,
+    "target_specific_sparse_canonical_organ_routing": true,
+    "target_own_organ_excluded_from_route": true,
+    "patient_bootstrap_route_ablation_required": true,
+    "pcgrad_variant": false,
+    "calibration_rows_used_for_training": false,
+    "conformal_method": "patient_cluster_cv_adaptive",
+    "conformal_nominal_coverage": 0.9,
+    "domain_invariance_weight": 0.1,
+    "domain_invariance_columns": [
+      "hospitalid",
+      "careunit"
+    ],
+    "causal_claim_allowed": false,
+    "clinical_promotion_allowed": false
+  },
+  "reports": [
+    {
+      "seed": 31,
+      "fit_rows": 56838,
+      "calibration_rows_untouched": 13213,
+      "test_rows": 23453,
+      "base_loss": 4.5179397719247,
+      "latent_svd": {
+        "fit_effective_rank": 15.342029571533203,
+        "test_effective_rank": 15.059850692749023,
+        "rank_ratio": 0.9816074608989311,
+        "mean_top_subspace_cosine": 0.9971593618392944,
+        "fit_sample_rows": 4096,
+        "test_sample_rows": 4096,
+        "patient_equalized_sampling": true,
+        "svd_components": 64,
+        "truncated_randomized_svd": true,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 6399,
+          "selection_subjects": 369,
+          "selection_patient_equal_delta_vs_persistence": -0.07005670233213199,
+          "selection_bootstrap_low": -0.22780546352669828,
+          "selection_bootstrap_high": 0.07783861689781896,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "teacher_router_mae": 6.870241641998291,
+              "persistence_mae": 6.870241641998291,
+              "delta_vs_teacher": -0.08107328414916992,
+              "delta_vs_persistence": -0.08107328414916992,
+              "direction_accuracy": 0.5874491060364666,
+              "delta_correlation": 0.26327991403797013,
+              "teacher_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.06644217563438533,
+                "bootstrap_low": -0.12042054246536782,
+                "bootstrap_high": -0.01130021686387359,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.06644217563438533,
+                "bootstrap_low": -0.1180338007627383,
+                "bootstrap_high": -0.011347693617429402,
+                "pass": true
+              }
+            }
+          },
+          "selected_coupling_cells": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.7741780281066895,
+              "teacher_router_mae": 6.870241641998291,
+              "persistence_mae": 6.870241641998291,
+              "delta_vs_teacher": -0.09606361389160156,
+              "delta_vs_persistence": -0.09606361389160156,
+              "direction_accuracy": 0.5893963533368738,
+              "delta_correlation": 0.26621290138285986,
+              "teacher_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.08278207915026366,
+                "bootstrap_low": -0.13206807226665113,
+                "bootstrap_high": -0.0365525988574353,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.08278207915026366,
+                "bootstrap_low": -0.13115634432346146,
+                "bootstrap_high": -0.02992026284133204,
+                "pass": true
+              }
+            }
+          },
+          "coupling_path_selection": {
+            "heart_rate@3h": {
+              "selected_path": "body_mediated",
+              "selection_rows_are_calibration_only": true,
+              "test_labels_used_for_selection": false,
+              "evidence": {
+                "direct_organ": {
+                  "delta_vs_system_only": -0.06925010681152344,
+                  "patient_equal_delta": -0.09113420343318795,
+                  "bootstrap_low": -0.13594801999838463,
+                  "bootstrap_high": -0.05005532867900607,
+                  "pass": true
+                },
+                "body_mediated": {
+                  "delta_vs_system_only": -0.07765579223632812,
+                  "patient_equal_delta": -0.10209890609913465,
+                  "bootstrap_low": -0.15973987312693796,
+                  "bootstrap_high": -0.04848322250160603,
+                  "pass": true
+                },
+                "full": {
+                  "delta_vs_system_only": -0.06530189514160156,
+                  "patient_equal_delta": -0.09103168794597954,
+                  "bootstrap_low": -0.15201596011292498,
+                  "bootstrap_high": -0.03335749223637596,
+                  "pass": true
+                }
+              }
+            }
+          },
+          "selected_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.7741780281066895,
+              "system_only_mae": 6.84535551071167,
+              "delta_vs_system_only": -0.07117748260498047,
+              "system_only_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.05938683829394721,
+                "bootstrap_low": -0.09856565105660858,
+                "bootstrap_high": -0.016433434996893766,
+                "pass": true
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.84535551071167,
+              "teacher_router_mae": 6.870241641998291,
+              "persistence_mae": 6.870241641998291,
+              "delta_vs_teacher": -0.024886131286621094,
+              "delta_vs_persistence": -0.024886131286621094,
+              "direction_accuracy": 0.5855018587360595,
+              "delta_correlation": 0.24670436206766996,
+              "teacher_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.02339523991933165,
+                "bootstrap_low": -0.03206273102832935,
+                "bootstrap_high": -0.015296822993651146,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.02339523991933165,
+                "bootstrap_low": -0.031665280432455235,
+                "bootstrap_high": -0.014398341548241753,
+                "pass": true
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "no_route_mae": 6.84535551071167,
+              "delta_vs_no_route": -0.05618715286254883,
+              "no_route_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.04304693609234652,
+                "bootstrap_low": -0.08910337874372025,
+                "bootstrap_high": 0.0012496630320333,
+                "pass": false
+              }
+            }
+          },
+          "organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "no_organ_coupling_mae": 6.7741780281066895,
+              "delta_vs_no_organ_coupling": 0.01499032974243164,
+              "no_organ_coupling_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": 0.016339902874955223,
+                "bootstrap_low": 0.011483482996143808,
+                "bootstrap_high": 0.020900169942036775,
+                "pass": false
+              }
+            }
+          },
+          "body_feedback_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "no_body_feedback_mae": 6.778866291046143,
+              "delta_vs_no_body_feedback": 0.010302066802978516,
+              "no_body_feedback_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": 0.01618247208919771,
+                "bootstrap_low": 0.0027793376664583505,
+                "bootstrap_high": 0.029852556130380292,
+                "pass": false
+              }
+            }
+          },
+          "body_mediated_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.7741780281066895,
+              "system_only_mae": 6.84535551071167,
+              "delta_vs_system_only": -0.07117748260498047,
+              "system_only_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.05938683829394721,
+                "bootstrap_low": -0.09857877128264998,
+                "bootstrap_high": -0.01218450986167198,
+                "pass": true
+              }
+            }
+          },
+          "direct_organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.778866291046143,
+              "system_only_mae": 6.84535551071167,
+              "delta_vs_system_only": -0.06648921966552734,
+              "system_only_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.05922940845393495,
+                "bootstrap_low": -0.09481438940103906,
+                "bootstrap_high": -0.025532123161979316,
+                "pass": true
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "no_expert_mae": 6.7556657791137695,
+              "delta_vs_no_expert": 0.03350257873535156,
+              "no_expert_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": 0.03568714612012082,
+                "bootstrap_low": 0.021257026595568464,
+                "bootstrap_high": 0.04980775856395404,
+                "pass": false
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 12793,
+              "subjects": 771,
+              "candidate_mae": 6.789168357849121,
+              "no_target_projection_mae": 6.791876316070557,
+              "delta_vs_no_target_projection": -0.002707958221435547,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 771,
+                "patient_equal_delta": -0.005684675627131599,
+                "bootstrap_low": -0.01583800948619812,
+                "bootstrap_high": 0.003898073688304209,
+                "pass": false
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 7461,
+              "test_n": 12793,
+              "q90": 15.487007141113281,
+              "median_lower_width": 15.487007141113281,
+              "median_upper_width": 15.487007141113281,
+              "q90_rank": 6731,
+              "coverage": 0.9083420790947087,
+              "row_coverage": 0.9110451027905886,
+              "patient_equalized_coverage": 0.9083420790947087,
+              "patient_coverage_ci95": [
+                0.8992638143861782,
+                0.9174880480169918
+              ],
+              "test_subjects": 771,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "patient_grouped_crossfit_adaptive_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9019148936170214,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 7461,
+                "calibration_subjects": 470,
+                "q90_rank": 6731,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false,
+                "cv_folds": 5,
+                "cv_coverage": 0.9032582711705984,
+                "candidate_cv_coverage": {
+                  "0.80": 0.8004724066122372,
+                  "0.81": 0.8118256091919773,
+                  "0.82": 0.8230056550819141,
+                  "0.83": 0.8334107963578,
+                  "0.84": 0.842017020695607,
+                  "0.85": 0.8517735516460998,
+                  "0.86": 0.8638143355089901,
+                  "0.87": 0.8713010273861768,
+                  "0.88": 0.8817718977446184,
+                  "0.89": 0.8922182036283639,
+                  "0.90": 0.9032582711705984,
+                  "0.91": 0.913135335874306
+                },
+                "all_calibration_rows_used_after_crossfit_selection": true
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.26003040107233183,
+              0.2557429463735649,
+              0.25197496318391394
+            ],
+            "stages": {
+              "system": [
+                0.26003040107233183
+              ],
+              "organ": [
+                0.2557429463735649
+              ],
+              "body": [
+                0.25197496318391394
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "kidneys",
+                  "weight": 0.32794758677482605
+                },
+                {
+                  "module": "heart",
+                  "weight": 0.23711173236370087
+                },
+                {
+                  "module": "blood_vessels",
+                  "weight": 0.20163342356681824
+                }
+              ]
+            }
+          },
+          "organ_coupling": {
+            "available": true,
+            "rows": 23453,
+            "edges": [
+              {
+                "left": "heart",
+                "right": "blood_vessels",
+                "coobserved_rows": 14086,
+                "coobserved_fraction": 0.6006054662516522,
+                "left_receives_from_right": 0.37801517136886886,
+                "right_receives_from_left": 0.33352439316026905,
+                "left_gate": 0.49765002727508545,
+                "right_gate": 0.49770236015319824
+              },
+              {
+                "left": "heart",
+                "right": "lungs",
+                "coobserved_rows": 13249,
+                "coobserved_fraction": 0.564917068178911,
+                "left_receives_from_right": 0.1592939489623926,
+                "right_receives_from_left": 0.3981030710697786,
+                "left_gate": 0.49765002727508545,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "kidneys",
+                "coobserved_rows": 16529,
+                "coobserved_fraction": 0.7047712446168933,
+                "left_receives_from_right": 0.499632383854782,
+                "right_receives_from_left": 0.3008737798436049,
+                "left_gate": 0.49765002727508545,
+                "right_gate": 0.49742835760116577
+              },
+              {
+                "left": "heart",
+                "right": "thyroid",
+                "coobserved_rows": 3238,
+                "coobserved_fraction": 0.13806336076408135,
+                "left_receives_from_right": 0.24372528963725165,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.49765002727508545,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "adrenal_glands",
+                "coobserved_rows": 457,
+                "coobserved_fraction": 0.01948578007077986,
+                "left_receives_from_right": 0.20609742199239897,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.49765002727508545,
+                "right_gate": 0.5
+              },
+              {
+                "left": "blood_vessels",
+                "right": "kidneys",
+                "coobserved_rows": 14182,
+                "coobserved_fraction": 0.6046987592205688,
+                "left_receives_from_right": 0.47222603352336145,
+                "right_receives_from_left": 0.38883558093467596,
+                "left_gate": 0.49770236015319824,
+                "right_gate": 0.49742835760116577
+              },
+              {
+                "left": "blood_vessels",
+                "right": "liver",
+                "coobserved_rows": 11602,
+                "coobserved_fraction": 0.49469151068093636,
+                "left_receives_from_right": 0.2405503999022518,
+                "right_receives_from_left": 0.31958777464796523,
+                "left_gate": 0.49770236015319824,
+                "right_gate": 0.5
+              },
+              {
+                "left": "lungs",
+                "right": "kidneys",
+                "coobserved_rows": 13260,
+                "coobserved_fraction": 0.5653860913315993,
+                "left_receives_from_right": 0.6022271778788502,
+                "right_receives_from_left": 0.18677013243013377,
+                "left_gate": 0.5,
+                "right_gate": 0.49742835760116577
+              },
+              {
+                "left": "kidneys",
+                "right": "liver",
+                "coobserved_rows": 18464,
+                "coobserved_fraction": 0.7872766810216177,
+                "left_receives_from_right": 0.4306355989368655,
+                "right_receives_from_left": 0.4366319317829051,
+                "left_gate": 0.49742835760116577,
+                "right_gate": 0.5
+              },
+              {
+                "left": "kidneys",
+                "right": "skeletal_muscle",
+                "coobserved_rows": 2096,
+                "coobserved_fraction": 0.08937022982134482,
+                "left_receives_from_right": 0.2240282881805915,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.49742835760116577,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "pancreas",
+                "coobserved_rows": 14180,
+                "coobserved_fraction": 0.6046134822837164,
+                "left_receives_from_right": 0.21286711338250694,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "bone_marrow",
+                "coobserved_rows": 16952,
+                "coobserved_fraction": 0.7228073167611819,
+                "left_receives_from_right": 0.23376090525473245,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "bone_marrow",
+                "right": "spleen",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              }
+            ],
+            "target_signal": {
+              "heart_rate": {
+                "mean_l2": 1.360295737916339,
+                "median_l2": 1.3678658860963078,
+                "nonzero_fraction": 0.9904063446041018,
+                "top_neighbor_organs": [
+                  {
+                    "organ": "kidneys",
+                    "mean_weight": 0.31469869428121555
+                  },
+                  {
+                    "organ": "liver",
+                    "mean_weight": 0.21960522197779422
+                  },
+                  {
+                    "organ": "heart",
+                    "mean_weight": 0.15089784817558785
+                  }
+                ]
+              }
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 23453,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "fit_rows": 56033,
+      "calibration_rows_untouched": 13766,
+      "test_rows": 23705,
+      "base_loss": 4.374958957944598,
+      "latent_svd": {
+        "fit_effective_rank": 16.559906005859375,
+        "test_effective_rank": 16.512712478637695,
+        "rank_ratio": 0.9971501331465903,
+        "mean_top_subspace_cosine": 0.9961272478103638,
+        "fit_sample_rows": 4096,
+        "test_sample_rows": 4096,
+        "patient_equalized_sampling": true,
+        "svd_components": 64,
+        "truncated_randomized_svd": true,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "ridge_realfit",
+          "selection_rows": 6013,
+          "selection_subjects": 372,
+          "selection_patient_equal_delta_vs_persistence": -0.1698468484999036,
+          "selection_bootstrap_low": -0.3104760617506565,
+          "selection_bootstrap_high": -0.03820720941570943,
+          "reason": "discovery_only_ridge_passed_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "teacher_router_mae": 6.939419269561768,
+              "persistence_mae": 7.000314712524414,
+              "delta_vs_teacher": -0.08031225204467773,
+              "delta_vs_persistence": -0.14120769500732422,
+              "direction_accuracy": 0.5971803511260861,
+              "delta_correlation": 0.33054316515247467,
+              "teacher_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.0842409516782865,
+                "bootstrap_low": -0.11443939470850559,
+                "bootstrap_high": -0.05570700353146737,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.17780082345745385,
+                "bootstrap_low": -0.25231494488124584,
+                "bootstrap_high": -0.10909019005343355,
+                "pass": true
+              }
+            }
+          },
+          "selected_coupling_cells": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "teacher_router_mae": 6.939419269561768,
+              "persistence_mae": 7.000314712524414,
+              "delta_vs_teacher": -0.08031225204467773,
+              "delta_vs_persistence": -0.14120769500732422,
+              "direction_accuracy": 0.5971803511260861,
+              "delta_correlation": 0.33054316515247467,
+              "teacher_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.0842409516782865,
+                "bootstrap_low": -0.11258472606902668,
+                "bootstrap_high": -0.05673925599069608,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.17780082345745385,
+                "bootstrap_low": -0.2478071697780275,
+                "bootstrap_high": -0.10234756895565443,
+                "pass": true
+              }
+            }
+          },
+          "coupling_path_selection": {
+            "heart_rate@3h": {
+              "selected_path": "full",
+              "selection_rows_are_calibration_only": true,
+              "test_labels_used_for_selection": false,
+              "evidence": {
+                "direct_organ": {
+                  "delta_vs_system_only": -0.05377817153930664,
+                  "patient_equal_delta": -0.048912437039236596,
+                  "bootstrap_low": -0.07212280094793568,
+                  "bootstrap_high": -0.025769870711507124,
+                  "pass": true
+                },
+                "body_mediated": {
+                  "delta_vs_system_only": -0.07178592681884766,
+                  "patient_equal_delta": -0.07683208441227382,
+                  "bootstrap_low": -0.10430755046474642,
+                  "bootstrap_high": -0.049801825799390576,
+                  "pass": true
+                },
+                "full": {
+                  "delta_vs_system_only": -0.07303762435913086,
+                  "patient_equal_delta": -0.07504993097036237,
+                  "bootstrap_low": -0.1039467023867005,
+                  "bootstrap_high": -0.044857400235633296,
+                  "pass": true
+                }
+              }
+            }
+          },
+          "selected_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "system_only_mae": 6.906458854675293,
+              "delta_vs_system_only": -0.047351837158203125,
+              "system_only_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.04950055389143291,
+                "bootstrap_low": -0.06978582531012625,
+                "bootstrap_high": -0.027842924310376847,
+                "pass": true
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.906458854675293,
+              "teacher_router_mae": 6.939419269561768,
+              "persistence_mae": 7.000314712524414,
+              "delta_vs_teacher": -0.03296041488647461,
+              "delta_vs_persistence": -0.0938558578491211,
+              "direction_accuracy": 0.5980670331619081,
+              "delta_correlation": 0.33350247526012194,
+              "teacher_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.03474039729449478,
+                "bootstrap_low": -0.04426541650950645,
+                "bootstrap_high": -0.026191354934400057,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.12830026885169313,
+                "bootstrap_low": -0.21306925095392312,
+                "bootstrap_high": -0.049158247208925726,
+                "pass": true
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "no_route_mae": 6.906458854675293,
+              "delta_vs_no_route": -0.047351837158203125,
+              "no_route_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.04950055389143291,
+                "bootstrap_low": -0.06979672483502952,
+                "bootstrap_high": -0.028623344180467067,
+                "pass": true
+              }
+            }
+          },
+          "organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "no_organ_coupling_mae": 6.859751224517822,
+              "delta_vs_no_organ_coupling": -0.0006442070007324219,
+              "no_organ_coupling_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.0012766502954690581,
+                "bootstrap_low": -0.004397425266885007,
+                "bootstrap_high": 0.001652330056311798,
+                "pass": false
+              }
+            }
+          },
+          "body_feedback_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "no_body_feedback_mae": 6.8676862716674805,
+              "delta_vs_no_body_feedback": -0.008579254150390625,
+              "no_body_feedback_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.00831783003456437,
+                "bootstrap_low": -0.017055722644876536,
+                "bootstrap_high": 0.00018687733500210706,
+                "pass": false
+              }
+            }
+          },
+          "body_mediated_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.859751224517822,
+              "system_only_mae": 6.906458854675293,
+              "delta_vs_system_only": -0.0467076301574707,
+              "system_only_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.04822390373115994,
+                "bootstrap_low": -0.0711258790676282,
+                "bootstrap_high": -0.026750758734438114,
+                "pass": true
+              }
+            }
+          },
+          "direct_organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.8676862716674805,
+              "system_only_mae": 6.906458854675293,
+              "delta_vs_system_only": -0.0387725830078125,
+              "system_only_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.04118272386282008,
+                "bootstrap_low": -0.056723654318447204,
+                "bootstrap_high": -0.024718284350852222,
+                "pass": true
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "no_expert_mae": 6.867710590362549,
+              "delta_vs_no_expert": -0.008603572845458984,
+              "no_expert_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.010377234110119449,
+                "bootstrap_low": -0.017566869051399314,
+                "bootstrap_high": -0.0035613903089778748,
+                "pass": true
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 12707,
+              "subjects": 765,
+              "candidate_mae": 6.85910701751709,
+              "no_target_projection_mae": 6.860688209533691,
+              "delta_vs_no_target_projection": -0.0015811920166015625,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 765,
+                "patient_equal_delta": -0.0017495397580871237,
+                "bootstrap_low": -0.006290290723026451,
+                "bootstrap_high": 0.0026729218963452038,
+                "pass": false
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 7666,
+              "test_n": 12707,
+              "q90": 14.706527709960938,
+              "median_lower_width": 14.706527709960938,
+              "median_upper_width": 14.706527709960938,
+              "q90_rank": 6885,
+              "coverage": 0.8996122164102883,
+              "row_coverage": 0.8949397969623042,
+              "patient_equalized_coverage": 0.8996122164102883,
+              "patient_coverage_ci95": [
+                0.890105359137915,
+                0.9097097913243801
+              ],
+              "test_subjects": 765,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "patient_grouped_crossfit_adaptive_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.901931330472103,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 7666,
+                "calibration_subjects": 466,
+                "q90_rank": 6885,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false,
+                "cv_folds": 5,
+                "cv_coverage": 0.9019617565971385,
+                "candidate_cv_coverage": {
+                  "0.80": 0.8025572104635632,
+                  "0.81": 0.8124630532100621,
+                  "0.82": 0.8225190782169255,
+                  "0.83": 0.8326466893938339,
+                  "0.84": 0.8422359460442793,
+                  "0.85": 0.8494092639451498,
+                  "0.86": 0.8615615684545583,
+                  "0.87": 0.8703423484053543,
+                  "0.88": 0.8818598582556209,
+                  "0.89": 0.8898957012370999,
+                  "0.90": 0.9019617565971385,
+                  "0.91": 0.9123392643089945
+                },
+                "all_calibration_rows_used_after_crossfit_selection": true
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.21328858499016082,
+              0.21371444634028844,
+              0.2132803089916706
+            ],
+            "stages": {
+              "system": [
+                0.21328858499016082
+              ],
+              "organ": [
+                0.21371444634028844
+              ],
+              "body": [
+                0.2132803089916706
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "kidneys",
+                  "weight": 0.32793620228767395
+                },
+                {
+                  "module": "heart",
+                  "weight": 0.23937439918518066
+                },
+                {
+                  "module": "blood_vessels",
+                  "weight": 0.19812527298927307
+                }
+              ]
+            }
+          },
+          "organ_coupling": {
+            "available": true,
+            "rows": 23705,
+            "edges": [
+              {
+                "left": "heart",
+                "right": "blood_vessels",
+                "coobserved_rows": 13965,
+                "coobserved_fraction": 0.5891162202067074,
+                "left_receives_from_right": 0.30408026762880225,
+                "right_receives_from_left": 0.377320528663148,
+                "left_gate": 0.4983559250831604,
+                "right_gate": 0.49824652075767517
+              },
+              {
+                "left": "heart",
+                "right": "lungs",
+                "coobserved_rows": 13188,
+                "coobserved_fraction": 0.556338325247838,
+                "left_receives_from_right": 0.300169113627981,
+                "right_receives_from_left": 0.4687990098061763,
+                "left_gate": 0.4983559250831604,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "kidneys",
+                "coobserved_rows": 16879,
+                "coobserved_fraction": 0.7120438726007171,
+                "left_receives_from_right": 0.42064478570808694,
+                "right_receives_from_left": 0.31136800729873176,
+                "left_gate": 0.4983559250831604,
+                "right_gate": 0.49819621443748474
+              },
+              {
+                "left": "heart",
+                "right": "thyroid",
+                "coobserved_rows": 3683,
+                "coobserved_fraction": 0.15536806580890108,
+                "left_receives_from_right": 0.3942508130998609,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.4983559250831604,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "adrenal_glands",
+                "coobserved_rows": 597,
+                "coobserved_fraction": 0.025184560219363005,
+                "left_receives_from_right": 0.2324951909095598,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.4983559250831604,
+                "right_gate": 0.5
+              },
+              {
+                "left": "blood_vessels",
+                "right": "kidneys",
+                "coobserved_rows": 14082,
+                "coobserved_fraction": 0.5940518877873866,
+                "left_receives_from_right": 0.399855041128044,
+                "right_receives_from_left": 0.280073455406969,
+                "left_gate": 0.49824652075767517,
+                "right_gate": 0.49819621443748474
+              },
+              {
+                "left": "blood_vessels",
+                "right": "liver",
+                "coobserved_rows": 11506,
+                "coobserved_fraction": 0.4853828306264501,
+                "left_receives_from_right": 0.2768086276517191,
+                "right_receives_from_left": 0.2769285184550592,
+                "left_gate": 0.49824652075767517,
+                "right_gate": 0.5
+              },
+              {
+                "left": "lungs",
+                "right": "kidneys",
+                "coobserved_rows": 13200,
+                "coobserved_fraction": 0.5568445475638051,
+                "left_receives_from_right": 0.5316271683302792,
+                "right_receives_from_left": 0.25751364497862983,
+                "left_gate": 0.5,
+                "right_gate": 0.49819621443748474
+              },
+              {
+                "left": "kidneys",
+                "right": "liver",
+                "coobserved_rows": 18781,
+                "coobserved_fraction": 0.7922801096815018,
+                "left_receives_from_right": 0.44124406054247034,
+                "right_receives_from_left": 0.3792702301501225,
+                "left_gate": 0.49819621443748474,
+                "right_gate": 0.5
+              },
+              {
+                "left": "kidneys",
+                "right": "skeletal_muscle",
+                "coobserved_rows": 2557,
+                "coobserved_fraction": 0.10786753849398861,
+                "left_receives_from_right": 0.3278216926681842,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.49819621443748474,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "pancreas",
+                "coobserved_rows": 14229,
+                "coobserved_fraction": 0.6002531111579835,
+                "left_receives_from_right": 0.27162292925474035,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "bone_marrow",
+                "coobserved_rows": 17166,
+                "coobserved_fraction": 0.7241510229909301,
+                "left_receives_from_right": 0.2840885183737368,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "bone_marrow",
+                "right": "spleen",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              }
+            ],
+            "target_signal": {
+              "heart_rate": {
+                "mean_l2": 1.3927233081165125,
+                "median_l2": 1.4077682794490958,
+                "nonzero_fraction": 0.9900021092596498,
+                "top_neighbor_organs": [
+                  {
+                    "organ": "kidneys",
+                    "mean_weight": 0.32577432206639556
+                  },
+                  {
+                    "organ": "liver",
+                    "mean_weight": 0.20486010913983652
+                  },
+                  {
+                    "organ": "blood_vessels",
+                    "mean_weight": 0.1852376911703531
+                  }
+                ]
+              }
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 23705,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 59,
+      "fit_rows": 56473,
+      "calibration_rows_untouched": 13539,
+      "test_rows": 23492,
+      "base_loss": 3.51943610395704,
+      "latent_svd": {
+        "fit_effective_rank": 17.72113037109375,
+        "test_effective_rank": 17.70016098022461,
+        "rank_ratio": 0.9988167012808988,
+        "mean_top_subspace_cosine": 0.9914987683296204,
+        "fit_sample_rows": 4096,
+        "test_sample_rows": 4096,
+        "patient_equalized_sampling": true,
+        "svd_components": 64,
+        "truncated_randomized_svd": true,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 6479,
+          "selection_subjects": 374,
+          "selection_patient_equal_delta_vs_persistence": -0.0036955750366812323,
+          "selection_bootstrap_low": -0.14120330837818876,
+          "selection_bootstrap_high": 0.13653948928108425,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "teacher_router_mae": 7.064343452453613,
+              "persistence_mae": 7.064343452453613,
+              "delta_vs_teacher": -0.1304640769958496,
+              "delta_vs_persistence": -0.1304640769958496,
+              "direction_accuracy": 0.594021978021978,
+              "delta_correlation": 0.2878579740465273,
+              "teacher_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.12468698897413938,
+                "bootstrap_low": -0.18037712783963253,
+                "bootstrap_high": -0.07749757703969727,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.12468698897413938,
+                "bootstrap_low": -0.17140678001792992,
+                "bootstrap_high": -0.07136465913354116,
+                "pass": true
+              }
+            }
+          },
+          "selected_coupling_cells": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.927492618560791,
+              "teacher_router_mae": 7.064343452453613,
+              "persistence_mae": 7.064343452453613,
+              "delta_vs_teacher": -0.13685083389282227,
+              "delta_vs_persistence": -0.13685083389282227,
+              "direction_accuracy": 0.5963076923076923,
+              "delta_correlation": 0.2883085016838909,
+              "teacher_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.12997081962067486,
+                "bootstrap_low": -0.17613929755530283,
+                "bootstrap_high": -0.08555702802748477,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.12997081962067486,
+                "bootstrap_low": -0.18050383510728377,
+                "bootstrap_high": -0.08165758731113913,
+                "pass": true
+              }
+            }
+          },
+          "coupling_path_selection": {
+            "heart_rate@3h": {
+              "selected_path": "body_mediated",
+              "selection_rows_are_calibration_only": true,
+              "test_labels_used_for_selection": false,
+              "evidence": {
+                "direct_organ": {
+                  "delta_vs_system_only": -0.058465003967285156,
+                  "patient_equal_delta": -0.06541718467538839,
+                  "bootstrap_low": -0.10471430857020961,
+                  "bootstrap_high": -0.024974429802660073,
+                  "pass": true
+                },
+                "body_mediated": {
+                  "delta_vs_system_only": -0.06734943389892578,
+                  "patient_equal_delta": -0.08095627839911355,
+                  "bootstrap_low": -0.13195468299417273,
+                  "bootstrap_high": -0.030313152446412053,
+                  "pass": true
+                },
+                "full": {
+                  "delta_vs_system_only": -0.05928659439086914,
+                  "patient_equal_delta": -0.07303210879231233,
+                  "bootstrap_low": -0.1260234600906176,
+                  "bootstrap_high": -0.016880635942157707,
+                  "pass": true
+                }
+              }
+            }
+          },
+          "selected_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.927492618560791,
+              "system_only_mae": 7.033071994781494,
+              "delta_vs_system_only": -0.10557937622070312,
+              "system_only_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.09882799646038148,
+                "bootstrap_low": -0.14064329156884922,
+                "bootstrap_high": -0.05836332956485518,
+                "pass": true
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 7.033071994781494,
+              "teacher_router_mae": 7.064343452453613,
+              "persistence_mae": 7.064343452453613,
+              "delta_vs_teacher": -0.03127145767211914,
+              "delta_vs_persistence": -0.03127145767211914,
+              "direction_accuracy": 0.5949010989010989,
+              "delta_correlation": 0.2654448770986834,
+              "teacher_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.031142823079015263,
+                "bootstrap_low": -0.04064578821701084,
+                "bootstrap_high": -0.0224876449141971,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.031142823079015263,
+                "bootstrap_low": -0.03980475044945104,
+                "bootstrap_high": -0.022507679155008536,
+                "pass": true
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "no_route_mae": 7.033071994781494,
+              "delta_vs_no_route": -0.09919261932373047,
+              "no_route_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.09354416512201583,
+                "bootstrap_low": -0.1357781177819835,
+                "bootstrap_high": -0.048333197675891795,
+                "pass": true
+              }
+            }
+          },
+          "organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "no_organ_coupling_mae": 6.927492618560791,
+              "delta_vs_no_organ_coupling": 0.006386756896972656,
+              "no_organ_coupling_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": 0.005283831524989241,
+                "bootstrap_low": 0.0007355815553020947,
+                "bootstrap_high": 0.009645863854061347,
+                "pass": false
+              }
+            }
+          },
+          "body_feedback_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "no_body_feedback_mae": 6.951060771942139,
+              "delta_vs_no_body_feedback": -0.017181396484375,
+              "no_body_feedback_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.01609874389866857,
+                "bootstrap_low": -0.029778058932260338,
+                "bootstrap_high": -0.0015727916395090634,
+                "pass": true
+              }
+            }
+          },
+          "body_mediated_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.927492618560791,
+              "system_only_mae": 7.033071994781494,
+              "delta_vs_system_only": -0.10557937622070312,
+              "system_only_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.09882799646038148,
+                "bootstrap_low": -0.13927518245645015,
+                "bootstrap_high": -0.06031918999201376,
+                "pass": true
+              }
+            }
+          },
+          "direct_organ_coupling_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.951060771942139,
+              "system_only_mae": 7.033071994781494,
+              "delta_vs_system_only": -0.08201122283935547,
+              "system_only_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": -0.07744542125305584,
+                "bootstrap_low": -0.10868005974859478,
+                "bootstrap_high": -0.04445517964454182,
+                "pass": true
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "no_expert_mae": 6.922394275665283,
+              "delta_vs_no_expert": 0.011485099792480469,
+              "no_expert_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": 0.009055679128958856,
+                "bootstrap_low": -0.0038502498324612736,
+                "bootstrap_high": 0.020493897115826824,
+                "pass": false
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 12884,
+              "subjects": 770,
+              "candidate_mae": 6.933879375457764,
+              "no_target_projection_mae": 6.932334899902344,
+              "delta_vs_no_target_projection": 0.0015444755554199219,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 770,
+                "patient_equal_delta": 0.0006086226420340206,
+                "bootstrap_low": -0.011800872419560902,
+                "bootstrap_high": 0.012200531541026514,
+                "pass": false
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 7377,
+              "test_n": 12884,
+              "q90": 15.293258666992188,
+              "median_lower_width": 15.293258666992188,
+              "median_upper_width": 15.293258666992188,
+              "q90_rank": 6674,
+              "coverage": 0.9070838314183333,
+              "row_coverage": 0.9009624340266997,
+              "patient_equalized_coverage": 0.9070838314183333,
+              "patient_coverage_ci95": [
+                0.8975585476619741,
+                0.9155485002702267
+              ],
+              "test_subjects": 770,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "patient_grouped_crossfit_adaptive_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9019189765458422,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 7377,
+                "calibration_subjects": 469,
+                "q90_rank": 6674,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false,
+                "cv_folds": 5,
+                "cv_coverage": 0.9020632517551019,
+                "candidate_cv_coverage": {
+                  "0.80": 0.8016875386456583,
+                  "0.81": 0.8139046666161422,
+                  "0.82": 0.8239787582172371,
+                  "0.83": 0.8334879497943405,
+                  "0.84": 0.8416650206741191,
+                  "0.85": 0.8523355601662587,
+                  "0.86": 0.8626184791302542,
+                  "0.87": 0.8721213968676098,
+                  "0.88": 0.8805758816498487,
+                  "0.89": 0.8921787163332452,
+                  "0.90": 0.9020632517551019,
+                  "0.91": 0.9117908952862681
+                },
+                "all_calibration_rows_used_after_crossfit_selection": true
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.2567766399255821,
+              0.25294176595551626,
+              0.24901833172355378
+            ],
+            "stages": {
+              "system": [
+                0.2567766399255821
+              ],
+              "organ": [
+                0.25294176595551626
+              ],
+              "body": [
+                0.24901833172355378
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "kidneys",
+                  "weight": 0.32615387439727783
+                },
+                {
+                  "module": "heart",
+                  "weight": 0.23737111687660217
+                },
+                {
+                  "module": "blood_vessels",
+                  "weight": 0.20166778564453125
+                }
+              ]
+            }
+          },
+          "organ_coupling": {
+            "available": true,
+            "rows": 23492,
+            "edges": [
+              {
+                "left": "heart",
+                "right": "blood_vessels",
+                "coobserved_rows": 14135,
+                "coobserved_fraction": 0.6016941937680913,
+                "left_receives_from_right": 0.32692412002520127,
+                "right_receives_from_left": 0.4270209058987449,
+                "left_gate": 0.5004817843437195,
+                "right_gate": 0.5003561973571777
+              },
+              {
+                "left": "heart",
+                "right": "lungs",
+                "coobserved_rows": 13279,
+                "coobserved_fraction": 0.5652562574493445,
+                "left_receives_from_right": 0.3586504931305446,
+                "right_receives_from_left": 0.5273171343468733,
+                "left_gate": 0.5004817843437195,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "kidneys",
+                "coobserved_rows": 16534,
+                "coobserved_fraction": 0.7038140643623361,
+                "left_receives_from_right": 0.3751546933560269,
+                "right_receives_from_left": 0.33598183306346163,
+                "left_gate": 0.5004817843437195,
+                "right_gate": 0.50048828125
+              },
+              {
+                "left": "heart",
+                "right": "thyroid",
+                "coobserved_rows": 3534,
+                "coobserved_fraction": 0.15043419036267666,
+                "left_receives_from_right": 0.2634014097555215,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5004817843437195,
+                "right_gate": 0.5
+              },
+              {
+                "left": "heart",
+                "right": "adrenal_glands",
+                "coobserved_rows": 460,
+                "coobserved_fraction": 0.019581134003064875,
+                "left_receives_from_right": 0.23856369584150935,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5004817843437195,
+                "right_gate": 0.5
+              },
+              {
+                "left": "blood_vessels",
+                "right": "kidneys",
+                "coobserved_rows": 14210,
+                "coobserved_fraction": 0.6048867699642432,
+                "left_receives_from_right": 0.3637765347181618,
+                "right_receives_from_left": 0.26901263656706814,
+                "left_gate": 0.5003561973571777,
+                "right_gate": 0.50048828125
+              },
+              {
+                "left": "blood_vessels",
+                "right": "liver",
+                "coobserved_rows": 11527,
+                "coobserved_fraction": 0.4906776775072365,
+                "left_receives_from_right": 0.26067449095072953,
+                "right_receives_from_left": 0.292391073671965,
+                "left_gate": 0.5003561973571777,
+                "right_gate": 0.5
+              },
+              {
+                "left": "lungs",
+                "right": "kidneys",
+                "coobserved_rows": 13292,
+                "coobserved_fraction": 0.5658096373233441,
+                "left_receives_from_right": 0.4731985958421442,
+                "right_receives_from_left": 0.26984370198395646,
+                "left_gate": 0.5,
+                "right_gate": 0.50048828125
+              },
+              {
+                "left": "kidneys",
+                "right": "liver",
+                "coobserved_rows": 18356,
+                "coobserved_fraction": 0.7813723820875191,
+                "left_receives_from_right": 0.41629262768928715,
+                "right_receives_from_left": 0.35751917738590033,
+                "left_gate": 0.50048828125,
+                "right_gate": 0.5
+              },
+              {
+                "left": "kidneys",
+                "right": "skeletal_muscle",
+                "coobserved_rows": 2375,
+                "coobserved_fraction": 0.10109824621147624,
+                "left_receives_from_right": 0.27535861426905583,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.50048828125,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "pancreas",
+                "coobserved_rows": 14211,
+                "coobserved_fraction": 0.6049293376468585,
+                "left_receives_from_right": 0.2951503151341047,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "liver",
+                "right": "bone_marrow",
+                "coobserved_rows": 16805,
+                "coobserved_fraction": 0.7153499063510983,
+                "left_receives_from_right": 0.2745376270181258,
+                "right_receives_from_left": 1.0,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "stomach",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "pancreas",
+                "right": "intestines",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              },
+              {
+                "left": "bone_marrow",
+                "right": "spleen",
+                "coobserved_rows": 0,
+                "coobserved_fraction": 0.0,
+                "left_receives_from_right": null,
+                "right_receives_from_left": null,
+                "left_gate": 0.5,
+                "right_gate": 0.5
+              }
+            ],
+            "target_signal": {
+              "heart_rate": {
+                "mean_l2": 1.4160684480176164,
+                "median_l2": 1.43162833990241,
+                "nonzero_fraction": 0.9866763153413928,
+                "top_neighbor_organs": [
+                  {
+                    "organ": "kidneys",
+                    "mean_weight": 0.3083068354703231
+                  },
+                  {
+                    "organ": "liver",
+                    "mean_weight": 0.21087185136635136
+                  },
+                  {
+                    "organ": "lungs",
+                    "mean_weight": 0.1515053864649346
+                  }
+                ]
+              }
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 23492,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "adjacent_three_level": {
+      "heart_rate@3h": {
+        "evaluated_splits": 3,
+        "beats_teacher_splits": 3,
+        "beats_persistence_splits": 3,
+        "selected_path_beats_teacher_splits": 3,
+        "selected_path_beats_persistence_splits": 3,
+        "selected_path_beats_system_only_splits": 3,
+        "selected_paths": [
+          "body_mediated",
+          "full",
+          "body_mediated"
+        ],
+        "median_delta_vs_teacher": -0.08107328414916992,
+        "median_delta_vs_persistence": -0.1304640769958496,
+        "selected_path_median_delta_vs_teacher": -0.09606361389160156,
+        "selected_path_median_delta_vs_persistence": -0.13685083389282227,
+        "selected_path_median_delta_vs_system_only": -0.07117748260498047,
+        "beats_no_route_splits": 2,
+        "beats_no_organ_coupling_splits": 0,
+        "beats_no_body_feedback_splits": 1,
+        "body_mediated_beats_system_only_splits": 3,
+        "direct_organ_beats_system_only_splits": 3,
+        "median_delta_vs_no_organ_coupling": 0.006386756896972656,
+        "median_delta_vs_no_body_feedback": -0.008579254150390625,
+        "median_body_mediated_delta_vs_system_only": -0.07117748260498047,
+        "median_direct_organ_delta_vs_system_only": -0.06648921966552734,
+        "median_delta_vs_no_route": -0.05618715286254883,
+        "beats_no_expert_splits": 1,
+        "median_delta_vs_no_expert": 0.011485099792480469,
+        "conformal_pass_splits": 3,
+        "beats_no_target_projection_splits": 0,
+        "median_delta_vs_no_target_projection": -0.0015811920166015625
+      }
+    }
+  },
+  "promotion_status": "candidate_only",
+  "next_gate": "Run all seven patient seeds and hospital/care-unit/time/conformal only if a bounded variant repeatedly beats the teacher router."
+}

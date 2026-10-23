@@ -259,6 +259,280 @@ class PatientStateResidualForecaster(nn.Module):
         return anchor + residual, scale
 
 
+class SharedRenalPatientStateForecaster(nn.Module):
+    """One renal patient state with independent target-horizon readouts.
+
+    All tasks update the same anatomical kidney token through the causal
+    history filter.  Target-specific heads preserve distinct units and time
+    scales, so coupling happens only in the shared renal representation.
+    """
+
+    architecture_contract = {
+        "placement": "kidney_organ_layer",
+        "shared_component": "renal_patient_state",
+        "target_specific_outputs": True,
+        "direct_system_or_body_output": False,
+    }
+
+    def __init__(
+        self,
+        *,
+        feature_dim: int,
+        belief_dim: int,
+        task_count: int,
+        hidden: int = 32,
+    ) -> None:
+        super().__init__()
+        if task_count < 2:
+            raise ValueError("shared renal forecaster requires at least two tasks")
+        self.feature_dim = int(feature_dim)
+        self.belief_dim = int(belief_dim)
+        self.task_count = int(task_count)
+        self.hidden = int(hidden)
+        self.organ_projection = nn.Sequential(
+            nn.Linear(feature_dim, hidden),
+            nn.LayerNorm(hidden),
+            nn.SiLU(),
+        )
+        self.patient_state = PatientStateAdapter(
+            organ_dim=hidden,
+            history_input_dim=feature_dim + 1,
+            belief_dim=belief_dim,
+            hidden_dim=hidden,
+        )
+        self.point_heads = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden + 2, hidden),
+                    nn.LayerNorm(hidden),
+                    nn.SiLU(),
+                    nn.Linear(hidden, 1),
+                )
+                for _ in range(task_count)
+            ]
+        )
+        self.scale_heads = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden, hidden),
+                    nn.SiLU(),
+                    nn.Linear(hidden, 1),
+                )
+                for _ in range(task_count)
+            ]
+        )
+        for head in self.point_heads:
+            nn.init.zeros_(head[-1].weight)
+            nn.init.zeros_(head[-1].bias)
+
+    def forward(
+        self,
+        current: torch.Tensor,
+        history: torch.Tensor,
+        history_mask: torch.Tensor,
+        belief: torch.Tensor,
+        anchors: torch.Tensor,
+        current_targets: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if anchors.shape != current_targets.shape:
+            raise ValueError("anchors and current_targets must have equal shape")
+        if anchors.ndim != 2 or anchors.shape[1] != self.task_count:
+            raise ValueError("task inputs must have shape [batch, task_count]")
+        organ = self.organ_projection(current).unsqueeze(1)
+        state = self.patient_state(
+            organ_latents=organ,
+            organ_presence=torch.ones(
+                (len(current), 1), dtype=current.dtype, device=current.device
+            ),
+            patient_history=history.unsqueeze(1),
+            patient_history_mask=history_mask.unsqueeze(1),
+            patient_belief=belief.unsqueeze(1),
+        )
+        renal_state = state["organ_latents"][:, 0]
+        points = []
+        scales = []
+        for task_index, (point_head, scale_head) in enumerate(
+            zip(self.point_heads, self.scale_heads)
+        ):
+            head_input = torch.cat(
+                (
+                    renal_state,
+                    anchors[:, task_index : task_index + 1],
+                    current_targets[:, task_index : task_index + 1],
+                ),
+                dim=-1,
+            )
+            residual = 2.5 * torch.tanh(point_head(head_input))
+            points.append(anchors[:, task_index : task_index + 1] + residual)
+            scales.append(
+                nn.functional.softplus(scale_head(renal_state.detach())) + 0.05
+            )
+        return torch.cat(points, dim=1), torch.cat(scales, dim=1)
+
+
+class GatedSharedPrivateRenalForecaster(nn.Module):
+    """Shared renal state plus task-private temporal filters.
+
+    ``disable_shared=True`` is the matched no-coupling ablation.  It preserves
+    the same task-private paths and parameter count while preventing the shared
+    renal state from changing any target-horizon prediction.
+    """
+
+    architecture_contract = {
+        "placement": "kidney_organ_layer",
+        "coupling": "gated_shared_private",
+        "matched_ablation": "disable_shared",
+        "direct_system_or_body_output": False,
+    }
+
+    def __init__(
+        self,
+        *,
+        feature_dim: int,
+        belief_dim: int,
+        task_count: int,
+        hidden: int = 32,
+    ) -> None:
+        super().__init__()
+        if task_count < 2:
+            raise ValueError("gated renal forecaster requires at least two tasks")
+        self.feature_dim = int(feature_dim)
+        self.belief_dim = int(belief_dim)
+        self.task_count = int(task_count)
+        self.hidden = int(hidden)
+        self.shared_projection = nn.Sequential(
+            nn.Linear(feature_dim, hidden), nn.LayerNorm(hidden), nn.SiLU()
+        )
+        self.shared_state = PatientStateAdapter(
+            organ_dim=hidden,
+            history_input_dim=feature_dim + 1,
+            belief_dim=belief_dim,
+            hidden_dim=hidden,
+        )
+        self.private_projections = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(feature_dim, hidden),
+                    nn.LayerNorm(hidden),
+                    nn.SiLU(),
+                )
+                for _ in range(task_count)
+            ]
+        )
+        self.private_states = nn.ModuleList(
+            [
+                PatientStateAdapter(
+                    organ_dim=hidden,
+                    history_input_dim=feature_dim + 1,
+                    belief_dim=belief_dim,
+                    hidden_dim=hidden,
+                )
+                for _ in range(task_count)
+            ]
+        )
+        self.shared_gates = nn.Parameter(torch.full((task_count, hidden), -2.0))
+        self.point_heads = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden + 2, hidden),
+                    nn.LayerNorm(hidden),
+                    nn.SiLU(),
+                    nn.Linear(hidden, 1),
+                )
+                for _ in range(task_count)
+            ]
+        )
+        self.scale_heads = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden, hidden), nn.SiLU(), nn.Linear(hidden, 1)
+                )
+                for _ in range(task_count)
+            ]
+        )
+        for head in self.point_heads:
+            nn.init.zeros_(head[-1].weight)
+            nn.init.zeros_(head[-1].bias)
+
+    def _state(
+        self,
+        projection: nn.Module,
+        adapter: PatientStateAdapter,
+        current: torch.Tensor,
+        history: torch.Tensor,
+        history_mask: torch.Tensor,
+        belief: torch.Tensor,
+    ) -> torch.Tensor:
+        organ = projection(current).unsqueeze(1)
+        output = adapter(
+            organ_latents=organ,
+            organ_presence=torch.ones(
+                (len(current), 1), dtype=current.dtype, device=current.device
+            ),
+            patient_history=history.unsqueeze(1),
+            patient_history_mask=history_mask.unsqueeze(1),
+            patient_belief=belief.unsqueeze(1),
+        )
+        return output["organ_latents"][:, 0]
+
+    def forward(
+        self,
+        current: torch.Tensor,
+        history: torch.Tensor,
+        history_mask: torch.Tensor,
+        belief: torch.Tensor,
+        anchors: torch.Tensor,
+        current_targets: torch.Tensor,
+        *,
+        disable_shared: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if anchors.shape != current_targets.shape:
+            raise ValueError("anchors and current_targets must have equal shape")
+        if anchors.ndim != 2 or anchors.shape[1] != self.task_count:
+            raise ValueError("task inputs must have shape [batch, task_count]")
+        shared = self._state(
+            self.shared_projection,
+            self.shared_state,
+            current,
+            history,
+            history_mask,
+            belief,
+        )
+        points = []
+        scales = []
+        for task_index in range(self.task_count):
+            private = self._state(
+                self.private_projections[task_index],
+                self.private_states[task_index],
+                current,
+                history,
+                history_mask,
+                belief,
+            )
+            if disable_shared:
+                renal_state = private
+            else:
+                gate = torch.sigmoid(self.shared_gates[task_index])
+                renal_state = private + gate * (shared - private)
+            head_input = torch.cat(
+                (
+                    renal_state,
+                    anchors[:, task_index : task_index + 1],
+                    current_targets[:, task_index : task_index + 1],
+                ),
+                dim=-1,
+            )
+            residual = 2.5 * torch.tanh(self.point_heads[task_index](head_input))
+            points.append(anchors[:, task_index : task_index + 1] + residual)
+            scales.append(
+                nn.functional.softplus(
+                    self.scale_heads[task_index](renal_state.detach())
+                )
+                + 0.05
+            )
+        return torch.cat(points, dim=1), torch.cat(scales, dim=1)
+
+
 @dataclass(frozen=True)
 class LoadedPatientStateArtifact:
     model: PatientStateResidualForecaster

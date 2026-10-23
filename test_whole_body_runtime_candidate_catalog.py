@@ -6,10 +6,10 @@ from whole_body_runtime_candidate_catalog import build_catalog
 
 
 class WholeBodyRuntimeCandidateCatalogTests(unittest.TestCase):
-    def test_current_catalog_contains_46_unique_validated_cells(self):
+    def test_current_catalog_contains_49_unique_validated_cells(self):
         root = Path(__file__).resolve().parent
         payload = json.loads(
-            (root / "whole_body_runtime_candidate_catalog_v9.json").read_text(
+            (root / "whole_body_runtime_candidate_catalog_v12.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -20,8 +20,8 @@ class WholeBodyRuntimeCandidateCatalogTests(unittest.TestCase):
         }
         targets = {cell.split("@", 1)[0] for cell in validated}
 
-        self.assertEqual(len(validated), 46)
-        self.assertEqual(len(targets), 15)
+        self.assertEqual(len(validated), 49)
+        self.assertEqual(len(targets), 16)
         self.assertTrue(payload["factual_only"])
         self.assertFalse(payload["causal_claim_allowed"])
         self.assertFalse(payload["clinical_promotion_allowed"])
@@ -29,7 +29,7 @@ class WholeBodyRuntimeCandidateCatalogTests(unittest.TestCase):
     def test_current_catalog_keeps_source_contracts_separate(self):
         root = Path(__file__).resolve().parent
         payload = json.loads(
-            (root / "whole_body_runtime_candidate_catalog_v9.json").read_text(
+            (root / "whole_body_runtime_candidate_catalog_v12.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -57,9 +57,58 @@ class WholeBodyRuntimeCandidateCatalogTests(unittest.TestCase):
             platelets["output_contract"]["platelets"]["interval"],
         )
 
+        chloride = by_id["chloride_regime_calibrated_change_hurdle_joint_jepa"]
+        self.assertEqual(chloride["validated_cells"], ["chloride@12h"])
+        hematocrit = by_id[
+            "hematocrit_regime_calibrated_change_hurdle_joint_jepa"
+        ]
+        self.assertEqual(hematocrit["validated_cells"], ["hematocrit@12h"])
+        self.assertIn(
+            "regime-Mondrian",
+            chloride["output_contract"]["chloride"]["interval"],
+        )
+
+        full_body = by_id["adjacent_three_level_full_cohort_20260810"]
+        self.assertEqual(
+            full_body["input_contract_id"],
+            "eicu_canonical_exact_future_full_cohort.v1",
+        )
+        self.assertEqual(
+            full_body["validated_cells"],
+            ["urine_output@1h", "urine_output@3h", "urine_output@6h"],
+        )
+
+        glucose = by_id[
+            "adjacent_three_level_glucose_domain_invariant_20260810"
+        ]
+        self.assertEqual(
+            glucose["input_contract_id"],
+            "eicu_canonical_exact_future_full_cohort.v1",
+        )
+        self.assertEqual(glucose["validated_cells"], ["glucose@1h"])
+
+    def test_current_catalog_entries_are_runtime_materialized(self):
+        root = Path(__file__).resolve().parent
+        payload = json.loads(
+            (root / "whole_body_runtime_candidate_catalog_v12.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for candidate in payload["candidates"]:
+            if not candidate.get("validated_cells"):
+                continue
+            self.assertTrue(candidate.get("input_contract_id"))
+            self.assertEqual(
+                set(candidate["validated_cells"]),
+                set(candidate.get("target_horizon_registry", {})),
+            )
+            for cell in candidate["validated_cells"]:
+                target = cell.split("@", 1)[0]
+                self.assertIn(target, candidate.get("variable_units", {}))
+
     def test_materialized_registry_keeps_its_contract_and_units(self):
         registry = {
-            "schema": "whole_body_promotion_registry.v2",
+            "schema": "whole_body_promotion_registry.v3",
             "candidate_id": "interval_urine_joint_jepa",
             "input_contract_id": "joint_interval_urine.v1",
             "input_contract": "interval-normalized urine output",

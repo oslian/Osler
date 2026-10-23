@@ -4,7 +4,7 @@ This is not a causal treatment-effect audit.  It compares three factual
 forecasting feature sets on the same observed MIMIC-IV transition cohort:
 
 * baseline: current physiology, masks/ages, and non-treatment context;
-* candidate: baseline plus observed ``hist_*`` and ``act_*`` treatment context;
+* candidate: baseline plus observed pre-anchor ``hist_*`` treatment context;
 * placebo: baseline plus the same number of random-noise columns.
 
 The candidate must beat both baseline and placebo under patient-heldout splits
@@ -30,6 +30,9 @@ from eicu_full_variable_coverage_audit import (
 from eicu_nowcasting_audit import DEFAULT_SEEDS
 from eicu_sepsis_target_router import _bootstrap_ci, split_subjects
 from mimiciv_cross_database_coverage_audit import add_time_holdout_column
+from mimiciv_observation_transition_extract import ACTION_KEYS
+from osler_jepa.interval_personalization import patient_weighted_quantile
+from osler_jepa.treatment_units import treatment_feature_actions
 
 
 DEFAULT_TARGETS = ("glucose", "potassium", "map", "bicarbonate")
@@ -49,14 +52,36 @@ def stable_seed(*parts: object) -> int:
 
 def feature_sets(frame: pd.DataFrame, target: str) -> dict[str, list[str]]:
     candidate = forecast_feature_columns(frame, target)
-    treatment = [
-        column for column in candidate
+    # act_* belongs to the forecast window. It is useful only as a label for
+    # a future-treatment study, never as an anchor-time factual input. Remove
+    # it from *both* arms so it cannot create a temporal leakage advantage.
+    all_action_columns = [
+        column
+        for column in candidate
         if column.startswith("hist_") or column.startswith("act_")
     ]
-    baseline = [column for column in candidate if column not in treatment]
+    permitted_actions = treatment_feature_actions(target)
+    basic_treatment_fields = {
+        f"hist_{action}{suffix}"
+        for action in permitted_actions
+        for suffix in ("", "_evidence_count", "_dose_observed")
+    }
+    treatment = [
+        column
+        for column in all_action_columns
+        if column.startswith("hist_")
+        and (
+            column in basic_treatment_fields
+            or any(
+                column.startswith(f"hist_{action}_")
+                for action in permitted_actions
+            )
+        )
+    ]
+    baseline = [column for column in candidate if column not in all_action_columns]
     return {
         "baseline": baseline,
-        "candidate": candidate,
+        "candidate": baseline + treatment,
         "treatment": treatment,
     }
 
@@ -152,6 +177,7 @@ def evaluate_predictions(
     bootstrap_samples: int,
 ) -> dict[str, object]:
     truth = rows["truth"].to_numpy(dtype=np.float64)
+    persistence = rows["current"].to_numpy(dtype=np.float64)
     return {
         "rows": int(len(rows)),
         "subjects": int(rows["subject_id"].nunique()) if len(rows) else 0,
@@ -159,6 +185,7 @@ def evaluate_predictions(
             "baseline_no_treatment_features": _round(mae(baseline, truth)),
             "candidate_with_treatment_features": _round(mae(candidate, truth)),
             "placebo_equal_random_features": _round(mae(placebo, truth)),
+            "persistence": _round(mae(persistence, truth)),
         },
         "candidate_vs_baseline": delta_summary(
             rows,
@@ -174,7 +201,176 @@ def evaluate_predictions(
             seed=seed + 137,
             bootstrap_samples=bootstrap_samples,
         ),
+        "candidate_vs_persistence": delta_summary(
+            rows,
+            candidate,
+            persistence,
+            seed=seed + 271,
+            bootstrap_samples=bootstrap_samples,
+        ),
     }
+
+
+def _patient_equalized_coverage(
+    rows: pd.DataFrame,
+    point: np.ndarray,
+    half_width: float,
+) -> float | None:
+    truth = rows["truth"].to_numpy(dtype=np.float64)
+    point = np.asarray(point, dtype=np.float64)
+    finite = np.isfinite(truth) & np.isfinite(point)
+    if not finite.any() or not np.isfinite(half_width):
+        return None
+    covered = pd.DataFrame({
+        "subject_id": rows.loc[finite, "subject_id"].astype(str).to_numpy(),
+        "covered": (np.abs(truth[finite] - point[finite]) <= float(half_width)).astype(float),
+    })
+    return float(covered.groupby("subject_id")["covered"].mean().mean())
+
+
+def _calibration_domain_labels(
+    discovery: pd.DataFrame,
+    group_column: str,
+) -> np.ndarray | None:
+    if group_column == "first_careunit" and group_column in discovery:
+        return discovery[group_column].fillna("missing").astype(str).to_numpy()
+    if group_column == "time_holdout_group" and "t" in discovery:
+        timestamps = pd.to_datetime(discovery["t"], errors="coerce")
+        if timestamps.notna().sum() < 30:
+            return None
+        ranks = timestamps.rank(method="first", pct=True).fillna(0.0)
+        return np.minimum((ranks.to_numpy() * 5).astype(int), 4).astype(str)
+    return None
+
+
+def _select_domain_adaptive_coverage(
+    discovery: pd.DataFrame,
+    prediction: np.ndarray,
+    group_column: str,
+    target_coverage: float,
+) -> tuple[float, float | None, float | None, float | None]:
+    labels = _calibration_domain_labels(discovery, group_column)
+    if labels is None or len(np.unique(labels)) < 2:
+        return float(target_coverage), None, None, None
+    truth = discovery["truth"].to_numpy(dtype=np.float64)
+    point = np.asarray(prediction, dtype=np.float64)
+    residual = np.abs(truth - point)
+    subjects = discovery["subject_id"].astype(str).to_numpy()
+    unique = np.unique(labels)
+    folds = np.array_split(unique, min(5, len(unique)))
+    scored: list[tuple[float, float, float, float, float]] = []
+    for nominal in np.linspace(0.80, 0.96, 17):
+        coverages = []
+        for heldout_labels in folds:
+            check = np.isin(labels, heldout_labels)
+            fit = ~check
+            finite_fit = fit & np.isfinite(residual)
+            if int(finite_fit.sum()) < 30 or int(check.sum()) < 20:
+                continue
+            half_width = patient_weighted_quantile(
+                residual[finite_fit],
+                subjects[finite_fit],
+                coverage=float(nominal),
+            )
+            coverage = _patient_equalized_coverage(
+                discovery.loc[check],
+                point[check],
+                half_width,
+            )
+            if coverage is not None:
+                coverages.append(float(coverage))
+        if coverages:
+            mean = float(np.mean(coverages))
+            spread = float(np.std(coverages))
+            minimum = float(np.min(coverages))
+            maximum = float(np.max(coverages))
+            range_violation = max(0.0, 0.87 - minimum) + max(0.0, maximum - 0.93)
+            score = (
+                10.0 * range_violation
+                + abs(mean - target_coverage)
+                + 0.10 * spread
+            )
+            scored.append((score, float(nominal), mean, minimum, maximum))
+    if not scored:
+        return float(target_coverage), None, None, None
+    _, nominal, cross_domain_coverage, minimum, maximum = min(
+        scored,
+        key=lambda item: (item[0], abs(item[1] - target_coverage)),
+    )
+    return nominal, cross_domain_coverage, minimum, maximum
+
+
+def conformal_comparison(
+    discovery: pd.DataFrame,
+    heldout: pd.DataFrame,
+    discovery_predictions: dict[str, np.ndarray],
+    heldout_predictions: dict[str, np.ndarray],
+    coverage: float = 0.90,
+    group_column: str = "subject_id",
+) -> dict[str, object]:
+    output: dict[str, object] = {"target_coverage": float(coverage)}
+    widths: dict[str, float] = {}
+    truth = discovery["truth"].to_numpy(dtype=np.float64)
+    subjects = discovery["subject_id"].astype(str).to_numpy()
+    for source in ("baseline", "candidate"):
+        prediction = np.asarray(discovery_predictions[source], dtype=np.float64)
+        finite = np.isfinite(truth) & np.isfinite(prediction)
+        if int(finite.sum()) < 30:
+            output[source] = {"status": "insufficient_calibration"}
+            continue
+        (
+            selected_coverage,
+            calibration_domain_coverage,
+            calibration_domain_minimum,
+            calibration_domain_maximum,
+        ) = (
+            _select_domain_adaptive_coverage(
+                discovery,
+                prediction,
+                group_column,
+                coverage,
+            )
+        )
+        half_width = patient_weighted_quantile(
+            np.abs(truth[finite] - prediction[finite]),
+            subjects[finite],
+            coverage=selected_coverage,
+        )
+        observed_coverage = _patient_equalized_coverage(
+            heldout,
+            heldout_predictions[source],
+            half_width,
+        )
+        widths[source] = float(2.0 * half_width)
+        output[source] = {
+            "status": "evaluated",
+            "full_width": _round(2.0 * half_width),
+            "heldout_patient_equalized_coverage": _round(observed_coverage),
+            "selected_nominal_coverage": _round(selected_coverage),
+            "calibration_cross_domain_coverage": _round(
+                calibration_domain_coverage
+            ),
+            "calibration_cross_domain_minimum": _round(
+                calibration_domain_minimum
+            ),
+            "calibration_cross_domain_maximum": _round(
+                calibration_domain_maximum
+            ),
+            "selection_uses_heldout_labels": False,
+            "coverage_gate_passed": bool(
+                observed_coverage is not None
+                and 0.87 <= observed_coverage <= 0.93
+            ),
+        }
+    if "baseline" in widths and "candidate" in widths:
+        output["candidate_width_change_vs_baseline"] = _round(
+            widths["candidate"] - widths["baseline"]
+        )
+        output["candidate_width_change_fraction"] = _round(
+            widths["candidate"] / max(widths["baseline"], 1.0e-12) - 1.0
+        )
+        output["candidate_narrower"] = bool(widths["candidate"] < widths["baseline"])
+    return output
 
 
 def oof_predictions(
@@ -319,6 +515,7 @@ def audit_split(
     selected = bool(
         discovery_eval["candidate_vs_baseline"]["significant"]
         and discovery_eval["candidate_vs_placebo"]["significant"]
+        and discovery_eval["candidate_vs_persistence"]["significant"]
     )
     heldout_pred = fit_heldout_predictions(
         discovery,
@@ -338,11 +535,19 @@ def audit_split(
         seed=seed + 50_000,
         bootstrap_samples=bootstrap_samples,
     )
+    conformal = conformal_comparison(
+        discovery,
+        heldout,
+        oof,
+        heldout_pred,
+        group_column=group_column,
+    )
     return {
         "status": "evaluated",
         "selected_candidate": selected,
         "discovery": discovery_eval,
         "heldout": heldout_eval,
+        "conformal_90": conformal,
     }
 
 
@@ -354,6 +559,7 @@ def split_passed(report: dict[str, object]) -> bool:
         report.get("selected_candidate")
         and (heldout.get("candidate_vs_baseline") or {}).get("significant")
         and (heldout.get("candidate_vs_placebo") or {}).get("significant")
+        and (heldout.get("candidate_vs_persistence") or {}).get("significant")
     )
 
 
@@ -368,11 +574,58 @@ def summarize_random(reports: list[dict[str, object]]) -> dict[str, int]:
         1 for report in reports
         if (report.get("heldout") or {}).get("candidate_vs_placebo", {}).get("significant")
     )
+    heldout_persistence = sum(
+        1 for report in reports
+        if (report.get("heldout") or {}).get("candidate_vs_persistence", {}).get("significant")
+    )
     return {
         "evaluated_splits": int(evaluated),
         "selected_candidate_splits": int(selected),
         "heldout_beats_baseline_splits": int(heldout_base),
         "heldout_beats_placebo_splits": int(heldout_placebo),
+        "heldout_beats_persistence_splits": int(heldout_persistence),
+    }
+
+
+def summarize_conformal(reports: list[dict[str, object]]) -> dict[str, object]:
+    evaluated = [
+        report["conformal_90"]
+        for report in reports
+        if report.get("status") == "evaluated" and report.get("conformal_90")
+    ]
+    if not evaluated:
+        return {"evaluated_splits": 0}
+    baseline_widths = [
+        item["baseline"]["full_width"]
+        for item in evaluated
+        if item.get("baseline", {}).get("full_width") is not None
+    ]
+    candidate_widths = [
+        item["candidate"]["full_width"]
+        for item in evaluated
+        if item.get("candidate", {}).get("full_width") is not None
+    ]
+    fractions = [
+        item["candidate_width_change_fraction"]
+        for item in evaluated
+        if item.get("candidate_width_change_fraction") is not None
+    ]
+    return {
+        "evaluated_splits": int(len(evaluated)),
+        "baseline_coverage_pass_splits": int(sum(
+            bool(item.get("baseline", {}).get("coverage_gate_passed"))
+            for item in evaluated
+        )),
+        "candidate_coverage_pass_splits": int(sum(
+            bool(item.get("candidate", {}).get("coverage_gate_passed"))
+            for item in evaluated
+        )),
+        "candidate_narrower_splits": int(sum(
+            bool(item.get("candidate_narrower")) for item in evaluated
+        )),
+        "median_baseline_full_width": _round(np.median(baseline_widths)) if baseline_widths else None,
+        "median_candidate_full_width": _round(np.median(candidate_widths)) if candidate_widths else None,
+        "median_candidate_width_change_fraction": _round(np.median(fractions)) if fractions else None,
     }
 
 
@@ -506,12 +759,14 @@ def audit_target(
         min_subjects,
     )
     summary = summarize_random(random_reports)
+    conformal_summary = summarize_conformal(random_reports)
     split_count = len(seeds)
     validated = bool(
         summary["evaluated_splits"] == split_count
         and summary["selected_candidate_splits"] == split_count
         and summary["heldout_beats_baseline_splits"] == split_count
         and summary["heldout_beats_placebo_splits"] == split_count
+        and summary["heldout_beats_persistence_splits"] == split_count
         and split_passed(careunit)
         and split_passed(time)
     )
@@ -525,15 +780,18 @@ def audit_target(
             "treatment_features": sets["treatment"],
         },
         "random_patient_splits": summary,
+        "random_patient_conformal_90": conformal_summary,
         "careunit_holdout": {
             "available": bool(careunit.get("available")),
             "gate_passed": split_passed(careunit),
             "heldout": careunit.get("heldout") if careunit.get("available") else None,
+            "conformal_90": careunit.get("conformal_90") if careunit.get("available") else None,
         },
         "time_holdout": {
             "available": bool(time.get("available")),
             "gate_passed": split_passed(time),
             "heldout": time.get("heldout") if time.get("available") else None,
+            "conformal_90": time.get("conformal_90") if time.get("available") else None,
         },
         "validated": validated,
     }
@@ -585,7 +843,7 @@ def run_audit(
         },
         "gate": {
             "baseline": "ridge residual forecast without hist_*/act_* treatment features",
-            "candidate": "same forecast plus observed factual hist_*/act_* treatment features",
+            "candidate": "same forecast plus observed pre-anchor hist_* treatment features",
             "placebo": "baseline plus equal number of random-noise features",
             "patient_heldout_splits": list(seeds),
             "careunit_heldout_required": True,
@@ -611,10 +869,10 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
         "",
         "## Gate",
         "",
-        "- Baseline: ridge forecast without `hist_*` / `act_*` treatment features.",
-        "- Candidate: same forecast plus observed factual treatment features.",
+        "- Baseline: ridge forecast without `hist_*` / `act_*` action fields.",
+        "- Candidate: same forecast plus observed pre-anchor `hist_*` treatment features.",
         "- Placebo: baseline plus an equal number of random-noise features.",
-        "- Pass rule: candidate must beat both baseline and placebo across 7 patient-heldout splits, careunit-heldout, and time-heldout.",
+        "- Pass rule: candidate must beat baseline, equal-capacity placebo, and persistence across 7 patient-heldout splits, careunit-heldout, and time-heldout.",
         "",
         "## Result",
         "",
@@ -622,8 +880,8 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
         f"- Subjects: `{report['subjects']}`",
         f"- Validated targets: `{', '.join(report['validated_targets']) if report['validated_targets'] else 'none'}`",
         "",
-        "| Target | Rows | Subjects | Treatment Features | 7-Split Selected | 7-Split vs Baseline | 7-Split vs Placebo | Careunit | Time | Status |",
-        "|---|---:|---:|---:|---:|---:|---:|---|---|---|",
+        "| Target | Rows | Subjects | Treatment Features | 7-Split Selected | 7-Split vs Baseline | 7-Split vs Placebo | 7-Split vs Persistence | Careunit | Time | Status |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for target, item in report["targets"].items():
         support = item["support"]
@@ -635,6 +893,7 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
             f"{random['selected_candidate_splits']}/7 | "
             f"{random['heldout_beats_baseline_splits']}/7 | "
             f"{random['heldout_beats_placebo_splits']}/7 | "
+            f"{random['heldout_beats_persistence_splits']}/7 | "
             f"{'pass' if item['careunit_holdout']['gate_passed'] else 'fail'} | "
             f"{'pass' if item['time_holdout']['gate_passed'] else 'fail'} | {status} |"
         )
@@ -642,7 +901,7 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
         "",
         "## Boundary",
         "",
-        "Observed treatment context is a factual input. This audit does not allow causal, counterfactual, clinical, or treatment-recommendation claims.",
+        "Only pre-anchor `hist_*` treatment context is a factual input. This audit does not allow causal, counterfactual, clinical, or treatment-recommendation claims.",
         "",
     ])
     path.write_text("\n".join(lines), encoding="utf-8")

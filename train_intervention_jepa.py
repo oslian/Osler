@@ -1067,7 +1067,18 @@ def evaluate_model(model, dataset, indices, device):
 
 
 @torch.no_grad()
-def evaluate_mimic_proxy(model, path, device):
+def evaluate_mimic_proxy(model, path, device, input_mode="measurement_pure"):
+    """Evaluate factual MIMIC rows with an explicit input provenance mode.
+
+    ``legacy`` preserves the historical evaluator.  ``measurement_pure``
+    matches the training contract: only values present in the observed-state
+    record are passed as state values; derived/default values remain available
+    only through the observation mask and age channels.
+    """
+    if input_mode not in {"legacy", "measurement_pure"}:
+        raise ValueError(
+            "input_mode must be 'legacy' or 'measurement_pure'"
+        )
     try:
         import pandas as pd
     except ImportError:
@@ -1230,8 +1241,17 @@ def evaluate_mimic_proxy(model, path, device):
                 json.loads(row["history_action_grid"]), dtype=np.float32
             )
             history = treatment_history_features(history_grid, DT, HISTORY_HOURS)
+        if input_mode == "measurement_pure":
+            # Align real-data evaluation with training, where missing state
+            # dimensions are zeroed and represented by mask/age metadata.
+            model_state = observation_context(
+                reported_state, age_map
+            )[0] * observed_mask
+        else:
+            # Historical path: derived/default state values are passed through.
+            model_state = s2vec(state)
         predicted, _, _ = model.rollout(
-            torch.as_tensor(s2vec(state), dtype=torch.float32, device=device).unsqueeze(0),
+            torch.as_tensor(model_state, dtype=torch.float32, device=device).unsqueeze(0),
             torch.as_tensor(sequence, dtype=torch.float32, device=device).unsqueeze(0),
             None if history is None else torch.as_tensor(
                 history, dtype=torch.float32, device=device
@@ -1306,6 +1326,14 @@ def evaluate_mimic_proxy(model, path, device):
     stays = int(frame["stay_id"].nunique())
     return {
         "available": True,
+        "input_provenance": {
+            "mode": input_mode,
+            "legacy_uses_derived_or_default_values": input_mode == "legacy",
+            "measurement_pure_zeroes_unobserved_state_dimensions": (
+                input_mode == "measurement_pure"
+            ),
+            "training_contract_alignment": input_mode == "measurement_pure",
+        },
         "rows_with_any_comparison": used,
         "rows_with_active_dka_comparison": active_used,
         "stays": stays,

@@ -1,0 +1,2143 @@
+{
+  "schema": "teacher_anchored_joint_jepa_audit.v4",
+  "status": "bounded_candidate_only",
+  "rows": 41630,
+  "subjects": 916,
+  "hospitals": 12,
+  "modules": [
+    "cardiovascular_perfusion",
+    "respiratory",
+    "renal_urinary",
+    "acid_base_electrolyte",
+    "endocrine_metabolic",
+    "hepatic_synthetic",
+    "gastrointestinal_pancreatic",
+    "hematologic_coagulation",
+    "immune_inflammatory",
+    "cardiac_injury",
+    "musculoskeletal_injury"
+  ],
+  "targets": [
+    "heart_rate",
+    "map"
+  ],
+  "target_mode": "explicit",
+  "target_future_label_support": {
+    "heart_rate": {
+      "total_rows": 21917,
+      "total_subjects": 833,
+      "evaluable_horizons": [
+        "3h",
+        "12h"
+      ],
+      "support_limited_horizons": [],
+      "by_horizon": {
+        "3h": {
+          "rows": 11817,
+          "subjects": 828,
+          "evaluable": true
+        },
+        "12h": {
+          "rows": 10100,
+          "subjects": 748,
+          "evaluable": true
+        }
+      }
+    },
+    "map": {
+      "total_rows": 19479,
+      "total_subjects": 816,
+      "evaluable_horizons": [
+        "3h",
+        "12h"
+      ],
+      "support_limited_horizons": [],
+      "by_horizon": {
+        "3h": {
+          "rows": 10519,
+          "subjects": 811,
+          "evaluable": true
+        },
+        "12h": {
+          "rows": 8960,
+          "subjects": 717,
+          "evaluable": true
+        }
+      }
+    }
+  },
+  "horizons": [
+    3,
+    12
+  ],
+  "seeds": [
+    7,
+    19,
+    31
+  ],
+  "split_mode": "hospital",
+  "architecture": {
+    "strict_adjacent_three_level_candidate": true,
+    "three_level_path": "system <-> organ <-> body",
+    "direct_system_body_path": false,
+    "validated_expert_projection_layer": "system",
+    "adjacent_training_schedule": "train_system_then_freeze_then_train_hierarchy",
+    "matched_system_only_ablation_required": true,
+    "validated_router_teacher_anchor": true,
+    "zero_initialized_bounded_residual": true,
+    "two_level_latent_hierarchy": true,
+    "level_1_shared_whole_body_latent": true,
+    "level_2_canonical_organ_latent_tokens": true,
+    "target_heads_above_two_level_latents": true,
+    "shared_slow_context_latent": true,
+    "target_specific_fast_future_latent": true,
+    "target_horizon_sparse_experts": true,
+    "optional_target_specific_projection_residuals": true,
+    "target_specific_distributional_scale_heads": true,
+    "scale_loss_detached_from_physiology_context": true,
+    "two_stage_point_then_scale_training": true,
+    "matched_no_expert_ablation_required": true,
+    "patient_target_horizon_dynamic_cross_organ_routing": true,
+    "target_own_organ_excluded_from_route": true,
+    "patient_bootstrap_route_ablation_required": true,
+    "pcgrad_variant": true,
+    "calibration_rows_used_for_training": false,
+    "conformal_method": "patient_cluster",
+    "conformal_nominal_coverage": 0.9,
+    "domain_invariance_weight": 0.05,
+    "domain_invariance_columns": [
+      "hospitalid"
+    ],
+    "causal_claim_allowed": false,
+    "clinical_promotion_allowed": false
+  },
+  "reports": [
+    {
+      "seed": 7,
+      "fit_rows": 29230,
+      "calibration_rows_untouched": 7576,
+      "test_rows": 4824,
+      "base_loss": 3.225180180867513,
+      "latent_svd": {
+        "fit_effective_rank": 20.534079001932536,
+        "test_effective_rank": 16.784094878530183,
+        "rank_ratio": 0.8173775350211993,
+        "mean_top_subspace_cosine": 0.787064622313867,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1763,
+          "selection_subjects": 115,
+          "selection_patient_equal_delta_vs_persistence": 0.41007005878845637,
+          "selection_bootstrap_low": -0.011473202700929141,
+          "selection_bootstrap_high": 0.7958886176074408,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "heart_rate@12h": {
+          "selected_source": "persistence",
+          "selection_rows": 1491,
+          "selection_subjects": 100,
+          "selection_patient_equal_delta_vs_persistence": -0.20233311530202627,
+          "selection_bootstrap_low": -1.176942277688533,
+          "selection_bootstrap_high": 0.8466119631016626,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1312,
+          "selection_subjects": 99,
+          "selection_patient_equal_delta_vs_persistence": -0.5763006260373977,
+          "selection_bootstrap_low": -1.443351042042063,
+          "selection_bootstrap_high": 0.22225997900270436,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@12h": {
+          "selected_source": "ridge_realfit",
+          "selection_rows": 1106,
+          "selection_subjects": 89,
+          "selection_patient_equal_delta_vs_persistence": -1.5856657923105058,
+          "selection_bootstrap_low": -2.616677222306725,
+          "selection_bootstrap_high": -0.49098033077303327,
+          "reason": "discovery_only_ridge_passed_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 1338,
+              "subjects": 100,
+              "candidate_mae": 6.997742652893066,
+              "teacher_router_mae": 7.186098575592041,
+              "persistence_mae": 7.186098575592041,
+              "delta_vs_teacher": -0.1883559226989746,
+              "delta_vs_persistence": -0.1883559226989746,
+              "direction_accuracy": 0.6150121065375302,
+              "delta_correlation": 0.28884409211574935,
+              "teacher_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.1942305946024135,
+                "bootstrap_low": -0.28797310377960095,
+                "bootstrap_high": -0.10595082276652106,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.1942305946024135,
+                "bootstrap_low": -0.27854629150545224,
+                "bootstrap_high": -0.10425540230819023,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1087,
+              "subjects": 90,
+              "candidate_mae": 10.024917602539062,
+              "teacher_router_mae": 10.382704734802246,
+              "persistence_mae": 10.382704734802246,
+              "delta_vs_teacher": -0.3577871322631836,
+              "delta_vs_persistence": -0.3577871322631836,
+              "direction_accuracy": 0.6647342995169082,
+              "delta_correlation": 0.4048593183501043,
+              "teacher_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.294386317104929,
+                "bootstrap_low": -0.429772345838137,
+                "bootstrap_high": -0.1568760726280097,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.294386317104929,
+                "bootstrap_low": -0.41615771904277304,
+                "bootstrap_high": -0.15999554254166368,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 842,
+              "subjects": 89,
+              "candidate_mae": 8.11994457244873,
+              "teacher_router_mae": 8.385985374450684,
+              "persistence_mae": 8.385985374450684,
+              "delta_vs_teacher": -0.2660408020019531,
+              "delta_vs_persistence": -0.2660408020019531,
+              "direction_accuracy": 0.6525,
+              "delta_correlation": 0.3433988324697408,
+              "teacher_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.28201418074915247,
+                "bootstrap_low": -0.38733582966647034,
+                "bootstrap_high": -0.17109909697613693,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.28201418074915247,
+                "bootstrap_low": -0.39049136637647247,
+                "bootstrap_high": -0.16089882317229354,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 664,
+              "subjects": 79,
+              "candidate_mae": 11.078520774841309,
+              "teacher_router_mae": 11.112699508666992,
+              "persistence_mae": 10.555723190307617,
+              "delta_vs_teacher": -0.034178733825683594,
+              "delta_vs_persistence": 0.5227975845336914,
+              "direction_accuracy": 0.6342592592592593,
+              "delta_correlation": 0.39942662979662047,
+              "teacher_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": -0.08006125773432889,
+                "bootstrap_low": -0.18181652267569606,
+                "bootstrap_high": 0.019909349617347846,
+                "pass": false
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": 0.49674658986586556,
+                "bootstrap_low": -0.6963151787867463,
+                "bootstrap_high": 1.6882930471974449,
+                "pass": false
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 1338,
+              "subjects": 100,
+              "candidate_mae": 7.074607849121094,
+              "teacher_router_mae": 7.186098575592041,
+              "persistence_mae": 7.186098575592041,
+              "delta_vs_teacher": -0.11149072647094727,
+              "delta_vs_persistence": -0.11149072647094727,
+              "direction_accuracy": 0.6174334140435835,
+              "delta_correlation": 0.27646523285530533,
+              "teacher_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.11230959977954626,
+                "bootstrap_low": -0.15565403181593865,
+                "bootstrap_high": -0.06602807494020092,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.11230959977954626,
+                "bootstrap_low": -0.15702909184480088,
+                "bootstrap_high": -0.06757214397471398,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1087,
+              "subjects": 90,
+              "candidate_mae": 10.185922622680664,
+              "teacher_router_mae": 10.382704734802246,
+              "persistence_mae": 10.382704734802246,
+              "delta_vs_teacher": -0.19678211212158203,
+              "delta_vs_persistence": -0.19678211212158203,
+              "direction_accuracy": 0.6531400966183575,
+              "delta_correlation": 0.3909857019133585,
+              "teacher_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.16732774252692859,
+                "bootstrap_low": -0.24200189818731613,
+                "bootstrap_high": -0.10163726145298119,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.16732774252692859,
+                "bootstrap_low": -0.2385824685709344,
+                "bootstrap_high": -0.09221432679125832,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 842,
+              "subjects": 89,
+              "candidate_mae": 8.247241020202637,
+              "teacher_router_mae": 8.385985374450684,
+              "persistence_mae": 8.385985374450684,
+              "delta_vs_teacher": -0.13874435424804688,
+              "delta_vs_persistence": -0.13874435424804688,
+              "direction_accuracy": 0.65125,
+              "delta_correlation": 0.3366074916407025,
+              "teacher_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.1446990112282252,
+                "bootstrap_low": -0.20137296665742407,
+                "bootstrap_high": -0.08616278831967353,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.1446990112282252,
+                "bootstrap_low": -0.19797519816692624,
+                "bootstrap_high": -0.09077693564461524,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 664,
+              "subjects": 79,
+              "candidate_mae": 11.080864906311035,
+              "teacher_router_mae": 11.112699508666992,
+              "persistence_mae": 10.555723190307617,
+              "delta_vs_teacher": -0.03183460235595703,
+              "delta_vs_persistence": 0.525141716003418,
+              "direction_accuracy": 0.6265432098765432,
+              "delta_correlation": 0.39760439345157145,
+              "teacher_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": -0.05795144592706539,
+                "bootstrap_low": -0.11547839967651835,
+                "bootstrap_high": -0.005488667268706848,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": 0.5188564158551678,
+                "bootstrap_low": -0.6084281586016281,
+                "bootstrap_high": 1.730653633851605,
+                "pass": false
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 1338,
+              "subjects": 100,
+              "candidate_mae": 6.997742652893066,
+              "no_route_mae": 7.074607849121094,
+              "delta_vs_no_route": -0.07686519622802734,
+              "no_route_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.08192099642474204,
+                "bootstrap_low": -0.12243942424177658,
+                "bootstrap_high": -0.03942804631602485,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1087,
+              "subjects": 90,
+              "candidate_mae": 10.024917602539062,
+              "no_route_mae": 10.185922622680664,
+              "delta_vs_no_route": -0.16100502014160156,
+              "no_route_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.12705857403472895,
+                "bootstrap_low": -0.18841227505149113,
+                "bootstrap_high": -0.061603106838754494,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 842,
+              "subjects": 89,
+              "candidate_mae": 8.11994457244873,
+              "no_route_mae": 8.247241020202637,
+              "delta_vs_no_route": -0.12729644775390625,
+              "no_route_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.13731516862361368,
+                "bootstrap_low": -0.1937140969067074,
+                "bootstrap_high": -0.08261661718565493,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 664,
+              "subjects": 79,
+              "candidate_mae": 11.078520774841309,
+              "no_route_mae": 11.080864906311035,
+              "delta_vs_no_route": -0.0023441314697265625,
+              "no_route_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": -0.022109811052774327,
+                "bootstrap_low": -0.06926764563209366,
+                "bootstrap_high": 0.02413723202056804,
+                "pass": false
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 1338,
+              "subjects": 100,
+              "candidate_mae": 6.997742652893066,
+              "no_expert_mae": 7.003853797912598,
+              "delta_vs_no_expert": -0.00611114501953125,
+              "no_expert_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.005903317770862487,
+                "bootstrap_low": -0.017929769921684054,
+                "bootstrap_high": 0.006152514629138747,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1087,
+              "subjects": 90,
+              "candidate_mae": 10.024917602539062,
+              "no_expert_mae": 10.055756568908691,
+              "delta_vs_no_expert": -0.030838966369628906,
+              "no_expert_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.026818114820505595,
+                "bootstrap_low": -0.05525326427874259,
+                "bootstrap_high": 0.002777346102262118,
+                "pass": false
+              }
+            },
+            "map@3h": {
+              "rows": 842,
+              "subjects": 89,
+              "candidate_mae": 8.11994457244873,
+              "no_expert_mae": 8.1702241897583,
+              "delta_vs_no_expert": -0.05027961730957031,
+              "no_expert_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.060438740153514435,
+                "bootstrap_low": -0.0964759452607917,
+                "bootstrap_high": -0.026536369938573414,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 664,
+              "subjects": 79,
+              "candidate_mae": 11.078520774841309,
+              "no_expert_mae": 11.100274085998535,
+              "delta_vs_no_expert": -0.021753311157226562,
+              "no_expert_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": -0.02567306581348228,
+                "bootstrap_low": -0.04079702358300167,
+                "bootstrap_high": -0.010931557329862288,
+                "pass": true
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 1338,
+              "subjects": 100,
+              "candidate_mae": 6.997742652893066,
+              "no_target_projection_mae": 7.003692626953125,
+              "delta_vs_no_target_projection": -0.005949974060058594,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 100,
+                "patient_equal_delta": -0.006369825922884047,
+                "bootstrap_low": -0.018079354609828444,
+                "bootstrap_high": 0.005265727893303845,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1087,
+              "subjects": 90,
+              "candidate_mae": 10.024917602539062,
+              "no_target_projection_mae": 10.06749153137207,
+              "delta_vs_no_target_projection": -0.04257392883300781,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 90,
+                "patient_equal_delta": -0.030988348613997612,
+                "bootstrap_low": -0.06117019220762207,
+                "bootstrap_high": 0.001222862228484391,
+                "pass": false
+              }
+            },
+            "map@3h": {
+              "rows": 842,
+              "subjects": 89,
+              "candidate_mae": 8.11994457244873,
+              "no_target_projection_mae": 8.147562980651855,
+              "delta_vs_no_target_projection": -0.027618408203125,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.033051589537893285,
+                "bootstrap_low": -0.057387723555741635,
+                "bootstrap_high": -0.011135871338275762,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 664,
+              "subjects": 79,
+              "candidate_mae": 11.078520774841309,
+              "no_target_projection_mae": 11.095465660095215,
+              "delta_vs_no_target_projection": -0.01694488525390625,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 79,
+                "patient_equal_delta": -0.02248925383680182,
+                "bootstrap_low": -0.045017089830605386,
+                "bootstrap_high": -0.0008179350928153145,
+                "pass": true
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 1860,
+              "test_n": 1338,
+              "q90": 15.452140808105469,
+              "median_lower_width": 15.452140808105469,
+              "median_upper_width": 15.452140808105469,
+              "q90_rank": 1683,
+              "coverage": 0.884536078698735,
+              "row_coverage": 0.9013452914798207,
+              "patient_equalized_coverage": 0.884536078698735,
+              "patient_coverage_ci95": [
+                0.8479217611833358,
+                0.9218468702203467
+              ],
+              "test_subjects": 100,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9066176470588235,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1860,
+                "calibration_subjects": 136,
+                "q90_rank": 1683,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "heart_rate@12h": {
+              "calibration_n": 1550,
+              "test_n": 1087,
+              "q90": 21.123252868652344,
+              "median_lower_width": 21.123252868652344,
+              "median_upper_width": 21.123252868652344,
+              "q90_rank": 1401,
+              "coverage": 0.8956508276582062,
+              "row_coverage": 0.8868445262189513,
+              "patient_equalized_coverage": 0.8956508276582062,
+              "patient_coverage_ci95": [
+                0.8582675543150909,
+                0.9322117029434915
+              ],
+              "test_subjects": 90,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.907563025210084,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1550,
+                "calibration_subjects": 119,
+                "q90_rank": 1401,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@3h": {
+              "calibration_n": 1317,
+              "test_n": 842,
+              "q90": 23.627647399902344,
+              "median_lower_width": 23.627647399902344,
+              "median_upper_width": 23.627647399902344,
+              "q90_rank": 1193,
+              "coverage": 0.9368965800146445,
+              "row_coverage": 0.9524940617577197,
+              "patient_equalized_coverage": 0.9368965800146445,
+              "patient_coverage_ci95": [
+                0.8993073236566775,
+                0.9674080481661057
+              ],
+              "test_subjects": 89,
+              "pass": false,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9076271186440679,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1317,
+                "calibration_subjects": 118,
+                "q90_rank": 1193,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@12h": {
+              "calibration_n": 1086,
+              "test_n": 664,
+              "q90": 27.793041229248047,
+              "median_lower_width": 27.793041229248047,
+              "median_upper_width": 27.793041229248047,
+              "q90_rank": 977,
+              "coverage": 0.9621894282014978,
+              "row_coverage": 0.9503012048192772,
+              "patient_equalized_coverage": 0.9621894282014978,
+              "patient_coverage_ci95": [
+                0.9397632621074141,
+                0.981217521652232
+              ],
+              "test_subjects": 79,
+              "pass": false,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9089108910891088,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1086,
+                "calibration_subjects": 101,
+                "q90_rank": 977,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.38892017205556234,
+              0.38691542744636537,
+              0.38414388298988345,
+              0.3826895594596863,
+              0.3802235941092173,
+              0.3776242514451345
+            ],
+            "stages": {
+              "system": [
+                0.38892017205556234,
+                0.38691542744636537,
+                0.38414388298988345
+              ],
+              "hierarchy": [
+                0.3826895594596863,
+                0.3802235941092173,
+                0.3776242514451345
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7487562298774719
+                }
+              ]
+            },
+            "map": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7487562298774719
+                }
+              ]
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            },
+            "map": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 4824,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            },
+            "map": {
+              "rows": 4824,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 19,
+      "fit_rows": 29476,
+      "calibration_rows_untouched": 7476,
+      "test_rows": 4678,
+      "base_loss": 3.182723045349121,
+      "latent_svd": {
+        "fit_effective_rank": 20.585637491916167,
+        "test_effective_rank": 15.605008207430977,
+        "rank_ratio": 0.7580531918702519,
+        "mean_top_subspace_cosine": 0.845004112615104,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1625,
+          "selection_subjects": 117,
+          "selection_patient_equal_delta_vs_persistence": 0.27641402142178106,
+          "selection_bootstrap_low": -0.0827482584815146,
+          "selection_bootstrap_high": 0.6705360449185895,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "heart_rate@12h": {
+          "selected_source": "persistence",
+          "selection_rows": 1348,
+          "selection_subjects": 106,
+          "selection_patient_equal_delta_vs_persistence": 0.6276242970928269,
+          "selection_bootstrap_low": -0.6612732599998982,
+          "selection_bootstrap_high": 2.1591571169808703,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1140,
+          "selection_subjects": 109,
+          "selection_patient_equal_delta_vs_persistence": 0.7917151675568125,
+          "selection_bootstrap_low": -0.6383887082082006,
+          "selection_bootstrap_high": 2.8399550100196778,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@12h": {
+          "selected_source": "persistence",
+          "selection_rows": 949,
+          "selection_subjects": 93,
+          "selection_patient_equal_delta_vs_persistence": 0.6514557775470519,
+          "selection_bootstrap_low": -0.9531845955979279,
+          "selection_bootstrap_high": 2.572949721103394,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 1372,
+              "subjects": 107,
+              "candidate_mae": 7.2786102294921875,
+              "teacher_router_mae": 7.420554161071777,
+              "persistence_mae": 7.420554161071777,
+              "delta_vs_teacher": -0.14194393157958984,
+              "delta_vs_persistence": -0.14194393157958984,
+              "direction_accuracy": 0.6142506142506142,
+              "delta_correlation": 0.30726023527781676,
+              "teacher_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.1001336717429771,
+                "bootstrap_low": -0.20912581860832,
+                "bootstrap_high": 0.003296152501754358,
+                "pass": false
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.1001336717429771,
+                "bootstrap_low": -0.20113557389236672,
+                "bootstrap_high": 0.004159261019482629,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1111,
+              "subjects": 89,
+              "candidate_mae": 10.589433670043945,
+              "teacher_router_mae": 10.889288902282715,
+              "persistence_mae": 10.889288902282715,
+              "delta_vs_teacher": -0.29985523223876953,
+              "delta_vs_persistence": -0.29985523223876953,
+              "direction_accuracy": 0.6594700686947988,
+              "delta_correlation": 0.42082339846364963,
+              "teacher_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.27068294577949337,
+                "bootstrap_low": -0.4014805662723028,
+                "bootstrap_high": -0.13150349692192997,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.27068294577949337,
+                "bootstrap_low": -0.40589884163071455,
+                "bootstrap_high": -0.12724882645252572,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 852,
+              "subjects": 92,
+              "candidate_mae": 10.369254112243652,
+              "teacher_router_mae": 10.613849639892578,
+              "persistence_mae": 10.613849639892578,
+              "delta_vs_teacher": -0.24459552764892578,
+              "delta_vs_persistence": -0.24459552764892578,
+              "direction_accuracy": 0.6189889025893958,
+              "delta_correlation": 0.3728489356628099,
+              "teacher_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.21964889349739836,
+                "bootstrap_low": -0.3267329229801164,
+                "bootstrap_high": -0.1124694552024543,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.21964889349739836,
+                "bootstrap_low": -0.3327087671495974,
+                "bootstrap_high": -0.10493512875096794,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 639,
+              "subjects": 74,
+              "candidate_mae": 12.230317115783691,
+              "teacher_router_mae": 12.60093879699707,
+              "persistence_mae": 12.60093879699707,
+              "delta_vs_teacher": -0.3706216812133789,
+              "delta_vs_persistence": -0.3706216812133789,
+              "direction_accuracy": 0.6709470304975923,
+              "delta_correlation": 0.42035459457094054,
+              "teacher_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.36232139885022835,
+                "bootstrap_low": -0.49668251428048354,
+                "bootstrap_high": -0.22731658580989855,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.36232139885022835,
+                "bootstrap_low": -0.48712670088720483,
+                "bootstrap_high": -0.22378793724032278,
+                "pass": true
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 1372,
+              "subjects": 107,
+              "candidate_mae": 7.351630687713623,
+              "teacher_router_mae": 7.420554161071777,
+              "persistence_mae": 7.420554161071777,
+              "delta_vs_teacher": -0.0689234733581543,
+              "delta_vs_persistence": -0.0689234733581543,
+              "direction_accuracy": 0.6126126126126126,
+              "delta_correlation": 0.3014087244620168,
+              "teacher_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.052784753441114295,
+                "bootstrap_low": -0.10299961814432727,
+                "bootstrap_high": 0.0009628574834988369,
+                "pass": false
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.052784753441114295,
+                "bootstrap_low": -0.1096873336005956,
+                "bootstrap_high": 0.0026773369021356836,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1111,
+              "subjects": 89,
+              "candidate_mae": 10.73529052734375,
+              "teacher_router_mae": 10.889288902282715,
+              "persistence_mae": 10.889288902282715,
+              "delta_vs_teacher": -0.15399837493896484,
+              "delta_vs_persistence": -0.15399837493896484,
+              "direction_accuracy": 0.6565260058881256,
+              "delta_correlation": 0.4078164330488526,
+              "teacher_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.1496610092862478,
+                "bootstrap_low": -0.22248499909026045,
+                "bootstrap_high": -0.07808323125322246,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.1496610092862478,
+                "bootstrap_low": -0.2157745929419199,
+                "bootstrap_high": -0.07908055578336237,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 852,
+              "subjects": 92,
+              "candidate_mae": 10.487871170043945,
+              "teacher_router_mae": 10.613849639892578,
+              "persistence_mae": 10.613849639892578,
+              "delta_vs_teacher": -0.1259784698486328,
+              "delta_vs_persistence": -0.1259784698486328,
+              "direction_accuracy": 0.6165228113440198,
+              "delta_correlation": 0.3640225520645875,
+              "teacher_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.12376126210438088,
+                "bootstrap_low": -0.17907287429647428,
+                "bootstrap_high": -0.07117590579993864,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.12376126210438088,
+                "bootstrap_low": -0.17787902711475592,
+                "bootstrap_high": -0.07181294986917436,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 639,
+              "subjects": 74,
+              "candidate_mae": 12.401070594787598,
+              "teacher_router_mae": 12.60093879699707,
+              "persistence_mae": 12.60093879699707,
+              "delta_vs_teacher": -0.19986820220947266,
+              "delta_vs_persistence": -0.19986820220947266,
+              "direction_accuracy": 0.6677367576243981,
+              "delta_correlation": 0.39888607076484656,
+              "teacher_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.19802888769757104,
+                "bootstrap_low": -0.27479964383575767,
+                "bootstrap_high": -0.12861607234446787,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.19802888769757104,
+                "bootstrap_low": -0.27168564615846685,
+                "bootstrap_high": -0.1212248936912196,
+                "pass": true
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 1372,
+              "subjects": 107,
+              "candidate_mae": 7.2786102294921875,
+              "no_route_mae": 7.351630687713623,
+              "delta_vs_no_route": -0.07302045822143555,
+              "no_route_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.047348917973288725,
+                "bootstrap_low": -0.09953571697735122,
+                "bootstrap_high": 0.006152408756587701,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1111,
+              "subjects": 89,
+              "candidate_mae": 10.589433670043945,
+              "no_route_mae": 10.73529052734375,
+              "delta_vs_no_route": -0.1458568572998047,
+              "no_route_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.12102193776204177,
+                "bootstrap_low": -0.18612996717179822,
+                "bootstrap_high": -0.050192972258115295,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 852,
+              "subjects": 92,
+              "candidate_mae": 10.369254112243652,
+              "no_route_mae": 10.487871170043945,
+              "delta_vs_no_route": -0.11861705780029297,
+              "no_route_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.09588763081600242,
+                "bootstrap_low": -0.14886033955307262,
+                "bootstrap_high": -0.04446523660761001,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 639,
+              "subjects": 74,
+              "candidate_mae": 12.230317115783691,
+              "no_route_mae": 12.401070594787598,
+              "delta_vs_no_route": -0.17075347900390625,
+              "no_route_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.16429250766255743,
+                "bootstrap_low": -0.2222973984057938,
+                "bootstrap_high": -0.10184274433132316,
+                "pass": true
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 1372,
+              "subjects": 107,
+              "candidate_mae": 7.2786102294921875,
+              "no_expert_mae": 7.286448955535889,
+              "delta_vs_no_expert": -0.007838726043701172,
+              "no_expert_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": -0.0066132784340199886,
+                "bootstrap_low": -0.025964526315225143,
+                "bootstrap_high": 0.012913279314922537,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1111,
+              "subjects": 89,
+              "candidate_mae": 10.589433670043945,
+              "no_expert_mae": 10.610160827636719,
+              "delta_vs_no_expert": -0.020727157592773438,
+              "no_expert_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.03471912020749381,
+                "bootstrap_low": -0.055937220176107645,
+                "bootstrap_high": -0.011852251855346503,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 852,
+              "subjects": 92,
+              "candidate_mae": 10.369254112243652,
+              "no_expert_mae": 10.385721206665039,
+              "delta_vs_no_expert": -0.01646709442138672,
+              "no_expert_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.016448650812811178,
+                "bootstrap_low": -0.0374082236684879,
+                "bootstrap_high": 0.0028544102332291534,
+                "pass": false
+              }
+            },
+            "map@12h": {
+              "rows": 639,
+              "subjects": 74,
+              "candidate_mae": 12.230317115783691,
+              "no_expert_mae": 12.260350227355957,
+              "delta_vs_no_expert": -0.030033111572265625,
+              "no_expert_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.027141840577855503,
+                "bootstrap_low": -0.05072717318229528,
+                "bootstrap_high": -0.006513301615612715,
+                "pass": true
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 1372,
+              "subjects": 107,
+              "candidate_mae": 7.2786102294921875,
+              "no_target_projection_mae": 7.276020050048828,
+              "delta_vs_no_target_projection": 0.002590179443359375,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 107,
+                "patient_equal_delta": 0.00024893133526789806,
+                "bootstrap_low": -0.015269907280230442,
+                "bootstrap_high": 0.015158674620509703,
+                "pass": false
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1111,
+              "subjects": 89,
+              "candidate_mae": 10.589433670043945,
+              "no_target_projection_mae": 10.617524147033691,
+              "delta_vs_no_target_projection": -0.028090476989746094,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 89,
+                "patient_equal_delta": -0.0372126152990072,
+                "bootstrap_low": -0.0728711253864,
+                "bootstrap_high": -0.0027779656106585258,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 852,
+              "subjects": 92,
+              "candidate_mae": 10.369254112243652,
+              "no_target_projection_mae": 10.380570411682129,
+              "delta_vs_no_target_projection": -0.011316299438476562,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 92,
+                "patient_equal_delta": -0.017520424168374713,
+                "bootstrap_low": -0.04409901184136169,
+                "bootstrap_high": 0.008167668483814772,
+                "pass": false
+              }
+            },
+            "map@12h": {
+              "rows": 639,
+              "subjects": 74,
+              "candidate_mae": 12.230317115783691,
+              "no_target_projection_mae": 12.281695365905762,
+              "delta_vs_no_target_projection": -0.05137825012207031,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 74,
+                "patient_equal_delta": -0.05255461946079457,
+                "bootstrap_low": -0.08382364953490529,
+                "bootstrap_high": -0.02379899721410176,
+                "pass": true
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 1922,
+              "test_n": 1372,
+              "q90": 16.532623291015625,
+              "median_lower_width": 16.532623291015625,
+              "median_upper_width": 16.532623291015625,
+              "q90_rank": 1741,
+              "coverage": 0.8947946866498766,
+              "row_coverage": 0.9030612244897959,
+              "patient_equalized_coverage": 0.8947946866498766,
+              "patient_coverage_ci95": [
+                0.8534611208552739,
+                0.9256635548178737
+              ],
+              "test_subjects": 107,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9069230769230769,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1922,
+                "calibration_subjects": 130,
+                "q90_rank": 1741,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "heart_rate@12h": {
+              "calibration_n": 1588,
+              "test_n": 1111,
+              "q90": 23.641616821289062,
+              "median_lower_width": 23.641616821289062,
+              "median_upper_width": 23.641616821289062,
+              "q90_rank": 1431,
+              "coverage": 0.9196334119733903,
+              "row_coverage": 0.9072907290729073,
+              "patient_equalized_coverage": 0.9196334119733903,
+              "patient_coverage_ci95": [
+                0.8840494362271345,
+                0.9494868332362958
+              ],
+              "test_subjects": 89,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9076271186440679,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1588,
+                "calibration_subjects": 118,
+                "q90_rank": 1431,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@3h": {
+              "calibration_n": 1306,
+              "test_n": 852,
+              "q90": 23.671066284179688,
+              "median_lower_width": 23.671066284179688,
+              "median_upper_width": 23.671066284179688,
+              "q90_rank": 1197,
+              "coverage": 0.907376230431882,
+              "row_coverage": 0.9213615023474179,
+              "patient_equalized_coverage": 0.907376230431882,
+              "patient_coverage_ci95": [
+                0.8684246538960508,
+                0.9414765852790797
+              ],
+              "test_subjects": 92,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9078260869565218,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1306,
+                "calibration_subjects": 115,
+                "q90_rank": 1197,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@12h": {
+              "calibration_n": 1063,
+              "test_n": 639,
+              "q90": 26.694786071777344,
+              "median_lower_width": 26.694786071777344,
+              "median_upper_width": 26.694786071777344,
+              "q90_rank": 957,
+              "coverage": 0.9109273107937618,
+              "row_coverage": 0.9092331768388107,
+              "patient_equalized_coverage": 0.9109273107937618,
+              "patient_coverage_ci95": [
+                0.870301924375691,
+                0.9439744597275561
+              ],
+              "test_subjects": 74,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9088235294117647,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1063,
+                "calibration_subjects": 102,
+                "q90_rank": 957,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.415524293979009,
+              0.4126195192337036,
+              0.40929600993792215,
+              0.4088504254817963,
+              0.4053686042626699,
+              0.40210145711898804
+            ],
+            "stages": {
+              "system": [
+                0.415524293979009,
+                0.4126195192337036,
+                0.40929600993792215
+              ],
+              "hierarchy": [
+                0.4088504254817963,
+                0.4053686042626699,
+                0.40210145711898804
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7695596218109131
+                }
+              ]
+            },
+            "map": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7695596218109131
+                }
+              ]
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            },
+            "map": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 4678,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            },
+            "map": {
+              "rows": 4678,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 31,
+      "fit_rows": 28426,
+      "calibration_rows_untouched": 6952,
+      "test_rows": 6252,
+      "base_loss": 3.51759443964277,
+      "latent_svd": {
+        "fit_effective_rank": 19.72410204580356,
+        "test_effective_rank": 17.877979485001248,
+        "rank_ratio": 0.9064027068753132,
+        "mean_top_subspace_cosine": 0.8797650501620291,
+        "pass": true
+      },
+      "teacher_selection": {
+        "heart_rate@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1635,
+          "selection_subjects": 112,
+          "selection_patient_equal_delta_vs_persistence": 0.529345462980148,
+          "selection_bootstrap_low": 0.16121034518749056,
+          "selection_bootstrap_high": 0.9560099020113867,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "heart_rate@12h": {
+          "selected_source": "persistence",
+          "selection_rows": 1386,
+          "selection_subjects": 104,
+          "selection_patient_equal_delta_vs_persistence": 0.41298915801542957,
+          "selection_bootstrap_low": -0.5666791104239775,
+          "selection_bootstrap_high": 1.4831105925465145,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@3h": {
+          "selected_source": "persistence",
+          "selection_rows": 1121,
+          "selection_subjects": 97,
+          "selection_patient_equal_delta_vs_persistence": 1.2266221509612714,
+          "selection_bootstrap_low": -0.9634544739499689,
+          "selection_bootstrap_high": 4.323617505447305,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        },
+        "map@12h": {
+          "selected_source": "persistence",
+          "selection_rows": 947,
+          "selection_subjects": 90,
+          "selection_patient_equal_delta_vs_persistence": 1.6538572658267285,
+          "selection_bootstrap_low": -1.6220440866156585,
+          "selection_bootstrap_high": 6.63211962957349,
+          "reason": "ridge_did_not_pass_disjoint_patient_bootstrap"
+        }
+      },
+      "variants": {
+        "adjacent_three_level": {
+          "cells": {
+            "heart_rate@3h": {
+              "rows": 1780,
+              "subjects": 132,
+              "candidate_mae": 7.495142936706543,
+              "teacher_router_mae": 7.6764044761657715,
+              "persistence_mae": 7.6764044761657715,
+              "delta_vs_teacher": -0.18126153945922852,
+              "delta_vs_persistence": -0.18126153945922852,
+              "direction_accuracy": 0.6390092879256966,
+              "delta_correlation": 0.3236815284594172,
+              "teacher_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.22259929877966925,
+                "bootstrap_low": -0.2902073420915809,
+                "bootstrap_high": -0.15225507630706434,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.22259929877966925,
+                "bootstrap_low": -0.28804927582916046,
+                "bootstrap_high": -0.15552410657467342,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1450,
+              "subjects": 111,
+              "candidate_mae": 10.160038948059082,
+              "teacher_router_mae": 10.468276023864746,
+              "persistence_mae": 10.468276023864746,
+              "delta_vs_teacher": -0.30823707580566406,
+              "delta_vs_persistence": -0.30823707580566406,
+              "direction_accuracy": 0.6740088105726872,
+              "delta_correlation": 0.4226873755531053,
+              "teacher_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.2567288141617937,
+                "bootstrap_low": -0.34622075997863533,
+                "bootstrap_high": -0.16304419782339927,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.2567288141617937,
+                "bootstrap_low": -0.34743651763896816,
+                "bootstrap_high": -0.17044297763097171,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 1065,
+              "subjects": 116,
+              "candidate_mae": 9.962835311889648,
+              "teacher_router_mae": 10.21314525604248,
+              "persistence_mae": 10.21314525604248,
+              "delta_vs_teacher": -0.25030994415283203,
+              "delta_vs_persistence": -0.25030994415283203,
+              "direction_accuracy": 0.6291585127201565,
+              "delta_correlation": 0.30962432131093276,
+              "teacher_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.23362941388843644,
+                "bootstrap_low": -0.32236573971538995,
+                "bootstrap_high": -0.14670771676766017,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.23362941388843644,
+                "bootstrap_low": -0.3269976226066978,
+                "bootstrap_high": -0.1443723385498241,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 814,
+              "subjects": 99,
+              "candidate_mae": 12.010466575622559,
+              "teacher_router_mae": 12.337838172912598,
+              "persistence_mae": 12.337838172912598,
+              "delta_vs_teacher": -0.32737159729003906,
+              "delta_vs_persistence": -0.32737159729003906,
+              "direction_accuracy": 0.6441102756892231,
+              "delta_correlation": 0.3598032859355359,
+              "teacher_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.33850287854897254,
+                "bootstrap_low": -0.4493118578897356,
+                "bootstrap_high": -0.22619242024457442,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.33850287854897254,
+                "bootstrap_low": -0.45144766652721424,
+                "bootstrap_high": -0.2295087596260463,
+                "pass": true
+              }
+            }
+          },
+          "no_route_cells": {
+            "heart_rate@3h": {
+              "rows": 1780,
+              "subjects": 132,
+              "candidate_mae": 7.577728271484375,
+              "teacher_router_mae": 7.6764044761657715,
+              "persistence_mae": 7.6764044761657715,
+              "delta_vs_teacher": -0.09867620468139648,
+              "delta_vs_persistence": -0.09867620468139648,
+              "direction_accuracy": 0.6371517027863777,
+              "delta_correlation": 0.32342403842358436,
+              "teacher_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.12420605535788293,
+                "bootstrap_low": -0.15769922890926175,
+                "bootstrap_high": -0.089202282286362,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.12420605535788293,
+                "bootstrap_low": -0.16013960386150178,
+                "bootstrap_high": -0.08757268535625896,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1450,
+              "subjects": 111,
+              "candidate_mae": 10.29565715789795,
+              "teacher_router_mae": 10.468276023864746,
+              "persistence_mae": 10.468276023864746,
+              "delta_vs_teacher": -0.17261886596679688,
+              "delta_vs_persistence": -0.17261886596679688,
+              "direction_accuracy": 0.6696035242290749,
+              "delta_correlation": 0.40437988738317787,
+              "teacher_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.14671801105309445,
+                "bootstrap_low": -0.19573839887313813,
+                "bootstrap_high": -0.09496744953343428,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.14671801105309445,
+                "bootstrap_low": -0.1956557693706641,
+                "bootstrap_high": -0.09475469641379075,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 1065,
+              "subjects": 116,
+              "candidate_mae": 10.080183029174805,
+              "teacher_router_mae": 10.21314525604248,
+              "persistence_mae": 10.21314525604248,
+              "delta_vs_teacher": -0.13296222686767578,
+              "delta_vs_persistence": -0.13296222686767578,
+              "direction_accuracy": 0.6183953033268101,
+              "delta_correlation": 0.3036596524718002,
+              "teacher_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.13442517065890697,
+                "bootstrap_low": -0.1824896920739336,
+                "bootstrap_high": -0.08784826490787212,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.13442517065890697,
+                "bootstrap_low": -0.18188828283905578,
+                "bootstrap_high": -0.08630399279127546,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 814,
+              "subjects": 99,
+              "candidate_mae": 12.155820846557617,
+              "teacher_router_mae": 12.337838172912598,
+              "persistence_mae": 12.337838172912598,
+              "delta_vs_teacher": -0.18201732635498047,
+              "delta_vs_persistence": -0.18201732635498047,
+              "direction_accuracy": 0.6453634085213033,
+              "delta_correlation": 0.34630966292016446,
+              "teacher_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.1928901904347268,
+                "bootstrap_low": -0.2562382250690287,
+                "bootstrap_high": -0.12765989499919195,
+                "pass": true
+              },
+              "persistence_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.1928901904347268,
+                "bootstrap_low": -0.2564693502672581,
+                "bootstrap_high": -0.12834702971193826,
+                "pass": true
+              }
+            }
+          },
+          "route_ablation": {
+            "heart_rate@3h": {
+              "rows": 1780,
+              "subjects": 132,
+              "candidate_mae": 7.495142936706543,
+              "no_route_mae": 7.577728271484375,
+              "delta_vs_no_route": -0.08258533477783203,
+              "no_route_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.09839324253279659,
+                "bootstrap_low": -0.13116112076708247,
+                "bootstrap_high": -0.0652794234952043,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1450,
+              "subjects": 111,
+              "candidate_mae": 10.160038948059082,
+              "no_route_mae": 10.29565715789795,
+              "delta_vs_no_route": -0.1356182098388672,
+              "no_route_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.11001080246474426,
+                "bootstrap_low": -0.14953098344629176,
+                "bootstrap_high": -0.06966567407288748,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 1065,
+              "subjects": 116,
+              "candidate_mae": 9.962835311889648,
+              "no_route_mae": 10.080183029174805,
+              "delta_vs_no_route": -0.11734771728515625,
+              "no_route_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.09920424403389916,
+                "bootstrap_low": -0.14293602635117514,
+                "bootstrap_high": -0.051936879030033425,
+                "pass": true
+              }
+            },
+            "map@12h": {
+              "rows": 814,
+              "subjects": 99,
+              "candidate_mae": 12.010466575622559,
+              "no_route_mae": 12.155820846557617,
+              "delta_vs_no_route": -0.1453542709350586,
+              "no_route_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.1456126899110398,
+                "bootstrap_low": -0.19561629174700515,
+                "bootstrap_high": -0.09457737214209494,
+                "pass": true
+              }
+            }
+          },
+          "expert_ablation": {
+            "heart_rate@3h": {
+              "rows": 1780,
+              "subjects": 132,
+              "candidate_mae": 7.495142936706543,
+              "no_expert_mae": 7.513443470001221,
+              "delta_vs_no_expert": -0.018300533294677734,
+              "no_expert_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.025111844545762957,
+                "bootstrap_low": -0.037128588659062656,
+                "bootstrap_high": -0.014120869221865593,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1450,
+              "subjects": 111,
+              "candidate_mae": 10.160038948059082,
+              "no_expert_mae": 10.182563781738281,
+              "delta_vs_no_expert": -0.02252483367919922,
+              "no_expert_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.014255232240601972,
+                "bootstrap_low": -0.026985796533634063,
+                "bootstrap_high": -0.00018102394580539217,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 1065,
+              "subjects": 116,
+              "candidate_mae": 9.962835311889648,
+              "no_expert_mae": 9.984809875488281,
+              "delta_vs_no_expert": -0.021974563598632812,
+              "no_expert_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.015809704804018235,
+                "bootstrap_low": -0.033536295786463347,
+                "bootstrap_high": 0.0036646669557551877,
+                "pass": false
+              }
+            },
+            "map@12h": {
+              "rows": 814,
+              "subjects": 99,
+              "candidate_mae": 12.010466575622559,
+              "no_expert_mae": 12.039092063903809,
+              "delta_vs_no_expert": -0.02862548828125,
+              "no_expert_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.03143503158141605,
+                "bootstrap_low": -0.052166718210274764,
+                "bootstrap_high": -0.011005611351757047,
+                "pass": true
+              }
+            }
+          },
+          "target_projection_ablation": {
+            "heart_rate@3h": {
+              "rows": 1780,
+              "subjects": 132,
+              "candidate_mae": 7.495142936706543,
+              "no_target_projection_mae": 7.508009433746338,
+              "delta_vs_no_target_projection": -0.012866497039794922,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 132,
+                "patient_equal_delta": -0.013766204697262627,
+                "bootstrap_low": -0.02474406571574229,
+                "bootstrap_high": -0.0018212243166114187,
+                "pass": true
+              }
+            },
+            "heart_rate@12h": {
+              "rows": 1450,
+              "subjects": 111,
+              "candidate_mae": 10.160038948059082,
+              "no_target_projection_mae": 10.207801818847656,
+              "delta_vs_no_target_projection": -0.04776287078857422,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 111,
+                "patient_equal_delta": -0.03351467757523563,
+                "bootstrap_low": -0.05837988191258544,
+                "bootstrap_high": -0.009258648541625926,
+                "pass": true
+              }
+            },
+            "map@3h": {
+              "rows": 1065,
+              "subjects": 116,
+              "candidate_mae": 9.962835311889648,
+              "no_target_projection_mae": 9.985438346862793,
+              "delta_vs_no_target_projection": -0.02260303497314453,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 116,
+                "patient_equal_delta": -0.01716983562148706,
+                "bootstrap_low": -0.03321219470309533,
+                "bootstrap_high": 0.0013430414258342844,
+                "pass": false
+              }
+            },
+            "map@12h": {
+              "rows": 814,
+              "subjects": 99,
+              "candidate_mae": 12.010466575622559,
+              "no_target_projection_mae": 12.065340995788574,
+              "delta_vs_no_target_projection": -0.054874420166015625,
+              "no_target_projection_bootstrap": {
+                "n_subjects": 99,
+                "patient_equal_delta": -0.058826880007417814,
+                "bootstrap_low": -0.08789623857739222,
+                "bootstrap_high": -0.02930902318036504,
+                "pass": true
+              }
+            }
+          },
+          "conformal": {
+            "heart_rate@3h": {
+              "calibration_n": 1988,
+              "test_n": 1780,
+              "q90": 15.807106018066406,
+              "median_lower_width": 15.807106018066406,
+              "median_upper_width": 15.807106018066406,
+              "q90_rank": 1797,
+              "coverage": 0.8753597457236243,
+              "row_coverage": 0.8882022471910113,
+              "patient_equalized_coverage": 0.8753597457236243,
+              "patient_coverage_ci95": [
+                0.8377735064523539,
+                0.9083207643268758
+              ],
+              "test_subjects": 132,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9067669172932331,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1988,
+                "calibration_subjects": 133,
+                "q90_rank": 1797,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "heart_rate@12h": {
+              "calibration_n": 1667,
+              "test_n": 1450,
+              "q90": 22.636390686035156,
+              "median_lower_width": 22.636390686035156,
+              "median_upper_width": 22.636390686035156,
+              "q90_rank": 1479,
+              "coverage": 0.9150633309540458,
+              "row_coverage": 0.8993103448275862,
+              "patient_equalized_coverage": 0.9150633309540458,
+              "patient_coverage_ci95": [
+                0.8894323253471221,
+                0.9395099717014211
+              ],
+              "test_subjects": 111,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9074380165289256,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1667,
+                "calibration_subjects": 121,
+                "q90_rank": 1479,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@3h": {
+              "calibration_n": 1350,
+              "test_n": 1065,
+              "q90": 23.425369262695312,
+              "median_lower_width": 23.425369262695312,
+              "median_upper_width": 23.425369262695312,
+              "q90_rank": 1236,
+              "coverage": 0.9208762375963269,
+              "row_coverage": 0.9248826291079812,
+              "patient_equalized_coverage": 0.9208762375963269,
+              "patient_coverage_ci95": [
+                0.8882706633292354,
+                0.9477241422447903
+              ],
+              "test_subjects": 116,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.907563025210084,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1350,
+                "calibration_subjects": 119,
+                "q90_rank": 1236,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            },
+            "map@12h": {
+              "calibration_n": 1098,
+              "test_n": 814,
+              "q90": 26.70263671875,
+              "median_lower_width": 26.70263671875,
+              "median_upper_width": 26.70263671875,
+              "q90_rank": 1008,
+              "coverage": 0.9063352505994118,
+              "row_coverage": 0.9078624078624079,
+              "patient_equalized_coverage": 0.9063352505994118,
+              "patient_coverage_ci95": [
+                0.8677154569415625,
+                0.9387228504358365
+              ],
+              "test_subjects": 99,
+              "pass": true,
+              "finite_sample_corrected": true,
+              "adaptive_calibration": {
+                "method": "target_horizon_patient_cluster_conformal",
+                "selected_nominal_coverage": 0.9,
+                "patient_finite_sample_coverage": 0.9090909090909091,
+                "target_empirical_coverage": 0.9,
+                "calibration_rows": 1098,
+                "calibration_subjects": 99,
+                "q90_rank": 1008,
+                "equal_total_weight_per_patient": true,
+                "test_labels_used": false
+              },
+              "calibration_rows_untouched_during_training": true,
+              "test_labels_used_for_calibration": false
+            }
+          },
+          "training": {
+            "loss_history": [
+              0.42614975784506115,
+              0.4237345925399235,
+              0.4202408194541931,
+              0.41818093614918844,
+              0.4165146904332297,
+              0.4145504470382418
+            ],
+            "stages": {
+              "system": [
+                0.42614975784506115,
+                0.4237345925399235,
+                0.4202408194541931
+              ],
+              "hierarchy": [
+                0.41818093614918844,
+                0.4165146904332297,
+                0.4145504470382418
+              ]
+            },
+            "gradient_pairs": 0,
+            "negative_gradient_fraction_before": null,
+            "negative_gradient_fraction_after": null,
+            "median_gradient_cosine_before": null,
+            "median_gradient_cosine_after": null,
+            "scale_loss_history": [],
+            "scale_point_predictor_frozen": true
+          },
+          "routing": {
+            "heart_rate": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7434421181678772
+                }
+              ]
+            },
+            "map": {
+              "mean_fast_weight": 1.0,
+              "top_cross_organ_routes": [
+                {
+                  "module": "cardiovascular_perfusion",
+                  "weight": 0.7434421181678772
+                }
+              ]
+            }
+          },
+          "expert_usage": {
+            "heart_rate": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            },
+            "map": {
+              "mean_weights": {
+                "shared_slow": 1.0,
+                "target_fast": 0.0,
+                "own_organ": 0.0
+              },
+              "zero_weight_fraction": {
+                "shared_slow": 0.0,
+                "target_fast": 1.0,
+                "own_organ": 1.0
+              }
+            }
+          },
+          "predicted_scale": {
+            "heart_rate": {
+              "rows": 6252,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            },
+            "map": {
+              "rows": 6252,
+              "mean_normalized_scale": 1.0,
+              "std_normalized_scale": 0.0,
+              "coefficient_of_variation": 0.0,
+              "q10": 1.0,
+              "q50": 1.0,
+              "q90": 1.0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "adjacent_three_level": {
+      "heart_rate@12h": {
+        "evaluated_splits": 3,
+        "beats_teacher_splits": 3,
+        "beats_persistence_splits": 3,
+        "median_delta_vs_teacher": -0.30823707580566406,
+        "median_delta_vs_persistence": -0.30823707580566406,
+        "beats_no_route_splits": 3,
+        "median_delta_vs_no_route": -0.1458568572998047,
+        "beats_no_expert_splits": 2,
+        "median_delta_vs_no_expert": -0.02252483367919922,
+        "conformal_pass_splits": 3,
+        "beats_no_target_projection_splits": 2,
+        "median_delta_vs_no_target_projection": -0.04257392883300781
+      },
+      "heart_rate@3h": {
+        "evaluated_splits": 3,
+        "beats_teacher_splits": 2,
+        "beats_persistence_splits": 2,
+        "median_delta_vs_teacher": -0.18126153945922852,
+        "median_delta_vs_persistence": -0.18126153945922852,
+        "beats_no_route_splits": 2,
+        "median_delta_vs_no_route": -0.07686519622802734,
+        "beats_no_expert_splits": 1,
+        "median_delta_vs_no_expert": -0.007838726043701172,
+        "conformal_pass_splits": 3,
+        "beats_no_target_projection_splits": 1,
+        "median_delta_vs_no_target_projection": -0.005949974060058594
+      },
+      "map@12h": {
+        "evaluated_splits": 3,
+        "beats_teacher_splits": 2,
+        "beats_persistence_splits": 2,
+        "median_delta_vs_teacher": -0.32737159729003906,
+        "median_delta_vs_persistence": -0.32737159729003906,
+        "beats_no_route_splits": 2,
+        "median_delta_vs_no_route": -0.1453542709350586,
+        "beats_no_expert_splits": 3,
+        "median_delta_vs_no_expert": -0.02862548828125,
+        "conformal_pass_splits": 2,
+        "beats_no_target_projection_splits": 3,
+        "median_delta_vs_no_target_projection": -0.05137825012207031
+      },
+      "map@3h": {
+        "evaluated_splits": 3,
+        "beats_teacher_splits": 3,
+        "beats_persistence_splits": 3,
+        "median_delta_vs_teacher": -0.25030994415283203,
+        "median_delta_vs_persistence": -0.25030994415283203,
+        "beats_no_route_splits": 3,
+        "median_delta_vs_no_route": -0.11861705780029297,
+        "beats_no_expert_splits": 1,
+        "median_delta_vs_no_expert": -0.021974563598632812,
+        "conformal_pass_splits": 2,
+        "beats_no_target_projection_splits": 1,
+        "median_delta_vs_no_target_projection": -0.02260303497314453
+      }
+    }
+  },
+  "promotion_status": "candidate_only",
+  "next_gate": "Run all seven patient seeds and hospital/care-unit/time/conformal only if a bounded variant repeatedly beats the teacher router."
+}

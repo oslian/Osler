@@ -10,6 +10,7 @@ from osler_jepa.waveform_features import (
     waveform_array_features,
     WaveformFeatureRecord,
 )
+from osler_jepa.waveform_encoder import beat_level_array_features
 
 
 class WaveformFeatureTests(unittest.TestCase):
@@ -88,6 +89,35 @@ class WaveformFeatureTests(unittest.TestCase):
         self.assertEqual(summary["signal_group_counts"]["ecg"], 1)
         self.assertFalse(summary["boundary"]["prediction_authority"])
         self.assertFalse(summary["boundary"]["raw_samples_committed"])
+
+    def test_beat_encoder_recovers_ecg_and_resp_rates(self):
+        fs = 100.0
+        t = np.arange(0, 30, 1 / fs)
+        beat_times = np.arange(0.5, 30.0, 1 / 1.2)
+        ecg = sum(np.exp(-((t - beat) / 0.025) ** 2) for beat in beat_times)
+        values = np.column_stack([
+            ecg,
+            np.sin(2 * np.pi * 0.25 * t),
+        ])
+
+        features = beat_level_array_features(values, ["II", "Resp"], fs)
+
+        self.assertAlmostEqual(features["wavebeat_ecg_1_rate_per_min"], 72.0, delta=8.0)
+        self.assertAlmostEqual(features["wavebeat_respiration_1_rate_per_min"], 15.0, delta=3.0)
+        self.assertGreater(features["wavebeat_ecg_1_quality_valid_fraction"], 0.99)
+        self.assertIn("wavebeat_ecg_consensus_rate_per_min", features)
+        self.assertGreater(features["wavebeat_ecg_consensus_agreement_fraction"], 0.9)
+
+    def test_beat_encoder_emits_arterial_pressure_cycle_features(self):
+        fs = 100.0
+        t = np.arange(0, 20, 1 / fs)
+        pulse = 80.0 + 40.0 * np.maximum(np.sin(2 * np.pi * 1.0 * t), 0.0)
+
+        features = beat_level_array_features(pulse[:, None], ["ABP"], fs)
+
+        self.assertIn("wavebeat_arterial_pressure_1_sbp_median", features)
+        self.assertIn("wavebeat_arterial_pressure_1_dbp_median", features)
+        self.assertGreater(features["wavebeat_arterial_pressure_1_beat_count"], 10)
 
 
 if __name__ == "__main__":

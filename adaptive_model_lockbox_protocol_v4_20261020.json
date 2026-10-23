@@ -1,0 +1,124 @@
+{
+  "schema": "adaptive_model_lockbox_protocol.v4",
+  "frozen_at": "2026-10-20T02:09:07-07:00",
+  "question": "Does the frozen self-adaptive deployment form, with recipes and the new-site starting interval selected on external development databases, pass robustly at untouched ICU sites without any local calibration study?",
+  "databases": {
+    "SICdb": "Salzburg Intensive Care database (PhysioNet), single site",
+    "HiRID": "HiRID (PhysioNet, Bern University Hospital), single site"
+  },
+  "prior_project_use": "none: neither database is on this machine (checked 2026-10-20: no SICdb/HiRID files in ~/Downloads or the project). The v3 lockbox for these databases was never scored.",
+  "development_data_used_for_this_system": "MIMIC-IV v4 (training), eICU harmonized, NWICU v4, Zigong v1.1 (selection of recipes and the starting multiplier; Zigong's v3 lockbox was scored on 2026-10-18 and it is development data since)",
+  "deployment_form": {
+    "training": "MIMIC-IV v4 transitions only",
+    "point_model": "per-cell recipe from external_recipe_selection_dev_20261019.json (MPR 40, change hurdle 7 of 47 continuous cells), selected on eICU/NWICU/Zigong by the predeclared rule: most databases point-robust, ties to the simplest",
+    "persistence_fallback": "cells with recipe 'persistence' (platelets@1h) output the current value without point correction, make no point claim, and are gated on the interval only",
+    "recipe_rule": "osler_jepa.recipe_availability.deployable_recipe (treatment-context ridge -> measurement-pure ridge when the site records none of the permitted treatment features)",
+    "point_recalibration": "osler_jepa.site_adaptive_point.online_point_correction, affine_0.005 (site_adaptive_point_dev_20261016.json)",
+    "day_one_weighting": "covariate-shift weights from the inputs of the first min(200, 25%) arriving stays (no labels)",
+    "interval": "v2 quintile value-bin normalization (osler_jepa.interval_scale 'quintile') + DtACI meta rate 20, site and care-unit levels, new-site starting log multiplier theta0 = 0.15 (site_adaptive_dtaci_prior_dev_20261019.json, selected by leave-one-database-out)",
+    "binary_event_cells": "unchanged catalog recipes via multi_sample_external_audit.py"
+  },
+  "preconditions_before_any_label_is_read": [
+    "data access approved under PhysioNet credentialing and each database's terms",
+    "an extractor per database producing transitions in the MIMIC-IV contract: 6h anchor step, 6h look-back, label = nearest measurement within min(2, h/2) hours of anchor + h, 72h episode cap, plausibility cleaning as in mimiciv_observation_transition_extract.py",
+    "variable mapping declared from the data dictionary only, following the harmonized definitions: glucose = chemistry laboratory glucose; point-of-care glucose -> glucose_poc; blood-gas glucose -> glucose_bg; nurse-validated vital signs where the database distinguishes them; urine output interval-normalized to mL/hour; MAP = measured mean pressure",
+    "an addendum file recording the SHA-256 of each extractor and mapping file and the extraction outputs, written before the extracted labels are opened; before the addendum only support counts and timestamps may be inspected, never target values"
+  ],
+  "evaluation": {
+    "commands": {
+      "continuous": "python3 site_adaptive_external_audit.py --database <SICdb|HiRID> --external-template <extracted {horizon} template> --protocol adaptive_model_lockbox_protocol_v4_20261020.json --output site_adaptive_lockbox_<database>_<date>.json (all other options at their defaults)",
+      "binary": "python3 multi_sample_external_audit.py --database <SICdb|HiRID> ... --protocol adaptive_model_lockbox_protocol_v4_20261020.json (defaults otherwise)"
+    },
+    "cells": "all 49 catalog cells; cells the site does not record are reported as not evaluable",
+    "stream": "the database is one site; stays in fixed random arrival order (seeded), chronological within a stay; outcome resolves at anchor + horizon; at most 60,000 rows per cell",
+    "samples": "5 MIMIC training samples of 15,000 rows (sample 0 = original seed)",
+    "gates": "unchanged: point = patient-cluster paired bootstrap CI upper < 0 vs persistence and vs the recipe's comparator; interval = patient-equal and care-unit-equal whole-stream coverage in [0.87, 0.93], every care unit weighted equally (researcher decision 2026-10-19)",
+    "robust": "full pass in >= 80% of samples (medical_jepa/AGENTS.md)"
+  },
+  "primary_endpoint": "per database: number of evaluable continuous cells robust under point_and_dtaci_adaptive",
+  "secondary": [
+    "robust counts under static v2 and the other adaptive configurations on the same streams",
+    "robust point counts; per-cell coverage, half-width and MAE relative to persistence"
+  ],
+  "development_reference_not_a_prediction": {
+    "eICU": {
+      "robust": 36,
+      "evaluable": 47
+    },
+    "NWICU": {
+      "robust": 37,
+      "evaluable": 44
+    },
+    "Zigong": {
+      "robust": 16,
+      "evaluable": 21
+    }
+  },
+  "development_reference_caveat": "in-sample: recipes and theta0 were selected on these databases; the leave-one-database-out interval estimate for theta0 was 93 vs 85 robust intervals",
+  "decision_rule": "cells robust on both SICdb and HiRID are independently replicated adaptive cells; robust on one = candidate. Any registry change requires the user's approval.",
+  "one_shot_rule": "each database is scored once; only crashes may be fixed, without changing methods, gates or cohorts, and every fix is reported",
+  "refreeze_rule": "if any hashed file changes before scoring, a new protocol version must be frozen before any label is read; site_adaptive_external_audit.py and multi_sample_external_audit.py refuse to score SICdb/HiRID when any hash differs",
+  "frozen_code_sha256": {
+    "dka_action_contract.py": "32159d253ebd740e89094c9775dd41fa8e122a026b94e8417d56fb358a5791f7",
+    "dka_body.py": "7cb6020c1482a3c308cc0831ddbc7123bbbc1c417d5a955f70b048f5712ec48a",
+    "dka_world_model_contract.py": "6f7a21ee7d5cd9ab403e498c82d307ebecbc7c300fd4d349874a84208eb86c0f",
+    "external_value_conditional_interval_audit.py": "a9b2533e3c0c27cb2b53ffc104f650af8b52520939c31f5d37b412a058e52d99",
+    "mimic_to_eicu_49_cell_external_audit.py": "e123c0f54a5c9dbf5160ccec459b403c0910431af1d39c59ae328b1d46fb4666",
+    "mimiciv_observation_transition_extract.py": "b5207238db412e91e4a3beadb738196c310350949f63431be5db4e900ee06dd5",
+    "multi_sample_external_audit.py": "3fb0eda6b07bae2ae66832ca8106d2835a18de69f16e2ee34f6db541e91a43b1",
+    "nonlinear_latent_rollout.py": "b5d66d14e4d4e1c9ef5009625eb68e014a2fc9a9091b758f119b0e07c01d730c",
+    "osler_jepa/__init__.py": "e4c5f54e1429f3189cf9004ed650f42c12bee8736280563c7af70836f3dd1d20",
+    "osler_jepa/actions.py": "7bd1ff8cc39b5d38d0713685ed6c1ea0871431f8b11dd09f2c9d0dad354c6b77",
+    "osler_jepa/adjacent_hierarchy.py": "8f8f55956688beb3e39d66d3134606920572c0e557649d9063faa5ed8e1827f0",
+    "osler_jepa/anchored_residual.py": "782e4cac3a150800dab987185a1a2ed4786f1f1bd28c84513d0e8ddab1f12476",
+    "osler_jepa/belief.py": "5b1ed19e7975b1e7998fcfba067e4f237feaf4873b5fba7c20a0032ba5f59397",
+    "osler_jepa/body_coupling.py": "621542416e70e9cccc069a7409cc908596177b867e4bc9715245f6cf58acc892",
+    "osler_jepa/causal_evaluation.py": "ab537c144733a8ccfae71a944a397ca170f04a87a4445c60acfbfe07eb913100",
+    "osler_jepa/causal_readiness.py": "e701c68a0d5f61da545eb67e8702d8263695c31033872e76c4d119f5ac206f1e",
+    "osler_jepa/cohort_signature.py": "8cf4bb832c38bc4f5dc5ec15a3026dfef53cbb53a2c03fb11e27eb7de100a881",
+    "osler_jepa/disease_router.py": "db6f176534527543548e85991883698b88b16de774c673782245d19e94f487da",
+    "osler_jepa/embodied_logic.py": "03872410d8afffe317bf7eb5b6532042ae3d4e238674c589f12feef1d56dc318",
+    "osler_jepa/interval_personalization.py": "1ad2c7dbd3307cb219186918c6e656e3158c1037e2c3e53a0e76156a940c6a3b",
+    "osler_jepa/interval_scale.py": "18e29f6b3e728ee9abd514cc62f5850db8dbc4c1941795ddce4e2a7cca54452a",
+    "osler_jepa/ontology.py": "16e374b11de0581115579ddecec9643e6e069eb98023efa134199248dd0092f3",
+    "osler_jepa/organ_schema.py": "7a0e021c9e4111d8e7988c7c6bd89da0c1b5916668175bdab452dff8b610d807",
+    "osler_jepa/patient_state.py": "1c17557310f86fe8adc990cae58fd69be919fd7ae5d201e9e781e8780042e1f5",
+    "osler_jepa/recipe_availability.py": "49b6c6ebea67614a1ac93faa79d529c18080d1d6912256e3ec30ab30a7ea29ae",
+    "osler_jepa/shadow.py": "f2a268508fbf4421a68ce379750aaec85d7084fab57c749703de063788a2f2c0",
+    "osler_jepa/shadow_cohort.py": "42cc47a645c837fd419889cc9f60ae193e988e6055b218fa8ba0df066768e2d1",
+    "osler_jepa/shadow_outcomes.py": "4c5d1eb51711332a845e55feaa6ae1b610c5ed41ac3436c2947911f001856042",
+    "osler_jepa/site_adaptive_conformal.py": "c2479299fc196d9d509a043b0eabb5f5ab45900a9b83ad7c228bf3fa00eef7c7",
+    "osler_jepa/site_adaptive_point.py": "d230b3949ce5939e529b075238c1b1de7f23e4c1112dac815d17c4d55f12dfcc",
+    "osler_jepa/state_compiler.py": "a709cca28e7d4605abc575f8ee2dec4b7d272b2c96872f8db32158cf5b0c48a6",
+    "osler_jepa/symbolic.py": "10c355ed36b7256f98dde8674d9a2cae4bd833d31797c8e91d019043bcaf1108",
+    "osler_jepa/treatment_units.py": "0f70576abf06701cef97eba8ab9da759f8a050765bf7db155c53beaaf939d397",
+    "osler_jepa/urine_output.py": "68dcc1e800ffe29e33baee99f55734c7cc6c685d1ff9994643ee4889c384c8b6",
+    "osler_jepa/validator.py": "ee7e60e4c8cdd80191518f523009410a65138d7c1059801fa1943b2b727eb3aa",
+    "site_adaptive_external_audit.py": "d0b7e21ea4636fefa57b66b43098d051e333ad923c8889357bf48e9d3c072c18",
+    "site_adaptive_interval_dev.py": "72982d47591d2b724e8c48147bfe7b5628dcea1863057e06f615d1d06c9ddef5",
+    "site_adaptive_point_dev.py": "db6b5e8b694c71f61d6935db1eb4341683ee6cbca8742a91ea5ede62e75fdaa5",
+    "target_specific_domain_conformal_audit.py": "1cb5f5a02f2a12f5233c04a14ef9be92df1197bbaf1bbafdea18dabe03c3986a",
+    "target_specific_event_hurdle_audit.py": "8d1b4818c16ffe8c25d41d961773bd62be1d05b59957b10476b6f5296022f84c",
+    "target_specific_event_hurdle_cluster_audit.py": "0182674d787c84ba45be5197bd579542eed448f77b6d58a780900fc4596898c8",
+    "teacher_anchored_joint_jepa_audit.py": "4429e056ae9b69188db034e78d75919aaacb54d9fe8db7680da9c4a58f1ffbc3",
+    "whole_body_joint_gate.py": "14aab508ba06b617381a829479f2d1c1009553bc5a182105722e7f2d6598d3e4",
+    "whole_body_joint_jepa.py": "7696a421480702e730f8f7fad01a249062aa1af569b5c378387d331a3a5e9c1a",
+    "whole_body_joint_source_registry.py": "9cccbb0eecb87d133095aba7cede885861c73e77794693afe34609e38fd52a30",
+    "mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json": "da3cd1507dcf6cc171ab7e09c0119edbf228bfc49df8cea1282c925258e5a64d",
+    "site_adaptive_point_dev_20261016.json": "ba1714d8b16df157799378252e35dcb577b2124378cb3a1a8b1e9d8c698ff060",
+    "site_adaptive_dtaci_dev_20261017.json": "f440c8aeca36f4bb05d1f4f02920cb50b51063b260130f6f5961d8c97568e513",
+    "site_adaptive_dtaci_prior_dev_20261019.json": "94f44113264be6b89cd9513ceb1e61c8cd99fb36b36bd9dfb093f40d1ef6039b",
+    "external_recipe_selection_dev_20261019.json": "f294d2c1d944132c40992fe14a02c44ddc75e80ae58a5ddf0822f8a424d53e0d"
+  },
+  "frozen_training_data_sha256": {
+    "mimiciv_observation_transitions_1h_full_v31_treatment_unit_safe_v4.parquet": "a909d3205a1df07226504bc0f152263a28bd97eb8a7b2f9d111534c72171904f",
+    "mimiciv_observation_transitions_3h_full_v31_treatment_unit_safe_v4.parquet": "d18c4e4fa697e49cf238cd62d6230cd452ae9ed668847caff4485fc2830c9ab7",
+    "mimiciv_observation_transitions_6h_full_v31_treatment_unit_safe_v4.parquet": "ae0de818e15946799c30e98a0a3d5bc9300663d3efbb121498de757a30125db1",
+    "mimiciv_observation_transitions_12h_full_v31_treatment_unit_safe_v4.parquet": "c5250e9dc9049e7750fb4db521fda2e244a318e3b019053b97bb084bf78211cb",
+    "mimiciv_observation_transitions_24h_full_v31_treatment_unit_safe_v4.parquet": "d39569294678bd53c86036a6392de9f280db7bd296462ccb755c7eceb2bac626",
+    "mimiciv_observation_transitions_48h_full_v31_treatment_unit_safe_v4.parquet": "9b552ec8e513a4344b3604106cd6891beb054e32d5512dafda941cfb82959aec"
+  },
+  "causal_claim_allowed": false,
+  "clinical_promotion_allowed": false,
+  "supersedes": "adaptive_model_lockbox_protocol_v3_20261018.json (SICdb/HiRID part never scored; deployment form changed on 2026-10-19/20)"
+}

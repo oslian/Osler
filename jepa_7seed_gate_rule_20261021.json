@@ -1,0 +1,29 @@
+{
+  "schema": "jepa_7seed_gate_rule.v1",
+  "written_before_results": true,
+  "seeds": [
+    7,
+    19,
+    31,
+    43,
+    57,
+    71,
+    97
+  ],
+  "training": "teacher_anchored_joint_jepa_audit.py, default adjacent_three_level, 14 anatomical organs, system->organ->body staged training, --split-mode database (train mimiciv, test eicu), --expert-anchor-registry expert_anchor_registry_core6_harmonized_20261021.json, --export-predictions",
+  "deployment_form": "jepa_deployment_form_dev.py per seed: frozen online point correction + DtACI (theta0 0.15, network-shared), uniform calibration weights for both systems",
+  "cell_passes_only_if_all": [
+    "7/7 seeds: jepa beats the frozen expert anchor in deployment form, paired bootstrap CI upper < 0 on the patient axis and on the hospital axis",
+    "7/7 seeds: jepa interval gate (patient-equal and hospital-equal coverage in [0.87, 0.93]) passes",
+    "7/7 seeds: if the calibration-selected path is not system_only, the audit's matched ablation shows that path beating system_only on the test rows",
+    "7/7 seeds: latent SVD collapse checks pass"
+  ],
+  "not_available_and_reported": [
+    "forward-time split: eICU event times are per-stay shifted (no calendar order)",
+    "care-unit cluster inference: fewer than 10 eICU unit types"
+  ],
+  "passing_cells_are": "development candidates for takeover only; next: NWICU/Zigong development check, then SICdb/HiRID lockbox; registry changes require the user's approval",
+  "causal_claim_allowed": false,
+  "data": "mimic_eicu_jepa_examples_harmonized_anchor_5000.parquet (prepare_jepa_event_examples.py: eICU ionized calcium /4.008; AFP, CA-125, CA 19-9, lipase excluded from the JEPA variable set)",
+  "amendment_before_results": "2026-10-21: the first 7-seed launch was stopped after seed 7 showed a non-converged base JEPA (base loss 263.6, latent SVD fail) caused by tumour-marker tails and an eICU ionized-calcium unit error; data were harmonized and anchors rebuilt; the gate rule itself is unchanged; no 7-seed result had been seen"
+}

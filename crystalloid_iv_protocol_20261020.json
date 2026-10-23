@@ -1,0 +1,78 @@
+{
+  "schema": "causal_iv_protocol.v1",
+  "frozen_at": "2026-10-20T15:46:13-07:00",
+  "question": "Effect of a predominantly balanced versus predominantly 0.9% saline crystalloid strategy over the first 24 h of ICU on chloride at ~24 h",
+  "identification_design": "instrumental_variable (hospital preference; Brookhart & Schneeweiss 2007)",
+  "data": "eICU Collaborative Research Database 2.0 (eICU is development data for the forecasting line; this causal analysis is new and no outcome of it has been read)",
+  "target_trial": "see eicu_crystalloid_iv_extract.py docstring (eligibility, strategies, time zero, instrument, outcome windows)",
+  "estimator": "2SLS, frozen covariate set crystalloid_iv_design.covariate_matrix, hospital cluster bootstrap 1,000 replicates, seed 0",
+  "readiness_rules": "see crystalloid_iv_estimate.py docstring: F >= 10; |SMD| <= 0.10 across instrument halves; outcome availability gap <= 0.05; benchmark chloride estimate in [-8, -0.3] mmol/L with CI upper < 0; placebo (baseline chloride) CI contains 0; negative control (platelet change) CI contains 0; external review required",
+  "benchmark_source": "Xue et al., Ann Intensive Care 2019 (8 RCTs, 19,301 patients): balanced crystalloids reduce the rise in serum chloride, SMD -1.23 (95% CI -1.59 to -0.87); no consistent bicarbonate/pH difference",
+  "design_stage_results_seen_before_freeze": {
+    "stays": 16386,
+    "hospitals": 58,
+    "treated_balanced_share": 0.1056,
+    "hospital_balanced_share_quantiles": [
+      0.0,
+      0.017,
+      0.041,
+      0.069,
+      0.111,
+      0.174,
+      0.949
+    ],
+    "first_stage_f_unadjusted": 1896.8,
+    "first_stage_f_adjusted": 922.2,
+    "uptake_by_instrument_quintile": [
+      0.021,
+      0.058,
+      0.083,
+      0.13,
+      0.255
+    ],
+    "balance_high_vs_low_preference_smd": {
+      "age": -0.012,
+      "admissionweight": -0.018,
+      "baseline_chloride": 0.079,
+      "baseline_sodium": -0.015,
+      "baseline_bicarbonate": 0.094,
+      "baseline_creatinine": -0.023,
+      "baseline_bun": -0.043,
+      "baseline_glucose": -0.091,
+      "baseline_potassium": 0.012,
+      "baseline_platelets": -0.082,
+      "baseline_hemoglobin": -0.091,
+      "typed_volume_ml": 0.081
+    },
+    "balance_treated_vs_untreated_smd": {
+      "age": -0.158,
+      "admissionweight": -0.024,
+      "baseline_chloride": 0.453,
+      "baseline_sodium": 0.254,
+      "baseline_bicarbonate": -0.1,
+      "baseline_creatinine": -0.258,
+      "baseline_bun": -0.266,
+      "baseline_glucose": -0.157,
+      "baseline_potassium": -0.189,
+      "baseline_platelets": -0.094,
+      "baseline_hemoglobin": -0.163,
+      "typed_volume_ml": 0.214
+    },
+    "adjustment_columns": 73,
+    "outcomes_read": false
+  },
+  "outcomes_extracted_before_freeze": false,
+  "one_shot_rule": "outcomes are extracted once after this freeze and analysed once; only crashes may be fixed, each reported",
+  "external_review": null,
+  "causal_claim_allowed_before_review": false,
+  "clinical_claim_allowed": false,
+  "frozen_code_sha256": {
+    "osler_jepa/instrumental_variable.py": "d28283a92f1671d1cdb0b329a6ab1685473c9903de58a49fcfd89f962517f501",
+    "eicu_crystalloid_iv_extract.py": "4da24124a45ef2e2bfc60f2072933cee5c14d1db3fedf9613848067c5d97fe86",
+    "crystalloid_iv_design.py": "6d32b74ab4697115ab89ac0dc215ffe61b435fcfa195690d2876e971087aa219",
+    "crystalloid_iv_estimate.py": "a71d75401c9ef0624ea61259e0d35e4c687a43e48cb298974d91c2855c3d4883",
+    "external_value_conditional_interval_audit.py": "42943abaec5cae255e1eb815df496e24d9a40722d70681e34d4d8c4bb26e483f",
+    "eicu_crystalloid_iv_design.parquet": "fda740b046bdfbee5e4330d0539c14b674d0dd1fb3ab7cdce309a3f76a1b9957",
+    "crystalloid_iv_design_report.json": "d0840ca2194bf541a88afd383aa2c0f812de992c8f3e14bf8f3320e29de7eb08"
+  }
+}

@@ -150,11 +150,17 @@ def prepare_features(train: pd.DataFrame, predict: pd.DataFrame, columns: list[s
     train_x = train_x.replace([np.inf, -np.inf], np.nan).fillna(medians)
     predict_x = predict_x.replace([np.inf, -np.inf], np.nan).fillna(medians)
     mean = train_x.mean(axis=0)
-    std = train_x.std(axis=0).replace(0.0, 1.0).fillna(1.0)
-    return (
-        ((train_x - mean) / std).to_numpy(dtype=np.float64),
-        ((predict_x - mean) / std).to_numpy(dtype=np.float64),
-    )
+    raw_std = train_x.std(axis=0).to_numpy(dtype=np.float64)
+    # Time/care-unit holdouts can contain a feature that is effectively
+    # constant in discovery but changes in held-out data. A near-zero scale
+    # would turn an ordinary distribution shift into 1e14-sized regressors.
+    scale_floor = np.maximum(np.abs(mean.to_numpy(dtype=np.float64)) * 1e-6, 1e-6)
+    std = np.where(np.isfinite(raw_std) & (raw_std >= scale_floor), raw_std, 1.0)
+    train_scaled = ((train_x - mean) / std).to_numpy(dtype=np.float64)
+    predict_scaled = ((predict_x - mean) / std).to_numpy(dtype=np.float64)
+    train_scaled = np.nan_to_num(train_scaled, nan=0.0, posinf=20.0, neginf=-20.0)
+    predict_scaled = np.nan_to_num(predict_scaled, nan=0.0, posinf=20.0, neginf=-20.0)
+    return np.clip(train_scaled, -20.0, 20.0), np.clip(predict_scaled, -20.0, 20.0)
 
 
 def fit_ridge_forecast(
@@ -794,4 +800,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

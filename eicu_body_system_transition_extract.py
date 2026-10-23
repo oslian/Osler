@@ -20,6 +20,7 @@ from eicu_sepsis_transition_extract import (
     ID,
     LOOKBACK_H,
     TARGET_TOL_H,
+    target_tolerance_for_horizon,
     _finite_number,
     _read_csv_chunks,
     _text_series_contains_any,
@@ -44,6 +45,11 @@ ACTION_EVIDENCE_COLUMNS = [
     "source",
     "evidence_kind",
     "dose_observed",
+    "amount_like",
+    "rate_like",
+    "dose_unit",
+    "rate_unit",
+    "routeadmin",
     "product_subtype",
     "dose_amount",
     "unit_like_count",
@@ -305,6 +311,18 @@ def infusion_evidence(
                     "source": "eicu_infusiondrug",
                     "evidence_kind": "infusion_presence",
                     "dose_observed": dose_observed,
+                    "amount_like": (
+                        float(amount)
+                        if np.isfinite(amount)
+                        else float(volume)
+                        if np.isfinite(volume)
+                        else np.nan
+                    ),
+                    "rate_like": float(rate) if np.isfinite(rate) else np.nan,
+                    # eICU does not provide separate unit columns here.
+                    "dose_unit": None,
+                    "rate_unit": None,
+                    "routeadmin": "iv",
                     **(
                         transfusion_evidence_payload(label, amount if np.isfinite(amount) else volume)
                         if action == "transfusion"
@@ -524,6 +542,14 @@ def build_anchors(
     return pd.DataFrame(rows)
 
 
+def input_state_vars(config: BodySystemDiseaseConfig) -> tuple[str, ...]:
+    """Point-of-care glucose is a separate input wherever laboratory glucose is."""
+
+    if "glucose" in config.state_vars and "glucose_poc" not in config.state_vars:
+        return (*config.state_vars, "glucose_poc")
+    return tuple(config.state_vars)
+
+
 def assemble_states(
     anchors: pd.DataFrame,
     measurements: pd.DataFrame,
@@ -531,19 +557,22 @@ def assemble_states(
     horizon_hours: float,
 ) -> pd.DataFrame:
     lookup = measurement_lookup(measurements)
+    target_tolerance = target_tolerance_for_horizon(horizon_hours)
+    state_vars = input_state_vars(config)
     rows = []
     for anchor in anchors.itertuples(index=False):
         row = {}
-        for var in config.state_vars:
+        for var in state_vars:
             times, values = lookup.get((int(anchor.stay_id), var), (np.asarray([]), np.asarray([])))
             if len(times):
                 current, age = backward_value(times, values, float(anchor.t_hour), LOOKBACK_H)
-                future = nearest_value(times, values, float(anchor.t_plus_hour), TARGET_TOL_H)
+                future, offset = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
             else:
-                current, age, future = np.nan, np.nan, np.nan
+                current, age, future, offset = np.nan, np.nan, np.nan, np.nan
             row[f"{var}_t"] = current
             row[f"{var}_age_hr"] = age
             row[future_column(var, horizon_hours)] = future
+            row[f"{future_column(var, horizon_hours)}_offset_hr"] = offset
         rows.append(row)
     return pd.DataFrame(rows, index=anchors.index)
 
@@ -653,13 +682,9 @@ def add_active_column(frame: pd.DataFrame, config: BodySystemDiseaseConfig) -> p
 
 
 def filter_evaluable(frame: pd.DataFrame, config: BodySystemDiseaseConfig, horizon_hours: float) -> pd.DataFrame:
-    has_pair = np.zeros(len(frame), dtype=bool)
-    for var in config.targets:
-        current = f"{var}_t"
-        future = future_column(var, horizon_hours)
-        if current in frame and future in frame:
-            has_pair |= frame[current].notna().values & frame[future].notna().values
-    return frame[has_pair].reset_index(drop=True)
+    """Keep every anchor: which anchors exist must not depend on future measurements."""
+
+    return frame.reset_index(drop=True)
 
 
 def target_pair_counts(frame: pd.DataFrame, config: BodySystemDiseaseConfig, horizon_hours: float) -> dict[str, int]:
@@ -773,7 +798,7 @@ def cohort_report(
             "future_suffix": horizon_suffix(horizon_hours),
             "anchor_step_hours": ANCHOR_STEP_H,
             "lookback_hours": LOOKBACK_H,
-            "target_tolerance_hours": TARGET_TOL_H,
+            "target_tolerance_hours": target_tolerance_for_horizon(horizon_hours),
         },
         "safety_boundary": {
             "raw_rows_included": False,
@@ -809,7 +834,7 @@ def build_transitions(
         }
     disease_stays = bounded_stays(all_stays, max_stays=max_stays)
     stay_ids = set(disease_stays)
-    measurements = read_measurements(data_root, stay_ids)
+    measurements = read_measurements(stay_ids)
     anchors = build_anchors(disease_stays, measurements, meta, horizon_hours=horizon_hours)
     evidence = read_action_evidence(data_root, stay_ids, config)
     if anchors.empty:

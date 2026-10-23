@@ -1,0 +1,28 @@
+{
+  "schema": "jepa_gate_rule.v3",
+  "written_before_results": true,
+  "written": "2026-10-22, after the Codex review (CODEX_REVIEW_20261022.md #5-#7) and before any JEPA result under this rule",
+  "supersedes": ["jepa_7seed_gate_rule_20261021.json", "jepa_7seed_gate_rule_four_db_20261021.json"],
+  "seeds": [7, 19, 31, 43, 57, 71, 97],
+  "mimic_samples_required_for_promotion": 5,
+  "robust_share": 0.8,
+  "training": "teacher_anchored_joint_jepa_audit.py default adjacent_three_level: five independently trained matched hierarchy models (osler_jepa.adjacent_hierarchy.HIERARCHY_MODELS: full, direct_organ, body_mediated, organ_route, system_only), identical initialization and per-stage epoch budget; structurally disabled stages are skipped",
+  "anchors": "build_expert_anchor_columns.py: every row, label-independent, recipes fitted on MIMIC patients outside the JEPA cohort",
+  "patient_roles": "held-out MIMIC calibration patients split by osler_jepa.patient_split: selection patients choose the path and fit point/interval scales; conformal patients give only conformal scores",
+  "deployment_form": "jepa_deployment_form_dev.deploy: shared deployment clock, outcomes used only after label_available_hr, warm-up stays unscored; online point correction and DtACI from the configs below",
+  "point_dev": "site_adaptive_point_dev_20261022.json",
+  "dtaci_dev": "site_adaptive_dtaci_dev_20261022.json",
+  "dtaci_prior": "site_adaptive_dtaci_prior_dev_20261022.json",
+  "network_dev": "site_adaptive_network_dev_20261022.json",
+  "path_choice": "on selection patients: a hierarchy model is eligible when it beats each matched ablation (patient-cluster paired bootstrap, CI upper bound < 0); lowest-MAE eligible model is chosen; system_only never takes over",
+  "seed_pass_per_database": [
+    "chosen model beats the frozen expert anchor on the database's point axes (eICU: patient and hospital; single-site: patient)",
+    "chosen model beats persistence on the same axes",
+    "chosen model beats each matched ablation and the trained no-route model (system_only) on the same axes",
+    "chosen model's interval gate passes (eICU: patient and hospital; single-site: patient and care unit)",
+    "latent SVD collapse check passes"
+  ],
+  "cell_pass": "a database:cell passes a MIMIC sample only if all 7 seeds pass; robust if it passes in >= 80% of samples; promotion additionally needs >= 5 samples and passing on every evaluable database",
+  "not_evaluated": ["time validation axis"],
+  "causal_claim_allowed": false
+}

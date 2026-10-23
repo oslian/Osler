@@ -37,6 +37,7 @@ def extract_waveform_features(
     root: Path,
     seconds: float,
     max_records: int | None = None,
+    feature_mode: str = "robust",
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
     """Extract candidate waveform features and return rows plus summary."""
 
@@ -46,7 +47,13 @@ def extract_waveform_features(
         if max_records is not None and len(feature_records) >= max_records:
             break
         try:
-            feature_records.append(read_waveform_feature_record(record_path, seconds=seconds))
+            feature_records.append(
+                read_waveform_feature_record(
+                    record_path,
+                    seconds=seconds,
+                    feature_mode=feature_mode,
+                )
+            )
         except Exception:
             failures += 1
 
@@ -70,6 +77,7 @@ def extract_waveform_features(
         {
             "artifact": "MIMIC-IV Waveform bounded feature extraction smoke",
             "seconds_requested": seconds,
+            "feature_mode": feature_mode,
             "max_records": max_records,
             "read_failures": failures,
             "authority": {
@@ -99,6 +107,7 @@ def main() -> None:
     parser.add_argument("--waveform-root", required=True, type=Path)
     parser.add_argument("--seconds", type=float, default=60.0)
     parser.add_argument("--max-records", type=int, default=100)
+    parser.add_argument("--feature-mode", choices=("robust", "beat"), default="robust")
     parser.add_argument("--features-output", required=True, type=Path)
     parser.add_argument("--summary-output", required=True, type=Path)
     args = parser.parse_args()
@@ -107,6 +116,7 @@ def main() -> None:
         args.waveform_root,
         seconds=args.seconds,
         max_records=args.max_records,
+        feature_mode=args.feature_mode,
     )
     write_csv(rows, args.features_output)
     args.summary_output.write_text(json.dumps(summary, indent=2, sort_keys=True))

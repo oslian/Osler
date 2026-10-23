@@ -6,26 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-
-TARGET_UNITS = {
-    "albumin": "g/dL",
-    "anion_gap": "mmol/L",
-    "bicarbonate": "mmol/L",
-    "bun": "mg/dL",
-    "calcium": "mg/dL",
-    "chloride": "mmol/L",
-    "creatinine": "mg/dL",
-    "hematocrit": "%",
-    "hemoglobin": "g/dL",
-    "magnesium": "mg/dL",
-    "phosphate": "mg/dL",
-    "platelets": "K/uL",
-    "potassium": "mmol/L",
-    "sodium": "mmol/L",
-    "temperature": "degC",
-    "total_protein": "g/dL",
-    "wbc": "K/uL",
-}
+from osler_jepa.event_adapters import CANONICAL_UNITS
 
 
 def _change_threshold(cell: dict) -> float | None:
@@ -43,6 +24,7 @@ def build_registry(report: dict, *, candidate_id: str, input_contract_id: str) -
     supported_schemas = {
         "target_specific_event_hurdle_audit.v1",
         "target_specific_event_hurdle_domain_conformal_audit.v1",
+        "target_specific_event_hurdle_regime_conformal_audit.v1",
     }
     if report.get("schema") not in supported_schemas:
         raise ValueError("Unsupported target-specific audit schema")
@@ -53,12 +35,14 @@ def build_registry(report: dict, *, candidate_id: str, input_contract_id: str) -
         target = str(cell.get("target", ""))
         horizon = int(cell.get("horizon_hours", 0))
         validated = bool(cell.get("summary", {}).get("validated", False))
-        interval = (
-            "external-domain-heldout adaptive normalized split conformal"
-            if report.get("schema")
-            == "target_specific_event_hurdle_domain_conformal_audit.v1"
-            else "patient-grouped crossfit adaptive normalized split conformal"
-        )
+        if report.get("schema") == "target_specific_event_hurdle_domain_conformal_audit.v1":
+            interval = "external-domain-heldout adaptive normalized split conformal"
+        elif report.get("schema") == "target_specific_event_hurdle_regime_conformal_audit.v1":
+            interval = (
+                "patient regime-Mondrian plus external global normalized split conformal"
+            )
+        else:
+            interval = "patient-grouped crossfit adaptive normalized split conformal"
         if target == "o2sat":
             runtime_target = "hypoxemia_event"
             task_type = "binary_event_probability"
@@ -68,15 +52,15 @@ def build_registry(report: dict, *, candidate_id: str, input_contract_id: str) -
                 "event_definition": report.get("hypoxemia_definition"),
                 "not_equivalent_to": "continuous oxygen-saturation value forecast",
             }
-        elif target in TARGET_UNITS:
+        elif target in CANONICAL_UNITS:
             runtime_target = target
             task_type = "continuous_value_with_change_hurdle"
-            units[runtime_target] = TARGET_UNITS[target]
+            units[runtime_target] = CANONICAL_UNITS[target]
             threshold = _change_threshold(cell)
             output_contract[runtime_target] = {
                 "task_type": task_type,
                 "change_definition": (
-                    f"abs(future-current) >= {threshold} {TARGET_UNITS[target]}"
+                    f"abs(future-current) >= {threshold} {CANONICAL_UNITS[target]}"
                     if threshold is not None
                     else None
                 ),
@@ -123,7 +107,7 @@ def build_registry(report: dict, *, candidate_id: str, input_contract_id: str) -
         key for key, value in registry.items() if value["validated_for_joint_runtime"]
     )
     return {
-        "schema": "whole_body_promotion_registry.v2",
+        "schema": "whole_body_promotion_registry.v3",
         "candidate_id": candidate_id,
         "input_contract_id": input_contract_id,
         "input_contract": report.get("input_policy"),

@@ -1,0 +1,26 @@
+{
+  "schema": "jepa_7seed_gate_rule.v2",
+  "written_before_results": true,
+  "purpose": "development check of the system-organ-body JEPA residual on NWICU and Zigong (and an eICU re-run with the same single model)",
+  "seeds": [
+    7,
+    19,
+    31,
+    43,
+    57,
+    71,
+    97
+  ],
+  "data": "four_db_jepa_examples_harmonized_anchor.parquet: MIMIC-IV 5,000 stays (training), eICU (August canonical examples, harmonized), NWICU 5,000 stays and Zigong (October harmonized measurement definitions via osler_jepa.event_adapters); anchors expert_anchor_registry_core6_four_db_20261021.json",
+  "training": "teacher_anchored_joint_jepa_audit.py default adjacent_three_level, --split-mode database --train-database mimiciv --test-database eicu,nwicu,zigong, --export-predictions",
+  "deployment_form": "jepa_deployment_form_dev.compare: frozen online point correction + DtACI theta0 0.15; network-shared on eICU, care-unit level on single-site NWICU/Zigong; uniform calibration weights",
+  "cell_passes_per_database_only_if_all_7_seeds": [
+    "jepa beats the frozen expert anchor in deployment form on that database's point axes (eICU: patient and hospital; NWICU, Zigong: patient)",
+    "jepa interval gate passes on that database's axes (eICU: patient and hospital; NWICU, Zigong: patient and care unit)",
+    "the selected coupling path is system_only or beats system_only in the audit's matched ablation (computed over all test rows together)",
+    "latent SVD collapse check passes"
+  ],
+  "takeover_candidate_definition": "a cell that passes the eICU gate (22 cells, jepa_7seed_gate_result_20261021.json) and also passes on every development database where it is evaluable among NWICU and Zigong",
+  "causal_claim_allowed": false,
+  "amendment_before_results": "2026-10-21, before any four-database result: a per-database median check found eICU CRP in mg/dL (x10 to mg/L), MIMIC 'bnp' = NT-proBNP vs BNP elsewhere, and non-comparable NWICU PTH; prepare_jepa_event_examples.py converts CRP and excludes BNP and PTH from the JEPA variable set; anchors rebuilt. Gate unchanged. The earlier eICU-only 7-seed gate used data without this CRP/BNP/PTH fix; this run re-evaluates eICU with it."
+}

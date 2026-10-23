@@ -95,6 +95,20 @@ class TargetSpecificEventHurdleRegistryTests(unittest.TestCase):
             output["output_contract"]["platelets"]["interval"],
         )
 
+    def test_regime_conformal_schema_uses_canonical_units(self):
+        report = self._report(target="bicarbonate")
+        report["schema"] = "target_specific_event_hurdle_regime_conformal_audit.v1"
+        output = build_registry(
+            report,
+            candidate_id="bicarbonate_regime_hurdle",
+            input_contract_id="joint.v1",
+        )
+        self.assertEqual(output["variable_units"]["bicarbonate"], "mEq/L")
+        self.assertIn(
+            "regime-Mondrian",
+            output["output_contract"]["bicarbonate"]["interval"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

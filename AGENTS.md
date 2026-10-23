@@ -82,6 +82,7 @@ python teacher_anchored_joint_jepa_audit.py \
 - 每格必須通過 7-seed patient-heldout、hospital、care-unit、time、patient bootstrap、persistence、既有 expert teacher、trained no-route ablation、conformal coverage 與 collapse/SVD gate，才可申請接管。
 - 每條實際啟用的耦合路徑必須各自通過 matched ablation：direct `organ <-> organ` 必須勝過 no-organ-coupling；body-mediated `organ -> body -> organ` 必須勝過 no-body-feedback。未通過的路徑必須在該 target × horizon 關閉，不得拖累或冒充另一條已驗證路徑。
 - 未通過的格子保持既有 validated expert 或 persistence；此 fallback 是安全政策，不是舊版相容層。
+- 外部驗證與晉升決策必須以多抽樣結果為準：每格在 5 個不同的 MIMIC 病人訓練抽樣（各 15,000 列；第 0 號為原始抽樣）上重新擬合並評分，完整 gate 至少 80% 抽樣通過才算穩定通過。單一抽樣的通過不得作為晉升或分級依據。標準工具為 `multi_sample_external_audit.py`；新的一次性 lockbox 也必須在凍結的 protocol 內直接採用此規則。
 - 不得在 runtime 手寫固定 interval half-width。只有 exact target × horizon 的 patient-specific conformal artifact 同時通過 patient、hospital、care-unit 與 time gate，才可輸出 `lower` / `upper`；否則固定輸出 `null` 與明確的 calibration status。
 - 跨器官效果只有在 trained no-route ablation 通過時才可宣稱。
 - direct 器官間耦合效果只有在 trained no-organ-coupling ablation 通過時才可宣稱；經人體層中介的器官耦合效果只有在 trained no-body-feedback ablation 通過時才可宣稱。

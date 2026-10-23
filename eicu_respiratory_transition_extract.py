@@ -30,6 +30,7 @@ from eicu_sepsis_transition_extract import (
     ID,
     LOOKBACK_H,
     TARGET_TOL_H,
+    target_tolerance_for_horizon,
     VASOPRESSOR_TERMS,
     VENTILATION_TERMS,
     _finite_number,
@@ -91,6 +92,7 @@ STATE_VARS = (
     "sodium",
     "potassium",
     "glucose",
+    "glucose_poc",
     "urine_output",
 )
 
@@ -649,6 +651,7 @@ def assemble_states(
     horizon_hours: float = DELTA_H,
 ) -> pd.DataFrame:
     lookup = measurement_lookup(measurements)
+    target_tolerance = target_tolerance_for_horizon(horizon_hours)
     rows = []
     for anchor in anchors.itertuples(index=False):
         row = {}
@@ -656,12 +659,13 @@ def assemble_states(
             times, values = lookup.get((int(anchor.stay_id), var), (np.asarray([]), np.asarray([])))
             if len(times):
                 current, age = backward_value(times, values, float(anchor.t_hour), LOOKBACK_H)
-                future = nearest_value(times, values, float(anchor.t_plus_hour), TARGET_TOL_H)
+                future, offset = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
             else:
-                current, age, future = np.nan, np.nan, np.nan
+                current, age, future, offset = np.nan, np.nan, np.nan, np.nan
             row[f"{var}_t"] = current
             row[f"{var}_age_hr"] = age
             row[future_column(var, horizon_hours)] = future
+            row[f"{future_column(var, horizon_hours)}_offset_hr"] = offset
         rows.append(row)
     return pd.DataFrame(rows, index=anchors.index)
 
@@ -749,10 +753,9 @@ def add_derived_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def filter_evaluable(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> pd.DataFrame:
-    has_pair = np.zeros(len(frame), dtype=bool)
-    for var in TARGET_VARS:
-        has_pair |= frame[f"{var}_t"].notna().values & frame[future_column(var, horizon_hours)].notna().values
-    return frame[has_pair].reset_index(drop=True)
+    """Keep every anchor: which anchors exist must not depend on future measurements."""
+
+    return frame.reset_index(drop=True)
 
 
 def target_pair_counts(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> dict[str, int]:
@@ -822,7 +825,7 @@ def cohort_report(
             "future_suffix": horizon_suffix(horizon_hours),
             "anchor_step_hours": ANCHOR_STEP_H,
             "lookback_hours": LOOKBACK_H,
-            "target_tolerance_hours": TARGET_TOL_H,
+            "target_tolerance_hours": target_tolerance_for_horizon(horizon_hours),
         },
         "safety_boundary": {
             "raw_rows_included": False,
@@ -848,7 +851,7 @@ def build_transitions(
     stay_ids = set(respiratory_stays)
     measurements = pd.concat(
         [
-            read_measurements(data_root, stay_ids),
+            read_measurements(stay_ids),
             read_respiratory_support_measurements(data_root, stay_ids),
         ],
         ignore_index=True,

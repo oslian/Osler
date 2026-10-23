@@ -45,8 +45,15 @@ def _target_rows(frame: pd.DataFrame, target: str, future_suffix: str) -> pd.Dat
     return frame[frame[current].notna() & frame[future].notna()].copy()
 
 
-def attach_belief(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
-    extra = endocrine_belief_state_features(frame)
+def attach_belief(
+    frame: pd.DataFrame,
+    *,
+    include_hormone_axes: bool = False,
+) -> tuple[pd.DataFrame, list[str]]:
+    extra = endocrine_belief_state_features(
+        frame,
+        include_hormone_axes=include_hormone_axes,
+    )
     return pd.concat([frame.reset_index(drop=True), extra.reset_index(drop=True)], axis=1), list(extra.columns)
 
 
@@ -82,13 +89,21 @@ def _fit_predictions(
 
     train_placebo = pd.concat([
         train,
-        placebo_endocrine_belief_features(train, seed=seed + 202),
+        placebo_endocrine_belief_features(
+            train,
+            seed=seed + 202,
+            columns=tuple(belief_columns),
+        ),
     ], axis=1)
     heldout_placebo = pd.concat([
         heldout,
-        placebo_endocrine_belief_features(heldout, seed=seed + 303),
+        placebo_endocrine_belief_features(
+            heldout,
+            seed=seed + 303,
+            columns=tuple(belief_columns),
+        ),
     ], axis=1)
-    placebo_columns = [f"placebo_{column}" for column in ENDOCRINE_BELIEF_COLUMNS]
+    placebo_columns = [f"placebo_{column}" for column in belief_columns]
     placebo_pred = _fit_ridge(
         train_placebo,
         heldout_placebo,
@@ -286,9 +301,13 @@ def audit(
     discovery_fraction: float,
     ridge_alpha: float,
     bootstrap_samples: int,
+    include_hormone_axes: bool = False,
 ) -> dict[str, object]:
     frame = pd.read_parquet(cohort).reset_index(drop=True)
-    frame, belief_columns = attach_belief(frame)
+    frame, belief_columns = attach_belief(
+        frame,
+        include_hormone_axes=include_hormone_axes,
+    )
     random_reports = [
         split_report(
             frame,
@@ -347,6 +366,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--discovery-fraction", type=float, default=0.67)
     parser.add_argument("--ridge-alpha", type=float, default=10.0)
     parser.add_argument("--bootstrap-samples", type=int, default=500)
+    parser.add_argument(
+        "--include-hormone-axes",
+        action="store_true",
+        help="include candidate-only water-balance and insulin-response states",
+    )
     return parser.parse_args()
 
 
@@ -362,12 +386,17 @@ def main() -> None:
         discovery_fraction=args.discovery_fraction,
         ridge_alpha=args.ridge_alpha,
         bootstrap_samples=args.bootstrap_samples,
+        include_hormone_axes=args.include_hormone_axes,
     )
     report = {
         "experiment": "eICU endocrine predict-update belief downstream observable audit",
         "belief": {
-            "name": "endocrine_glycemic_stress_patient_specific_state",
-            "columns": ENDOCRINE_BELIEF_COLUMNS,
+            "name": (
+                "endocrine_glycemic_stress_patient_specific_state_with_hormone_axes"
+                if args.include_hormone_axes
+                else "endocrine_glycemic_stress_patient_specific_state"
+            ),
+            "columns": result.get("belief_columns", ENDOCRINE_BELIEF_COLUMNS),
             "direct_hidden_state_accuracy_claim_allowed": False,
             "requires_capacity_matched_placebo": True,
             "targets": targets,
@@ -403,4 +432,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

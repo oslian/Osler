@@ -115,6 +115,28 @@ class PersonalizationDemoTests(unittest.TestCase):
         self.assertTrue(frame["potassium_t"].isna().all())
         self.assertFalse((frame[["glucose_t", "potassium_t"]] == 0).any().any())
 
+    def test_zero_urine_output_is_observed_and_never_replaced_by_missing(self):
+        payload = {
+            "patient_id": "zero-urine-test",
+            "trajectory": [
+                {"hours_since_onset": 0, "urine_output": 0},
+                {"hours_since_onset": 4, "urine_output": 0},
+                {"hours_since_onset": 8, "urine_output": 0},
+            ],
+        }
+        frame = make_frame(payload)
+        self.assertEqual(frame["urine_output_t"].tolist(), [0.0, 0.0, 0.0])
+
+        urine = [
+            item for item in forecast(payload)["forecasts"]
+            if item["target"] == "urine_output"
+        ]
+        self.assertEqual({item["horizon_hours"] for item in urine}, {6, 12})
+        self.assertTrue(all(item["status"] != "missing_current_value" for item in urine))
+        self.assertTrue(all(item["unit"] == "mL/hour" for item in urine))
+        self.assertTrue(all(0.0 <= item["personalized"]["point"] <= 200.0 for item in urine))
+        self.assertTrue(all(item["lower"] is None or item["lower"] >= 0.0 for item in urine))
+
     def test_make_frame_derives_anion_gap_from_basic_chemistry(self):
         frame = make_frame({
             "trajectory": [

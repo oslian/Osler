@@ -10,6 +10,7 @@ runtime, checkpoint-promotion, or active-rule authority.
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass
 
 from osler_jepa.state_completion import (
@@ -19,6 +20,164 @@ from osler_jepa.state_completion import (
 from osler_jepa.waveform import WAVEFORM_CANDIDATE_TARGETS
 
 PREDICTION_HORIZONS_HOURS = (1, 3, 6, 12, 24, 48)
+
+# These are validated irregular-time query cells, not fixed point horizons.
+# The interval is part of the query contract because sparse labs are observed
+# at patient- and unit-dependent times.
+MIMICIV_IRREGULAR_TIME_VALIDATED_CELLS = (
+    {
+        "target": "inr",
+        "time_window_hours": (6.0, 24.0),
+        "source": "mimiciv_log_event_history_ridge",
+        "model": "log_event",
+        "can_move": True,
+        "interval_status": "calibrated",
+        "reason": "validated irregular-time factual forecast in the 6--24h bin",
+    },
+    {
+        "target": "inr",
+        "time_window_hours": (24.0, 72.0),
+        "source": "mimiciv_log_event_history_ridge",
+        "model": "log_event",
+        "can_move": True,
+        "interval_status": "calibrated",
+        "reason": "validated irregular-time factual forecast in the 24--72h bin",
+    },
+    {
+        "target": "ptt",
+        "time_window_hours": (0.0, 6.0),
+        "source": "mimiciv_log_event_history_ridge",
+        "model": "log_event",
+        "can_move": True,
+        "interval_status": "needs_calibration_audit",
+        "reason": "validated irregular-time factual forecast in the 0--6h bin",
+    },
+    {
+        "target": "fibrinogen",
+        "time_window_hours": (6.0, 24.0),
+        "source": "mimiciv_raw_event_history_ridge",
+        "model": "raw_event",
+        "can_move": True,
+        "interval_status": "needs_calibration_audit",
+        "reason": "validated irregular-time factual forecast in the 6--24h bin",
+    },
+    {
+        "target": "cortisol",
+        "time_window_hours": (0.0, 6.0),
+        "source": "mimiciv_raw_event_history_ridge",
+        "model": "raw_event",
+        "can_move": True,
+        "interval_status": "needs_calibration_audit",
+        "reason": "validated irregular-time factual forecast in the 0--6h bin",
+    },
+)
+
+
+def irregular_time_prediction_grid() -> tuple[dict[str, object], ...]:
+    """Return validated sparse-lab bins without collapsing them to point hours."""
+
+    return tuple(dict(cell) for cell in MIMICIV_IRREGULAR_TIME_VALIDATED_CELLS)
+
+
+def resolve_irregular_time_forecast_cell(
+    target: str,
+    requested_horizon_hours: float,
+) -> dict[str, object]:
+    """Resolve a sparse-lab query to a validated irregular-time contract cell.
+
+    The audit uses right-closed elapsed-time bins: ``(0, 6]``, ``(6, 24]``,
+    and ``(24, 72]``.  This resolver only returns capability metadata; it does
+    not invent a patient value or an interval.  Numeric values must be filled
+    by a runtime model after this gate has passed.
+    """
+
+    normalized_target = str(target).strip().lower().replace("-", "_").replace(" ", "_")
+    try:
+        horizon = float(requested_horizon_hours)
+    except (TypeError, ValueError):
+        horizon = float("nan")
+
+    selected = None
+    if math.isfinite(horizon) and horizon > 0.0:
+        for cell in MIMICIV_IRREGULAR_TIME_VALIDATED_CELLS:
+            lower, upper = cell["time_window_hours"]
+            if normalized_target == cell["target"] and lower < horizon <= upper:
+                selected = cell
+                break
+
+    if selected is None:
+        return {
+            "target": normalized_target,
+            "requested_horizon_hours": horizon if math.isfinite(horizon) else None,
+            "time_window_hours": None,
+            "time_axis": "irregular_future",
+            "status": "fallback",
+            "source": "persistence_or_missing",
+            "model": None,
+            "point_estimate": None,
+            "lower": None,
+            "upper": None,
+            "interval_level": None,
+            "interval_status": "not_available",
+            "can_estimate": False,
+            "can_move": False,
+            "query_boundary_policy": "right_closed_irregular_bins",
+            "reason": (
+                "no validated target-specific irregular-time cell covers this "
+                "query; runtime must use persistence or missing"
+            ),
+        }
+
+    resolved = dict(selected)
+    resolved.update(
+        {
+            "requested_horizon_hours": horizon,
+            "time_axis": "irregular_future",
+            "status": "validated",
+            "point_estimate": None,
+            "lower": None,
+            "upper": None,
+            "interval_level": 0.90 if selected["interval_status"] == "calibrated" else None,
+            "can_estimate": True,
+            "query_boundary_policy": "right_closed_irregular_bins",
+            "reason": (
+                "validated target-specific elapsed-time cell selected; numeric "
+                "forecast must be supplied by the runtime model"
+            ),
+        }
+    )
+    return resolved
+
+# These cells were validated on the full MIMIC-IV v3.1 observation cohort.
+# They are kept separate from disease-specific routers because the audit is a
+# global factual observation result, not a claim about a hidden disease state.
+MIMICIV_FULL_MIMIC_VALIDATED_NOWCAST_TARGETS = (
+    "crp",
+    "fibrinogen",
+    "ionized_calcium",
+    "magnesium",
+    "serum_osmolality",
+)
+MIMICIV_FULL_MIMIC_VALIDATED_FORECAST_6H_TARGETS = (
+    "anion_gap",
+    "calcium",
+    "chloride",
+    "magnesium",
+    "minute_volume",
+    "paco2",
+    "pao2",
+    "phosphate",
+    "urine_output",
+)
+MIMICIV_FULL_MIMIC_VALIDATED_INTERVAL_6H_TARGETS = (
+    "anion_gap",
+    "calcium",
+    "magnesium",
+    "minute_volume",
+    "paco2",
+    "pao2",
+    "phosphate",
+)
 
 VALIDATED_NOWCAST_MODULE_TARGETS: dict[str, tuple[str, ...]] = {
     "sepsis": (
@@ -67,6 +226,7 @@ VALIDATED_NOWCAST_MODULE_TARGETS: dict[str, tuple[str, ...]] = {
     "cardiac_injury": ("bun", "potassium"),
     "hepatic_failure": ("bicarbonate", "bilirubin_direct", "bun", "creatinine", "ph", "platelets", "potassium", "wbc"),
     "coagulopathy_heme": ("bun", "hematocrit", "hemoglobin", "potassium"),
+    "mimiciv_full_target_coverage": MIMICIV_FULL_MIMIC_VALIDATED_NOWCAST_TARGETS,
 }
 
 VALIDATED_FULL_VARIABLE_FORECAST_6H_CELLS: dict[str, tuple[str, ...]] = {
@@ -514,19 +674,38 @@ def whole_body_observation_capabilities() -> tuple[ObservationCapability, ...]:
             ),
         ),
         ObservationCapability(
-            name="mimiciv_observed_treatment_context_forecast_features",
+            name="mimiciv_full_target_observation_coverage_6h",
+            status="validated",
+            scope="full_mimic_target_observation_coverage",
+            systems=("whole_body",),
+            targets=(
+                "19_validated_nowcast_targets",
+                "18_validated_6h_forecast_targets",
+                "14_validated_6h_interval_targets",
+            ),
+            horizon_hours=(0, 6),
+            evidence=(
+                "MIMICIV_FULL_TARGET_COVERAGE_FINDINGS.md; full MIMIC-IV v3.1 "
+                "observation sweep over 55 eligible numeric targets, with "
+                "7 patient-heldout seeds plus care-unit and chronological "
+                "heldout gates"
+            ),
+        ),
+        ObservationCapability(
+            name="mimiciv_unit_safe_treatment_precision",
             status="validated",
             scope="factual_observed_treatment_context",
             systems=("intensive_care_unit", "medication_administration", "whole_body"),
-            targets=("glucose", "potassium", "bicarbonate"),
+            targets=("glucose", "bicarbonate"),
             horizon_hours=(6,),
             evidence=(
-                "MIMICIV_TREATMENT_CONTEXT_ACCURACY_FINDINGS.md; observed "
-                "inputevents/emar/procedureevents hist_*/act_* features "
-                "improve 6h factual forecasts for glucose, potassium, and "
-                "bicarbonate across 7 patient splits plus careunit/time "
-                "held-out gates. MAP remains candidate-only. This is observed "
-                "factual treatment context, not a treatment-effect claim."
+                "MIMICIV_UNIT_SAFE_TREATMENT_PRECISION_FINDINGS_20260812.md; "
+                "strictly pre-anchor dose/route/rate/delivered-exposure "
+                "features improve glucose and bicarbonate point forecasts and "
+                "narrow patient-equalized 90% conformal intervals across 7 "
+                "patient splits plus careunit/time heldout gates. MAP and "
+                "potassium remain fallback for this increment. This is factual "
+                "observed context, not a treatment-effect claim."
             ),
         ),
         ObservationCapability(
@@ -549,9 +728,69 @@ def whole_body_observation_capabilities() -> tuple[ObservationCapability, ...]:
             horizon_hours=(0, 1, 3, 6),
             evidence=(
                 "MIMICIV_WAVEFORM_PRECISION_FINDINGS.md; waveform work is "
-                "opened as a candidate-only high-frequency signal pipeline. "
-                "No local waveform manifest or held-out accuracy audit is "
-                "available yet, so no factual prediction authority is granted."
+                "a candidate-only high-frequency signal pipeline. Robust and "
+                "beat-level 1h/3h audits evaluated 57 targets in the linked "
+                "cohort and "
+                "promoted zero waveform increments, so no factual prediction "
+                "authority is granted."
+            ),
+            allowed_uses=(
+                "waveform_manifest_inspection",
+                "feature_engineering_candidate",
+                "capability_reporting",
+            ),
+        ),
+        ObservationCapability(
+            name="mimiciv_waveform_same_anchor_nowcast_validation",
+            status="validated",
+            scope="high_frequency_same_anchor_nowcast",
+            systems=("icu_waveform", "cardiovascular", "respiratory"),
+            targets=("heart_rate", "respiratory_rate"),
+            horizon_hours=(0,),
+            evidence=(
+                "mimiciv_waveform_nowcast_audit.py; QRS-corrected beat-level "
+                "waveform features beat table-only and capacity-matched placebo "
+                "on 7/7 patient-heldout splits plus care-unit and chronological "
+                "heldouts for HR and respiratory rate. This validates same-anchor "
+                "nowcasting only; 1h/3h future forecasting remains candidate-only."
+            ),
+            allowed_uses=(
+                "waveform_same_anchor_nowcast",
+                "same_time_state_completion",
+                "observation_state_completion",
+                "capability_reporting",
+            ),
+        ),
+        ObservationCapability(
+            name="mimiciv_waveform_nowcast_to_forecast_bridge_candidate",
+            status="candidate_only",
+            scope="waveform_state_completion_future_forecast_bridge",
+            systems=("icu_waveform", "cardiovascular", "respiratory"),
+            targets=("heart_rate", "respiratory_rate"),
+            horizon_hours=(1, 3),
+            evidence=(
+                "MIMICIV_WAVEFORM_PRECISION_FINDINGS.md; validated same-anchor "
+                "HR/RR nowcasts were refit inside each split and supplied as "
+                "wave_nowcast_* forecast features. The 1h RR bridge reached 6/7 "
+                "patient splits but no target passed forecast promotion."
+            ),
+            allowed_uses=(
+                "feature_engineering_candidate",
+                "waveform_state_completion_candidate",
+                "capability_reporting",
+            ),
+        ),
+        ObservationCapability(
+            name="mimiciv_waveform_all_target_precision_sweep",
+            status="candidate_only",
+            scope="high_frequency_all_target_precision_sweep",
+            systems=("icu_waveform", "whole_body"),
+            targets=("57_evaluated_targets", "0_validated_waveform_increments"),
+            horizon_hours=(0, 1, 3),
+            evidence=(
+                "MIMICIV_WAVEFORM_PRECISION_FINDINGS.md; robust and beat-level "
+                "waveform features were evaluated against 57 targets on the "
+                "linked MIMIC cohort, but no target passed the full gate."
             ),
             allowed_uses=(
                 "waveform_manifest_inspection",
@@ -931,6 +1170,186 @@ def whole_body_observation_capabilities() -> tuple[ObservationCapability, ...]:
             allowed_uses=("capability_reporting",),
         ),
         ObservationCapability(
+            name="endocrine_hormone_axis_belief_candidate",
+            status="candidate_only",
+            scope="predict_update_hidden_endocrine_axis",
+            systems=(
+                "endocrine_metabolic",
+                "renal_urinary",
+                "fluid_electrolyte",
+            ),
+            targets=(
+                "water_balance_adh_like_drive",
+                "insulin_response_state",
+                "no_direct_hormone_concentration_claim",
+            ),
+            horizon_hours=(6,),
+            evidence=(
+                "ENDOCRINE_HORMONE_AXIS_BELIEF_FINDINGS.md; candidate-only "
+                "water-balance and insulin-response predict-update states were "
+                "tested against downstream observables, but neither passed the "
+                "full 7-seed plus hospital-heldout promotion gate"
+            ),
+            allowed_uses=("shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="glycemic_clearance_and_acid_base_buffer_belief_candidate",
+            status="candidate_only",
+            scope="predict_update_hidden_physiology_proxy",
+            systems=("endocrine_metabolic", "electrolyte_acid_base", "renal_urinary"),
+            targets=(
+                "glycemic_clearance_tendency",
+                "acid_base_buffer_reserve",
+                "glucose",
+                "anion_gap",
+                "bicarbonate",
+                "ph",
+            ),
+            horizon_hours=(6,),
+            evidence=(
+                "hidden_physiology_beliefs.py and eICU downstream audit; the "
+                "two states are observation-derived proxies, not measured "
+                "insulin sensitivity or buffer pools. No target passed both "
+                "the 7-seed patient-heldout and hospital-heldout gates, so "
+                "the states remain candidate-only."
+            ),
+            allowed_uses=("shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="mimiciv_sparse_laboratory_long_horizon_candidate",
+            status="candidate_only",
+            scope="sparse_lab_long_horizon_forecast",
+            systems=(
+                "endocrine_metabolic",
+                "cardiac_myocardial",
+                "coagulopathy_heme",
+                "hepatic_failure",
+            ),
+            targets=(
+                "cortisol",
+                "pth",
+                "tsh",
+                "total_t4",
+                "free_t4",
+                "troponin_t",
+                "inr",
+                "ptt",
+                "fibrinogen",
+                "bilirubin",
+                "crp",
+                "ferritin",
+                "no_validated_sparse_lab_cell",
+            ),
+            horizon_hours=(6, 12, 24, 48),
+            evidence=(
+                "mimiciv_sparse_lab_long_horizon_audit.py; raw MIMIC-IV "
+                "labevents were scanned with anchor-safe features. Troponin-I "
+                "had no raw observations and TPO antibody had no longitudinal "
+                "pairs; remaining sparse targets had pairs but none passed the "
+                "full patient-heldout plus care-unit gate. The enhanced "
+                "event-history/log-space endpoint audit also validated zero "
+                "cells; the earlier within-window INR/PTT signal was rejected "
+                "as not being a true 24/48-hour endpoint forecast."
+            ),
+            allowed_uses=("shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="mimiciv_sparse_irregular_time_coagulation_cortisol_forecast",
+            status="validated",
+            scope="irregular_time_factual_sparse_lab_forecast",
+            systems=("coagulopathy_heme", "endocrine_metabolic"),
+            targets=(
+                "inr_6_to_24h",
+                "inr_24_to_72h",
+                "ptt_0_to_6h",
+                "fibrinogen_6_to_24h",
+                "cortisol_0_to_6h",
+            ),
+            horizon_hours=(0, 6, 24, 72),
+            evidence=(
+                "MIMICIV_SPARSE_LAB_IRREGULAR_TIME_FINDINGS.md; after fixing "
+                "datetime64[us] to nanosecond normalization and retaining all "
+                "future events, log event-history forecast passed seven "
+                "patient-heldout seeds plus care-unit heldout for INR 6--24h "
+                "and 24--72h, PTT 0--6h, while raw event-history passed "
+                "fibrinogen 6--24h and cortisol 0--6h. This is single-center "
+                "factual evidence, not causal or clinical authority."
+            ),
+            allowed_uses=("factual_prediction", "shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="mimiciv_sparse_lab_coupled_irregular_candidate",
+            status="candidate_only",
+            scope="coupled_irregular_sparse_lab_forecast",
+            systems=(
+                "endocrine_metabolic",
+                "cardiac_myocardial",
+                "coagulopathy_heme",
+                "hepatic_failure",
+            ),
+            targets=(
+                "inr",
+                "ptt",
+                "fibrinogen",
+                "cortisol",
+                "troponin_t",
+                "bilirubin",
+                "tsh",
+                "no_promoted_coupled_sparse_lab_cell",
+            ),
+            horizon_hours=(0, 6, 24, 72),
+            evidence=(
+                "MIMICIV_SPARSE_LAB_COUPLED_IRREGULAR_FINDINGS.md; adding "
+                "mechanism-limited pre-anchor history from related labs to the "
+                "target-history model promoted 0/21 target-window cells. No "
+                "additional sparse-lab forecast authority is granted."
+            ),
+            allowed_uses=("shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="whole_body_nonlinear_latent_rollout_candidate",
+            status="candidate_only",
+            scope="nonlinear_latent_state_rollout",
+            systems=("whole_body", "renal_urinary", "cardiopulmonary", "fluid_electrolyte"),
+            targets=(
+                "multi_horizon_factual_trajectory",
+                "patient_history_latent_state",
+                "nonlinear_state_transition",
+            ),
+            horizon_hours=(1, 3, 6, 12, 24, 48),
+            evidence=(
+                "NONLINEAR_LATENT_ROLLOUT_COMPREHENSIVE_AUDIT.md; eICU AKI, "
+                "sepsis and respiratory observation-only audits used a GRU "
+                "history encoder and bounded nonlinear latent transitions. "
+                "The candidate improved median point estimates after 3h in "
+                "several modules, but long-rollout stability and target-cell "
+                "confirmation are not sufficient for promotion."
+            ),
+            allowed_uses=("shadow_research", "capability_reporting"),
+        ),
+        ObservationCapability(
+            name="mimiciv_hormone_lab_targets_candidate",
+            status="candidate_only",
+            scope="sparse_hormone_observation_targets",
+            systems=("endocrine_metabolic", "hormonal_axis"),
+            targets=(
+                "cortisol",
+                "tsh",
+                "free_t4",
+                "total_t4",
+                "pth",
+                "tpo_antibody",
+            ),
+            horizon_hours=(0, 6),
+            evidence=(
+                "MIMICIV_HORMONE_DATA_FINDINGS.md; hormone lab observations "
+                "are connected through a targeted augmentation artifact, but "
+                "no hormone target passed the full patient-heldout and "
+                "hospital-heldout nowcast/6h forecast gate"
+            ),
+            allowed_uses=("shadow_observation", "capability_reporting"),
+        ),
+        ObservationCapability(
             name="immune_inflammatory_belief_state",
             status="validated",
             scope="predict_update_belief_state",
@@ -1119,8 +1538,10 @@ def observation_readiness() -> dict[str, object]:
                 "but candidate-only note targets may not be imputed or forecast"
             ),
             "observed_treatment_context_rule": (
-                "observed hist_*/act_* treatment context may be used as factual "
-                "input only for targets that passed held-out accuracy gates; it "
+                "strictly pre-anchor, unit-safe hist_* treatment context may be "
+                "used as factual input only for target-horizon cells that passed "
+                "point, placebo, and conformal held-out gates; act_* future "
+                "fields are never forecast inputs; it "
                 "does not authorize causal or counterfactual treatment claims"
             ),
             "waveform_rule": (
@@ -1128,6 +1549,11 @@ def observation_readiness() -> dict[str, object]:
                 "signal source, but waveform-derived features require a separate "
                 "held-out accuracy audit against table-only and placebo baselines "
                 "before any forecast use"
+            ),
+            "irregular_time_sparse_lab_rule": (
+                "use the validated target-specific time-window cells with the "
+                "requested horizon as an explicit query; do not relabel an "
+                "irregular bin as a fixed 24h/48h point forecast"
             ),
         },
         "safety_boundary": {
@@ -1276,6 +1702,28 @@ def trajectory_prediction_grid() -> tuple[TrajectoryGridCell, ...]:
                 )
             )
 
+    existing_forecast_pairs = {(cell.target, cell.horizon_hours) for cell in cells}
+    calibrated_mimic_targets = set(MIMICIV_FULL_MIMIC_VALIDATED_INTERVAL_6H_TARGETS)
+    for target in MIMICIV_FULL_MIMIC_VALIDATED_FORECAST_6H_TARGETS:
+        if (target, 6) in existing_forecast_pairs:
+            continue
+        cells.append(
+            _cell(
+                target,
+                6,
+                "validated",
+                "mimiciv_full_target_router",
+                "mimiciv_full_target_coverage",
+                True,
+                "validated full MIMIC-IV 6h factual target cell",
+                interval_status=(
+                    "calibrated"
+                    if target in calibrated_mimic_targets
+                    else "needs_calibration_audit"
+                ),
+            )
+        )
+
     for target in ("bilirubin", "inr", "ptt", "fibrinogen", "paco2"):
         for horizon in PREDICTION_HORIZONS_HOURS:
             cells.append(
@@ -1394,6 +1842,7 @@ def whole_body_state_forecast_schema() -> dict[str, object]:
 
     return {
         "object_name": "whole_body_state_forecast",
+        "schema_version": "whole_body_state_forecast.v2",
         "patient_time": {
             "patient_key": "runtime-local identifier, never committed in aggregate artifacts",
             "anchor_time": "runtime timestamp or encounter-relative anchor",
@@ -1424,16 +1873,41 @@ def whole_body_state_forecast_schema() -> dict[str, object]:
             "target": "physiology variable name",
             "module": "validated forecast context",
             "horizon_hours": "one of PREDICTION_HORIZONS_HOURS",
+            "actual_horizon": "target-specific elapsed time to the real future measurement",
             "time_axis": "future",
+            "observed_value": "anchor measurement when directly observed",
+            "nowcast": "validated current-time estimate, never silently reused as a future label",
             "point_estimate": "validated forecast value or runtime persistence value",
             "lower": "numeric lower interval bound only when conformal calibration passes",
             "upper": "numeric upper interval bound only when conformal calibration passes",
             "interval_level": "coverage level, usually 0.9, or null",
             "interval_status": "calibrated or needs_calibration_audit",
             "source": "validated router, belief state, multihop path, persistence, or missing",
+            "source_model": "concrete checkpoint/router responsible for the value",
+            "organ_latent_source": "organ token or shared-body-plus-target-specific source",
+            "measurement_age": "hours since the anchor value was measured",
+            "observed_treatment_context": "strictly pre-anchor unit-safe factual dose/route/rate/delivered-exposure context",
+            "fallback_reason": "first fail-closed reason when can_move is false",
             "status": "validated, fallback, candidate_only, or missing",
             "can_estimate": "true only when point estimate is allowed",
             "can_move": "true only when the target-horizon cell is validated",
+            "causal_claim_allowed": False,
+        },
+            "irregular_future_state_cell": {
+            "target": "sparse physiology variable",
+            "requested_horizon_hours": "runtime query horizon in hours",
+            "time_window_hours": "validated elapsed-time query interval",
+            "time_axis": "irregular_future",
+            "point_estimate": "validated irregular-time factual forecast value",
+            "lower": "numeric only after interval calibration passes",
+            "upper": "numeric only after interval calibration passes",
+            "interval_level": "0.9 only when interval_status is calibrated, otherwise null",
+            "interval_status": "calibrated, needs_calibration_audit, or not_available",
+            "source": "validated irregular-time event-history router or fallback",
+            "status": "validated or fallback",
+            "can_estimate": "true only after a validated target-window cell is selected",
+            "can_move": "true only for validated target-window cells",
+            "query_boundary_policy": "right-closed irregular bins",
         },
     }
 
@@ -1450,6 +1924,7 @@ def whole_body_state_forecast_template() -> dict[str, object]:
     trajectory_cells = _trajectory_state_cells()
     validated_future = [cell for cell in trajectory_cells if cell.status == "validated"]
     fallback_future = [cell for cell in trajectory_cells if cell.status != "validated"]
+    irregular_cells = irregular_time_prediction_grid()
     return {
         "object_name": "whole_body_state_forecast",
         "artifact_status": "schema_and_capability_template",
@@ -1490,9 +1965,12 @@ def whole_body_state_forecast_template() -> dict[str, object]:
             "validated_cell_count": len(validated_future),
             "fallback_or_closed_cell_count": len(fallback_future),
             "cells": [cell.to_dict() for cell in trajectory_cells],
+            "irregular_time_validated_cell_count": len(irregular_cells),
+            "irregular_time_cells": list(irregular_cells),
             "policy": {
                 "move_rule": "only validated future cells may move away from persistence",
                 "fallback_rule": "unsupported target-horizon pairs stay at persistence or missing",
+                "irregular_time_rule": "use explicit query windows; do not collapse bins into fixed point horizons",
                 "no_recursive_unvalidated_rollout": True,
             },
         },
@@ -1506,6 +1984,20 @@ def whole_body_state_forecast_template() -> dict[str, object]:
             "whole_body_all_modules_conformal_coverage_audit.json",
             "MIMICIV_CROSS_DATABASE_COVERAGE_FINDINGS.md",
             "mimiciv_cross_database_coverage_audit.json",
+            "MIMICIV_FULL_TARGET_COVERAGE_FINDINGS.md",
+            "MIMICIV_HORMONE_DATA_FINDINGS.md",
+            "MIMICIV_SPARSE_LAB_IRREGULAR_TIME_FINDINGS.md",
+            "MIMICIV_SPARSE_LAB_IRREGULAR_CONFORMAL_FINDINGS.md",
+            "MIMICIV_SPARSE_LAB_COUPLED_IRREGULAR_FINDINGS.md",
+            "mimiciv_sparse_lab_irregular_audit_fixed.json",
+            "mimiciv_sparse_lab_irregular_conformal_audit_fixed.json",
+            "mimiciv_sparse_lab_coupled_irregular_audit.json",
+            "NONLINEAR_LATENT_ROLLOUT_FINDINGS.md",
+            "NONLINEAR_LATENT_ROLLOUT_COMPREHENSIVE_AUDIT.md",
+            "NONLINEAR_LATENT_ROLLOUT_BODY_SYSTEM_SCREEN.md",
+            "NONLINEAR_LATENT_ROLLOUT_REGIME_UNCERTAINTY_FINDINGS.md",
+            "NONLINEAR_LATENT_ROLLOUT_REGIME_BODY_SCREEN.md",
+            "mimiciv_cross_database_coverage_6h_all_targets.json",
             "MIMICIV_ED_OBSERVATION_FINDINGS.md",
             "mimiciv_ed_observation_coverage_audit_1h.json",
             "mimiciv_ed_observation_coverage_audit_3h.json",
@@ -1537,6 +2029,7 @@ def whole_body_state_forecast_template() -> dict[str, object]:
             "ENDOCRINE_BELIEF_FINDINGS.md",
             "eicu_endocrine_belief_full_audit.json",
             "eicu_endocrine_stress_full_transition_report.json",
+            "ENDOCRINE_HORMONE_AXIS_BELIEF_FINDINGS.md",
             "IMMUNE_INFLAMMATORY_BELIEF_FINDINGS.md",
             "eicu_immune_belief_sepsis_full_audit.json",
             "GI_NUTRITION_BELIEF_FINDINGS.md",
@@ -1567,11 +2060,13 @@ def rollout_readiness() -> dict[str, object]:
         "validated_cell_count": len(validated),
         "fallback_or_closed_cell_count": len(fallback),
         "validated_cells": [cell.to_dict() for cell in validated],
+        "irregular_time_validated_cells": list(irregular_time_prediction_grid()),
         "fallback_or_closed_cells": [cell.to_dict() for cell in fallback],
         "trajectory_policy": {
             "rollout_shape": "target x horizon factual state grid",
             "move_rule": "only validated cells may move away from persistence",
             "fallback_rule": "unsupported target-horizon pairs stay at persistence or missing",
+            "irregular_time_rule": "validated sparse-lab bins retain their elapsed-time window",
             "no_recursive_unvalidated_rollout": True,
         },
         "uncertainty_policy": uncertainty_calibration_policy(),

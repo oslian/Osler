@@ -31,6 +31,7 @@ from nonlinear_latent_rollout import (
     load_multihorizon_cohort,
     set_seed,
 )
+from osler_jepa.patient_state import NeuralBeliefFilter
 from whole_body_joint_source_registry import ATTRIBUTION_VALIDATED_GROUP_ADAPTERS, PHYSIOLOGY_GROUPS
 
 
@@ -184,10 +185,78 @@ def load_joint_event_examples(
     history_mode="recent",
     history_steps=5,
     history_lags_hours=(48.0, 24.0, 12.0, 8.0, 6.0, 4.0, 3.0, 2.0, 1.0, 0.0),
+    event_time_targets=None,
 ):
     """Load canonical-ledger examples as a whole-body joint training cohort."""
 
-    frame = pd.read_parquet(Path(path))
+    import pyarrow.parquet as pq
+
+    path = Path(path)
+    available_columns = tuple(pq.read_schema(path).names)
+    available = set(available_columns)
+    variables_from_schema = tuple(
+        sorted(
+            column[len("future_") :]
+            for column in available_columns
+            if column.startswith("future_")
+            and f"{column[len('future_') :]}_t" in available
+            and not column.startswith(
+                (
+                    "future_event_time_",
+                    "future_delta_t_hr_",
+                    "future_label_quality_",
+                    "future_label_weight_",
+                )
+            )
+        )
+    )
+    requested_event_times = (
+        set(variables_from_schema)
+        if event_time_targets is None
+        else {str(value) for value in event_time_targets}
+    )
+    base_columns = {
+        "patient_id",
+        "subject_id",
+        "encounter_id",
+        "stay_id",
+        "anchor_time",
+        "t",
+        "database",
+        "hospitalid",
+        "hospital_id",
+        "careunit",
+        "care_unit",
+        "_source_horizon",
+        "horizon_hours",
+    }
+    projected_columns = set(base_columns)
+    projected_columns.update(
+        column for column in available_columns if column.startswith("hist_")
+    )
+    projected_columns.update(
+        column for column in available_columns if column.startswith("expert__")
+    )
+    for variable in variables_from_schema:
+        projected_columns.update(
+            {
+                f"{variable}_t",
+                f"{variable}_age_hr",
+                f"_observed_{variable}",
+                f"future_{variable}",
+                f"future_delta_t_hr_{variable}",
+                f"future_label_weight_{variable}",
+                f"next_measurement_time_hr_{variable}",
+            }
+        )
+        if variable in requested_event_times:
+            projected_columns.add(f"future_event_time_{variable}")
+    frame = pd.read_parquet(
+        path,
+        columns=[
+            column for column in available_columns if column in projected_columns
+        ],
+    )
     if frame.empty:
         raise ValueError("Canonical event examples are empty")
     if "t" not in frame and "anchor_time" in frame:
@@ -216,22 +285,7 @@ def load_joint_event_examples(
     if "database" not in frame:
         frame["database"] = "__unknown_database__"
 
-    variables = tuple(
-        sorted(
-            column[len("future_") :]
-            for column in frame.columns
-            if column.startswith("future_")
-            and f"{column[len('future_') :]}_t" in frame.columns
-            and not column.startswith(
-                (
-                    "future_event_time_",
-                    "future_delta_t_hr_",
-                    "future_label_quality_",
-                    "future_label_weight_",
-                )
-            )
-        )
-    )
+    variables = variables_from_schema
     module_variables = _event_module_variable_contracts(
         modules,
         variables,
@@ -1151,46 +1205,6 @@ def _future_window_arrays(frame, future, future_mask, future_delta_t, window_hor
                 fallback,
             )
     return values, masks, actual_deltas
-
-
-class NeuralBeliefFilter(nn.Module):
-    """A small predict-update filter for patient-specific history state."""
-
-    def __init__(self, input_dim, hidden):
-        super().__init__()
-        self.hidden = int(hidden)
-        self.observation_projection = nn.Sequential(
-            nn.Linear(input_dim, hidden), nn.LayerNorm(hidden), nn.SiLU()
-        )
-        self.innovation_projection = nn.Sequential(
-            nn.Linear(2 * hidden, hidden), nn.LayerNorm(hidden), nn.SiLU()
-        )
-        self.update_gate = nn.Linear(2 * hidden, hidden)
-        self.decay_rate = nn.Parameter(torch.full((hidden,), -1.0))
-        self.uncertainty_head = nn.Sequential(
-            nn.Linear(hidden, max(8, hidden // 2)),
-            nn.SiLU(),
-            nn.Linear(max(8, hidden // 2), hidden),
-        )
-
-    def forward(self, observations):
-        batch_size, steps, _ = observations.shape
-        time = observations[:, :, -1:].detach()
-        belief = observations.new_zeros((batch_size, self.hidden))
-        previous_time = time[:, 0]
-        for step in range(steps):
-            current_time = time[:, step]
-            delta = (current_time - previous_time).abs().clamp(0.0, 1.0)
-            decay = torch.exp(-nn.functional.softplus(self.decay_rate) * delta)
-            predicted = belief * decay
-            observation = self.observation_projection(observations[:, step])
-            combined = torch.cat([predicted, observation], dim=-1)
-            innovation = torch.tanh(self.innovation_projection(combined))
-            gate = torch.sigmoid(self.update_gate(combined))
-            belief = predicted + gate * (innovation - predicted)
-            previous_time = current_time
-        uncertainty = nn.functional.softplus(self.uncertainty_head(belief)) + 1e-4
-        return belief, uncertainty
 
 
 class JointWholeBodyJEPA(nn.Module):
@@ -3979,6 +3993,30 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-root", default="/Users/chunyouchang/Desktop/llm_project/medical_jepa")
     parser.add_argument(
+        "--event-examples",
+        type=Path,
+        default=None,
+        help=(
+            "Canonical event-ledger examples parquet. When supplied, this "
+            "is the sole training source and legacy module transitions are not read."
+        ),
+    )
+    parser.add_argument(
+        "--organ-contract-mode",
+        choices=("canonical_organs", "overlap"),
+        default="canonical_organs",
+    )
+    parser.add_argument(
+        "--history-mode",
+        choices=("multiscale", "recent"),
+        default="multiscale",
+    )
+    parser.add_argument("--history-steps", type=int, default=5)
+    parser.add_argument(
+        "--history-lags-hours",
+        default="48,24,12,8,6,4,3,2,1,0",
+    )
+    parser.add_argument(
         "--modules",
         default="sepsis,aki,respiratory,integumentary_skin_wound,toxic_metabolic,electrolyte_acid_base,endocrine_stress,gi_pancreatic_nutrition,cardiac_injury,musculoskeletal_rhabdo,immune_inflammatory,cardiovascular_instability,acute_neuro,hepatic_failure,coagulopathy_heme",
     )
@@ -4154,21 +4192,41 @@ def main():
     args = parser.parse_args()
     modules = tuple(value.strip() for value in args.modules.split(",") if value.strip())
     horizons = tuple(int(value) for value in args.horizons.split(",") if value.strip())
+    history_lags_hours = tuple(
+        float(value)
+        for value in args.history_lags_hours.split(",")
+        if value.strip()
+    )
     variable_age_limits = None
     if args.variable_age_limits is not None:
         variable_age_limits = json.loads(args.variable_age_limits.read_text(encoding="utf-8"))
-    frame, variables, module_names = load_joint_cohort(
-        args.data_root,
-        modules,
-        horizons,
-        args.max_stays,
-        min_modules=args.min_modules,
-        alignment=args.alignment,
-        asof_max_age_hours=args.asof_max_age_hours,
-        future_label_tolerance_hours=args.future_label_tolerance_hours,
-        asof_age_policy=args.asof_age_policy,
-        variable_age_limits=variable_age_limits,
-    )
+    if args.event_examples is not None:
+        frame, variables, module_names = load_joint_event_examples(
+            args.event_examples,
+            modules,
+            horizons,
+            args.max_stays,
+            min_modules=args.min_modules,
+            organ_contract_mode=args.organ_contract_mode,
+            history_mode=args.history_mode,
+            history_steps=args.history_steps,
+            history_lags_hours=history_lags_hours,
+        )
+        source_contract = "canonical_event_ledger"
+    else:
+        frame, variables, module_names = load_joint_cohort(
+            args.data_root,
+            modules,
+            horizons,
+            args.max_stays,
+            min_modules=args.min_modules,
+            alignment=args.alignment,
+            asof_max_age_hours=args.asof_max_age_hours,
+            future_label_tolerance_hours=args.future_label_tolerance_hours,
+            asof_age_policy=args.asof_age_policy,
+            variable_age_limits=variable_age_limits,
+        )
+        source_contract = "legacy_module_transition"
     rows = np.arange(len(frame), dtype=np.int64)
     model, arrays, losses = fit_joint(
         frame,
@@ -4222,6 +4280,11 @@ def main():
         "latent": model.latent,
         "promotion_status": "candidate_only",
         "architecture": {
+            "source_contract": source_contract,
+            "organ_contract_mode": args.organ_contract_mode,
+            "history_mode": args.history_mode,
+            "history_steps": int(args.history_steps),
+            "history_lags_hours": list(history_lags_hours),
             "joint_patient_time_alignment": True,
             "alignment_mode": args.alignment,
             "asof_max_age_hours": float(args.asof_max_age_hours),
@@ -4289,6 +4352,12 @@ def main():
             "clinical_promotion_allowed": False,
         },
         "training": {
+            "source_contract": source_contract,
+            "event_examples": (
+                str(args.event_examples.resolve())
+                if args.event_examples is not None
+                else None
+            ),
             "rows": len(frame),
             "subjects": int(frame.subject_id.nunique()),
             "joint_rows_min_modules": int(args.min_modules),
@@ -4305,6 +4374,16 @@ def main():
         "rows": len(frame),
         "subjects": int(frame.subject_id.nunique()),
         "mean_modules_per_row": float(frame["_module_count"].mean()),
+        "source_contract": source_contract,
+        "event_examples": (
+            str(args.event_examples.resolve())
+            if args.event_examples is not None
+            else None
+        ),
+        "organ_contract_mode": args.organ_contract_mode,
+        "history_mode": args.history_mode,
+        "history_steps": int(args.history_steps),
+        "history_lags_hours": list(history_lags_hours),
         "alignment_mode": args.alignment,
         "asof_max_age_hours": float(args.asof_max_age_hours),
         "asof_age_policy": args.asof_age_policy,

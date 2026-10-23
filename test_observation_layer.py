@@ -5,6 +5,8 @@ from osler_jepa.observation_layer import (
     DERIVED_COMPLETION_RULES,
     SAME_GROUP_CALIBRATED_COMPLETION_GROUPS,
     observation_readiness,
+    irregular_time_prediction_grid,
+    resolve_irregular_time_forecast_cell,
     rollout_readiness,
     nowcast_state_grid,
     trajectory_prediction_grid,
@@ -48,13 +50,20 @@ class ObservationLayerTests(unittest.TestCase):
         self.assertEqual(mimiciv.horizon_hours, (0, 6))
         self.assertIn("14_target_calibrated_interval_cells", mimiciv.targets)
 
-        treatment_context = capabilities["mimiciv_observed_treatment_context_forecast_features"]
+        full_mimic = capabilities["mimiciv_full_target_observation_coverage_6h"]
+        self.assertTrue(full_mimic.is_validated)
+        self.assertEqual(full_mimic.scope, "full_mimic_target_observation_coverage")
+        self.assertEqual(full_mimic.horizon_hours, (0, 6))
+        self.assertIn("19_validated_nowcast_targets", full_mimic.targets)
+        self.assertIn("18_validated_6h_forecast_targets", full_mimic.targets)
+
+        treatment_context = capabilities["mimiciv_unit_safe_treatment_precision"]
         self.assertTrue(treatment_context.is_validated)
         self.assertEqual(treatment_context.scope, "factual_observed_treatment_context")
         self.assertEqual(treatment_context.horizon_hours, (6,))
         self.assertIn("glucose", treatment_context.targets)
-        self.assertIn("potassium", treatment_context.targets)
         self.assertIn("bicarbonate", treatment_context.targets)
+        self.assertNotIn("potassium", treatment_context.targets)
         self.assertIn("not a treatment-effect claim", treatment_context.evidence)
 
         waveform = capabilities["mimiciv_waveform_precision_candidate"]
@@ -64,7 +73,21 @@ class ObservationLayerTests(unittest.TestCase):
         self.assertIn("heart_rate", waveform.targets)
         self.assertIn("waveform_manifest_inspection", waveform.allowed_uses)
         self.assertNotIn("factual_prediction", waveform.allowed_uses)
-        self.assertIn("No local waveform manifest", waveform.evidence)
+        self.assertIn("57 targets", waveform.evidence)
+
+        waveform_nowcast = capabilities["mimiciv_waveform_same_anchor_nowcast_validation"]
+        self.assertTrue(waveform_nowcast.is_validated)
+        self.assertEqual(waveform_nowcast.scope, "high_frequency_same_anchor_nowcast")
+        self.assertEqual(waveform_nowcast.horizon_hours, (0,))
+        self.assertIn("heart_rate", waveform_nowcast.targets)
+        self.assertIn("waveform_same_anchor_nowcast", waveform_nowcast.allowed_uses)
+        self.assertNotIn("future_forecast", waveform_nowcast.allowed_uses)
+
+        waveform_sweep = capabilities["mimiciv_waveform_all_target_precision_sweep"]
+        self.assertFalse(waveform_sweep.is_validated)
+        self.assertIn("57_evaluated_targets", waveform_sweep.targets)
+        self.assertIn("0_validated_waveform_increments", waveform_sweep.targets)
+        self.assertNotIn("factual_prediction", waveform_sweep.allowed_uses)
 
         ed = capabilities["mimiciv_ed_scene_observation_validation"]
         self.assertTrue(ed.is_validated)
@@ -169,6 +192,33 @@ class ObservationLayerTests(unittest.TestCase):
         self.assertIn("cortisol_sparse", endocrine_remaining.targets)
         self.assertNotIn("factual_prediction", endocrine_remaining.allowed_uses)
 
+        hormone_axes = capabilities["endocrine_hormone_axis_belief_candidate"]
+        self.assertFalse(hormone_axes.is_validated)
+        self.assertIn("water_balance_adh_like_drive", hormone_axes.targets)
+        self.assertIn("insulin_response_state", hormone_axes.targets)
+        self.assertNotIn("factual_prediction", hormone_axes.allowed_uses)
+
+        nonlinear_rollout = capabilities["whole_body_nonlinear_latent_rollout_candidate"]
+        self.assertFalse(nonlinear_rollout.is_validated)
+        self.assertEqual(nonlinear_rollout.horizon_hours, (1, 3, 6, 12, 24, 48))
+        self.assertIn("nonlinear_state_transition", nonlinear_rollout.targets)
+        self.assertNotIn("factual_prediction", nonlinear_rollout.allowed_uses)
+
+        hormone_labs = capabilities["mimiciv_hormone_lab_targets_candidate"]
+        self.assertFalse(hormone_labs.is_validated)
+        self.assertEqual(hormone_labs.scope, "sparse_hormone_observation_targets")
+        self.assertIn("tsh", hormone_labs.targets)
+        self.assertIn("free_t4", hormone_labs.targets)
+        self.assertIn("cortisol", hormone_labs.targets)
+        self.assertNotIn("factual_prediction", hormone_labs.allowed_uses)
+
+        coupled_sparse = capabilities["mimiciv_sparse_lab_coupled_irregular_candidate"]
+        self.assertFalse(coupled_sparse.is_validated)
+        self.assertIn("troponin_t", coupled_sparse.targets)
+        self.assertIn("no_promoted_coupled_sparse_lab_cell", coupled_sparse.targets)
+        self.assertIn("0/21", coupled_sparse.evidence)
+        self.assertNotIn("factual_prediction", coupled_sparse.allowed_uses)
+
     def test_readiness_is_observation_only_and_fail_closed(self):
         readiness = observation_readiness()
 
@@ -214,14 +264,53 @@ class ObservationLayerTests(unittest.TestCase):
             "fallback_observability_limited",
         )
 
+        irregular = irregular_time_prediction_grid()
+        self.assertIn(
+            ("inr", (6.0, 24.0)),
+            {(cell["target"], tuple(cell["time_window_hours"])) for cell in irregular},
+        )
+        self.assertTrue(all(cell["can_move"] for cell in irregular))
+
+        inr_12h = resolve_irregular_time_forecast_cell("INR", 12)
+        self.assertEqual(inr_12h["status"], "validated")
+        self.assertEqual(inr_12h["time_window_hours"], (6.0, 24.0))
+        self.assertEqual(inr_12h["interval_status"], "calibrated")
+        self.assertEqual(inr_12h["interval_level"], 0.90)
+        self.assertTrue(inr_12h["can_move"])
+        self.assertIsNone(inr_12h["point_estimate"])
+
+        inr_36h = resolve_irregular_time_forecast_cell("inr", 36)
+        self.assertEqual(inr_36h["time_window_hours"], (24.0, 72.0))
+        self.assertEqual(inr_36h["interval_status"], "calibrated")
+
+        ptt_3h = resolve_irregular_time_forecast_cell("ptt", 3)
+        self.assertEqual(ptt_3h["status"], "validated")
+        self.assertEqual(ptt_3h["interval_status"], "needs_calibration_audit")
+        self.assertIsNone(ptt_3h["interval_level"])
+        self.assertTrue(ptt_3h["can_move"])
+
+        ptt_6h = resolve_irregular_time_forecast_cell("ptt", 6)
+        self.assertEqual(ptt_6h["time_window_hours"], (0.0, 6.0))
+        self.assertEqual(ptt_6h["query_boundary_policy"], "right_closed_irregular_bins")
+
+        unsupported = resolve_irregular_time_forecast_cell("cortisol", 12)
+        self.assertEqual(unsupported["status"], "fallback")
+        self.assertFalse(unsupported["can_move"])
+        self.assertEqual(unsupported["source"], "persistence_or_missing")
+        self.assertEqual(unsupported["interval_status"], "not_available")
+
     def test_whole_body_state_forecast_template_unifies_three_objects(self):
         nowcasts = nowcast_state_grid()
-        self.assertEqual(len(nowcasts), 71)
+        self.assertEqual(len(nowcasts), 76)
         self.assertTrue(all(cell.time_axis == "current" for cell in nowcasts))
         self.assertTrue(all(cell.can_estimate for cell in nowcasts))
         self.assertTrue(all(not cell.can_move for cell in nowcasts))
         self.assertIn(
             ("hepatic_failure", "bilirubin_direct"),
+            {(cell.module, cell.target) for cell in nowcasts},
+        )
+        self.assertIn(
+            ("mimiciv_full_target_coverage", "serum_osmolality"),
             {(cell.module, cell.target) for cell in nowcasts},
         )
 
@@ -245,7 +334,7 @@ class ObservationLayerTests(unittest.TestCase):
         )
         self.assertEqual(
             template["current_state"]["validated_nowcast_module_target_cells"],
-            71,
+            76,
         )
         self.assertGreaterEqual(
             template["future_trajectory"]["validated_cell_count"],
@@ -269,6 +358,14 @@ class ObservationLayerTests(unittest.TestCase):
             },
         )
         self.assertIn(
+            ("mimiciv_full_target_coverage", "pao2", 6),
+            {
+                (cell["module"], cell["target"], cell["horizon_hours"])
+                for cell in future_cells
+                if cell["status"] == "validated"
+            },
+        )
+        self.assertIn(
             ("sepsis", "platelets", 6),
             {
                 (cell["module"], cell["target"], cell["horizon_hours"])
@@ -282,6 +379,14 @@ class ObservationLayerTests(unittest.TestCase):
         self.assertIn(
             "mimiciv_cross_database_coverage_audit.json",
             template["source_artifacts"],
+        )
+        self.assertEqual(template["future_trajectory"]["irregular_time_validated_cell_count"], 5)
+        self.assertIn(
+            ("inr", (6.0, 24.0)),
+            {
+                (cell["target"], tuple(cell["time_window_hours"]))
+                for cell in template["future_trajectory"]["irregular_time_cells"]
+            },
         )
         self.assertIn(
             "mimiciv_ed_observation_coverage_audit_6h.json",
@@ -297,6 +402,30 @@ class ObservationLayerTests(unittest.TestCase):
         )
         self.assertIn(
             "MIMICIV_TREATMENT_CONTEXT_ACCURACY_FINDINGS.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "MIMICIV_HORMONE_DATA_FINDINGS.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "MIMICIV_SPARSE_LAB_COUPLED_IRREGULAR_FINDINGS.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "NONLINEAR_LATENT_ROLLOUT_COMPREHENSIVE_AUDIT.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "NONLINEAR_LATENT_ROLLOUT_BODY_SYSTEM_SCREEN.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "NONLINEAR_LATENT_ROLLOUT_REGIME_UNCERTAINTY_FINDINGS.md",
+            template["source_artifacts"],
+        )
+        self.assertIn(
+            "NONLINEAR_LATENT_ROLLOUT_REGIME_BODY_SCREEN.md",
             template["source_artifacts"],
         )
         self.assertIn(

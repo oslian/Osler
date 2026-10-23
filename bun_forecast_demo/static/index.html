@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Osler BUN 3 小時個人化預測</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#172033; background:#f4f7f5; font-synthesis:none; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 5% 0%,rgba(53,160,128,.14),transparent 31rem),radial-gradient(circle at 100% 22%,rgba(83,123,189,.12),transparent 27rem),#f4f7f5; }
+    main { width:min(960px,calc(100% - 32px)); margin:0 auto; padding:24px 0 64px; }
+    .topbar { display:flex; justify-content:flex-end; margin-bottom:20px; }
+    .language-switch { display:flex; gap:4px; padding:4px; background:#e8eeeb; border-radius:999px; }
+    .language-button { border:0; border-radius:999px; padding:7px 12px; color:#536173; background:transparent; font:inherit; font-size:.86rem; font-weight:800; cursor:pointer; }
+    .language-button.active { color:white; background:#19735b; }
+    header { display:grid; gap:14px; margin-bottom:28px; }
+    .eyebrow { color:#19735b; font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:0; max-width:790px; font-size:clamp(2.2rem,6vw,4.5rem); line-height:.98; letter-spacing:-.055em; }
+    header p { max-width:700px; margin:0; color:#5d687b; font-size:1.05rem; line-height:1.65; }
+    .notice { border-left:3px solid #d69a29; padding:11px 14px; color:#665329; background:#fff9e9; border-radius:0 12px 12px 0; }
+    .panel { background:rgba(255,255,255,.91); border:1px solid #dce4df; border-radius:24px; padding:24px; box-shadow:0 22px 70px rgba(31,55,47,.08); }
+    .example-box { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:end; margin-bottom:18px; padding:16px; border:1px solid #dce4df; border-radius:17px; background:#f7faf8; }
+    .example-box label { display:block; margin-bottom:7px; font-size:.88rem; font-weight:800; }
+    select { width:100%; padding:11px 40px 11px 12px; border:1px solid #aebeb7; border-radius:12px; color:#172033; background:white; font:inherit; }
+    .upload { display:grid; place-items:center; gap:11px; min-height:210px; padding:28px; border:2px dashed #9cb9ae; border-radius:18px; text-align:center; background:#f8fbf9; transition:.2s ease; }
+    .upload.drag { border-color:#19735b; background:#eef8f4; transform:translateY(-2px); }
+    .upload strong { font-size:1.15rem; }
+    .upload p { margin:0; color:#6a7587; }
+    input[type=file] { position:absolute; width:1px; height:1px; opacity:0; }
+    button,.file-button { display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:999px; padding:12px 18px; font:inherit; font-weight:800; cursor:pointer; }
+    .file-button,button.primary { color:white; background:#19735b; }
+    button.secondary,.file-button.secondary { color:#314054; background:#edf1ef; text-decoration:none; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    details { margin-top:18px; color:#536173; }
+    summary { cursor:pointer; font-weight:750; color:#334155; }
+    code { color:#145c49; }
+    .status { min-height:24px; margin:14px 2px 0; color:#5d687b; }
+    .status.error { color:#a23333; }
+    .results { display:none; margin-top:22px; }
+    .results.visible { display:block; }
+    .result-head { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+    .result-head h2 { margin:0; font-size:1.35rem; }
+    .badge { padding:7px 10px; border-radius:999px; color:#176047; background:#e2f5ed; font-size:.78rem; font-weight:800; }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:20px; }
+    .metric { padding:16px; border-radius:17px; background:#f5f8f6; border:1px solid #e2e9e5; }
+    .metric small { display:block; min-height:2.2em; color:#738092; font-weight:650; }
+    .metric strong { display:block; margin-top:7px; font-size:clamp(1.35rem,4vw,2rem); letter-spacing:-.04em; }
+    .metric.primary { color:#0f674e; background:#eaf7f2; border-color:#bfe4d6; }
+    .interval { margin-top:18px; padding:18px; border-radius:17px; background:#172033; color:white; }
+    .interval-line { position:relative; height:8px; margin:18px 0 8px; background:linear-gradient(90deg,#5fb897,#8bd3ba); border-radius:999px; }
+    .interval-line::after { content:""; position:absolute; left:50%; top:50%; width:12px; height:12px; transform:translate(-50%,-50%); border:3px solid white; border-radius:50%; background:#19735b; }
+    .interval-labels { display:flex; justify-content:space-between; color:#d8e3df; font-variant-numeric:tabular-nums; }
+    .quality { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+    .quality h3 { margin:0 0 8px; font-size:.92rem; }
+    .quality p,.quality li { color:#657083; line-height:1.5; }
+    .quality ul { margin:6px 0 0; padding-left:20px; }
+    footer { margin-top:24px; color:#7c8796; font-size:.84rem; line-height:1.5; }
+    @media (max-width:760px) { .metric-grid { grid-template-columns:1fr 1fr; } .quality { grid-template-columns:1fr; } }
+    @media (max-width:540px) { main { width:min(100% - 20px,960px); padding-top:16px; } .panel { padding:16px; } .example-box { grid-template-columns:1fr; } .example-box p { grid-column:auto; } .metric-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="topbar" aria-label="Language">
+    <div class="language-switch">
+      <button class="language-button" data-language="zh-Hant">中文</button>
+      <button class="language-button" data-language="en">English</button>
+    </div>
+  </div>
+
+  <header>
+    <div class="eyebrow">Osler · Personalized Renal Forecast</div>
+    <h1 data-i18n="title"></h1>
+    <p data-i18n="subtitle"></p>
+    <div class="notice" data-i18n-html="notice"></div>
+  </header>
+
+  <section class="panel">
+    <div class="example-box">
+      <div>
+        <label for="example-select" data-i18n="exampleLabel"></label>
+        <select id="example-select"></select>
+      </div>
+      <button id="load-example" class="secondary" data-i18n="loadExample"></button>
+    </div>
+
+    <div id="dropzone" class="upload">
+      <strong id="file-name" data-i18n="dropCsv"></strong>
+      <p data-i18n-html="requirements"></p>
+      <label class="file-button" for="file-input" data-i18n="chooseCsv"></label>
+      <input id="file-input" type="file" accept=".csv,text/csv">
+    </div>
+    <div class="actions">
+      <button id="predict" class="primary" disabled data-i18n="predict"></button>
+      <a id="download-example" href="#" download class="file-button secondary" data-i18n="downloadExample"></a>
+    </div>
+    <details>
+      <summary data-i18n="optionalSummary"></summary>
+      <p data-i18n-html="optionalBody"></p>
+    </details>
+    <p id="status" class="status"></p>
+  </section>
+
+  <section id="results" class="panel results" aria-live="polite">
+    <div class="result-head">
+      <div><div class="eyebrow">3-hour factual forecast</div><h2 data-i18n="resultTitle"></h2></div>
+      <span class="badge" data-i18n="intervalBadge"></span>
+    </div>
+    <div class="metric-grid">
+      <div class="metric"><small data-i18n="currentBun"></small><strong id="current">—</strong></div>
+      <div class="metric"><small data-i18n="populationModel"></small><strong id="population">—</strong></div>
+      <div class="metric primary"><small data-i18n="personalizedForecast"></small><strong id="personalized">—</strong></div>
+      <div class="metric"><small data-i18n="changeFromNow"></small><strong id="change">—</strong></div>
+    </div>
+    <div class="interval">
+      <strong data-i18n="intervalTitle"></strong>
+      <div class="interval-line"></div>
+      <div class="interval-labels"><span id="lower">—</span><span id="upper">—</span></div>
+      <small id="width"></small>
+    </div>
+    <div class="quality">
+      <div><h3 data-i18n="dataUsed"></h3><p id="quality-summary"></p></div>
+      <div><h3 data-i18n="dataNotes"></h3><ul id="warnings"></ul></div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer"></footer>
+</main>
+
+<script>
+  const translations = {
+    "zh-Hant": {
+      pageTitle:"Osler BUN 3 小時個人化預測", title:"預測 3 小時後的 BUN",
+      subtitle:"上傳同一位病人的腎臟時序 CSV。模型會讀取最近六筆紀錄，推算個人化 BUN 預測與經驗證的 90% 預測區間。",
+      notice:"<strong>時間誠實：</strong>BUN@6h 是參考強格；此頁實際使用獨立驗證過的 <strong>BUN@3h</strong> 模型，不會重新貼標籤。",
+      exampleLabel:"合成範例（不含真實病人資料）", loadExample:"載入這個範例", downloadExample:"下載所選範例",
+      dropCsv:"拖曳 CSV 到這裡", requirements:"至少 6 列。必填：<code>hours_since_onset</code>、<code>bun</code>", chooseCsv:"選擇 CSV", predict:"開始預測",
+      optionalSummary:"可選欄位與單位", optionalBody:"<code>creatinine</code> mg/dL、<code>urine_output</code> mL、<code>potassium</code>、<code>bicarbonate</code>、<code>sodium</code> mEq/L、<code>map</code> mmHg，以及五個 <code>hist_*</code> 治療欄位。空白表示未知，不會被當成 0。",
+      resultTitle:"個人化預測結果", intervalBadge:"90% 校準區間", currentBun:"目前 BUN", populationModel:"族群模型", personalizedForecast:"個人化 3h 預測", changeFromNow:"相對目前變化", intervalTitle:"90% 預測區間", dataUsed:"使用的資料", dataNotes:"資料提示",
+      footer:"研究用途。這是觀察型 factual forecast，不是診斷、治療建議或因果推論。CSV 只在伺服器記憶體中解析，不保存病人識別碼。",
+      ready:"資料已載入，尚未上傳。", invalidCsv:"請選擇 .csv 檔案。", loadingExample:"正在載入範例…", exampleError:"無法載入範例。", predicting:"模型正在讀取病人歷史…", predictionError:"預測失敗", complete:"預測完成。上傳內容未被保存。",
+      width:value=>`完整寬度 ${value}`, quality:q=>`收到 ${q.rows_received} 列，模型使用最近 ${q.history_rows_used} 列，涵蓋 ${q.history_span_hours} 小時。最新 BUN measurement age：${q.bunAge} 小時。`, noWarnings:"主要資料欄位完整，沒有額外提示。",
+      missing_optional_measurements:variables=>`缺少可選量測；模型使用訓練時的缺失處理：${variables.join(", ")}`, missing_treatment_context:variables=>`未回報的治療情境維持為未知，不當成 0：${variables.join(", ")}`
+    },
+    en: {
+      pageTitle:"Osler Personalized BUN 3-Hour Forecast", title:"Forecast BUN three hours ahead",
+      subtitle:"Upload one patient's renal time-series CSV. The model reads the latest six observations and returns a personalized BUN forecast with a validated 90% prediction interval.",
+      notice:"<strong>Time-honest:</strong> BUN@6h is a strong reference cell. This page uses the separately validated <strong>BUN@3h</strong> model and never relabels the six-hour model.",
+      exampleLabel:"Synthetic examples (no real patient data)", loadExample:"Load this example", downloadExample:"Download selected example",
+      dropCsv:"Drop a CSV here", requirements:"At least 6 rows. Required: <code>hours_since_onset</code> and <code>bun</code>", chooseCsv:"Choose CSV", predict:"Run forecast",
+      optionalSummary:"Optional columns and units", optionalBody:"<code>creatinine</code> mg/dL, <code>urine_output</code> mL, <code>potassium</code>, <code>bicarbonate</code>, <code>sodium</code> mEq/L, <code>map</code> mmHg, and five <code>hist_*</code> treatment columns. Blank means unknown, never zero.",
+      resultTitle:"Personalized forecast", intervalBadge:"90% calibrated interval", currentBun:"Current BUN", populationModel:"Population model", personalizedForecast:"Personalized 3h forecast", changeFromNow:"Change from current", intervalTitle:"90% prediction interval", dataUsed:"Data used", dataNotes:"Data notes",
+      footer:"Research use only. This is an observational factual forecast, not diagnosis, treatment advice, or causal inference. CSV data is parsed in server memory and patient identifiers are not retained.",
+      ready:"Data loaded and not yet uploaded.", invalidCsv:"Please choose a .csv file.", loadingExample:"Loading example…", exampleError:"Could not load the example.", predicting:"The model is reading this patient's history…", predictionError:"Forecast failed", complete:"Forecast complete. The upload was not retained.",
+      width:value=>`Full width ${value}`, quality:q=>`Received ${q.rows_received} rows; used the latest ${q.history_rows_used} across ${q.history_span_hours} hours. Latest BUN measurement age: ${q.bunAge} hours.`, noWarnings:"Core input fields are complete; no additional notes.",
+      missing_optional_measurements:variables=>`Optional measurements were missing and handled by training-time imputation: ${variables.join(", ")}`, missing_treatment_context:variables=>`Unreported treatment context remained unknown, not zero: ${variables.join(", ")}`
+    }
+  };
+
+  let language = localStorage.getItem("osler-bun-language") || (navigator.language.startsWith("zh") ? "zh-Hant" : "en");
+  let csvText = "";
+  let loadedFileName = "";
+  let examples = [];
+  let lastResult = null;
+  let statusKey = "";
+  const input = document.getElementById("file-input");
+  const dropzone = document.getElementById("dropzone");
+  const fileName = document.getElementById("file-name");
+  const predictButton = document.getElementById("predict");
+  const status = document.getElementById("status");
+  const results = document.getElementById("results");
+  const exampleSelect = document.getElementById("example-select");
+  const downloadExample = document.getElementById("download-example");
+
+  function t(key) { return translations[language][key]; }
+  function localized(value) { return value?.[language] || value?.en || ""; }
+  function renderLanguage() {
+    document.documentElement.lang = language;
+    document.title = t("pageTitle");
+    document.querySelectorAll("[data-i18n]").forEach(node => { node.textContent = t(node.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-html]").forEach(node => { node.innerHTML = t(node.dataset.i18nHtml); });
+    document.querySelectorAll(".language-button").forEach(button => button.classList.toggle("active", button.dataset.language === language));
+    fileName.textContent = loadedFileName || t("dropCsv");
+    renderExamples();
+    if (lastResult) renderResult(lastResult);
+    if (statusKey) setStatus(statusKey, status.classList.contains("error"));
+  }
+
+  function setStatus(key, isError=false) {
+    statusKey = key;
+    status.className = isError ? "status error" : "status";
+    status.textContent = key ? t(key) : "";
+  }
+
+  function renderExamples() {
+    const selected = exampleSelect.value || examples[0]?.id;
+    exampleSelect.innerHTML = "";
+    for (const example of examples) {
+      const option = document.createElement("option");
+      option.value = example.id;
+      option.textContent = localized(example.title);
+      exampleSelect.appendChild(option);
+    }
+    if (examples.some(example => example.id === selected)) exampleSelect.value = selected;
+    const current = examples.find(example => example.id === exampleSelect.value);
+    downloadExample.href = current?.download_url || "#";
+    downloadExample.download = current?.filename || "example.csv";
+  }
+
+  function useCsv(name, text) {
+    csvText = text;
+    loadedFileName = name;
+    fileName.textContent = name;
+    predictButton.disabled = !text.trim();
+    setStatus(text.trim() ? "ready" : "");
+    results.classList.remove("visible");
+    lastResult = null;
+  }
+
+  async function useFile(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setStatus("invalidCsv", true);
+      return;
+    }
+    useCsv(file.name, await file.text());
+  }
+
+  input.addEventListener("change", () => useFile(input.files[0]));
+  for (const event of ["dragenter","dragover"]) dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.add("drag"); });
+  for (const event of ["dragleave","drop"]) dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.remove("drag"); });
+  dropzone.addEventListener("drop", e => useFile(e.dataTransfer.files[0]));
+  exampleSelect.addEventListener("change", renderExamples);
+  document.querySelectorAll(".language-button").forEach(button => button.addEventListener("click", () => { language = button.dataset.language; localStorage.setItem("osler-bun-language", language); renderLanguage(); }));
+
+  document.getElementById("load-example").addEventListener("click", async () => {
+    const example = examples.find(item => item.id === exampleSelect.value);
+    if (!example) return;
+    setStatus("loadingExample");
+    try {
+      const response = await fetch(example.download_url);
+      if (!response.ok) throw new Error();
+      useCsv(example.filename, await response.text());
+    } catch (_) {
+      setStatus("exampleError", true);
+    }
+  });
+
+  function number(value) { return `${Number(value).toFixed(2)} mg/dL`; }
+  function signed(value) { const n=Number(value); return `${n >= 0 ? "+" : ""}${n.toFixed(2)} mg/dL`; }
+  function warningText(warning) {
+    const formatter = t(warning.code);
+    return typeof formatter === "function" ? formatter(warning.variables || []) : warning.code;
+  }
+  function renderResult(data) {
+    document.getElementById("current").textContent = number(data.current_bun);
+    document.getElementById("population").textContent = number(data.population_point);
+    document.getElementById("personalized").textContent = number(data.personalized_point);
+    document.getElementById("change").textContent = signed(data.change_from_current);
+    document.getElementById("lower").textContent = number(data.lower);
+    document.getElementById("upper").textContent = number(data.upper);
+    document.getElementById("width").textContent = t("width")(number(data.interval_full_width));
+    const q=data.input_quality;
+    document.getElementById("quality-summary").textContent = t("quality")({...q,bunAge:data.current_bun_measurement_age_hours});
+    const list=document.getElementById("warnings");
+    list.innerHTML="";
+    const warnings=q.warnings.length ? q.warnings.map(warningText) : [t("noWarnings")];
+    for (const warning of warnings) { const item=document.createElement("li"); item.textContent=warning; list.appendChild(item); }
+  }
+
+  predictButton.addEventListener("click", async () => {
+    predictButton.disabled=true;
+    setStatus("predicting");
+    try {
+      const response=await fetch("/api/predict-csv",{method:"POST",headers:{"Content-Type":"text/csv; charset=utf-8"},body:csvText});
+      const data=await response.json();
+      if (!response.ok) throw new Error(data.detail || t("predictionError"));
+      lastResult=data;
+      renderResult(data);
+      results.classList.add("visible");
+      setStatus("complete");
+      results.scrollIntoView({behavior:"smooth",block:"start"});
+    } catch (error) {
+      statusKey="";
+      status.className="status error";
+      status.textContent=error.message;
+      results.classList.remove("visible");
+    } finally { predictButton.disabled=!csvText.trim(); }
+  });
+
+  async function initialize() {
+    renderLanguage();
+    try {
+      const response=await fetch("/api/examples");
+      if (!response.ok) throw new Error();
+      examples=(await response.json()).examples;
+      renderExamples();
+    } catch (_) {
+      setStatus("exampleError", true);
+    }
+  }
+  initialize();
+</script>
+</body>
+</html>

@@ -184,6 +184,10 @@ ALIASES = {
     "scr": "creatinine",
 }
 
+TARGET_UNITS = {
+    "urine_output": "mL/hour",
+}
+
 
 def sample_payload() -> dict[str, Any]:
     """Return a small synthetic trajectory for the demo UI."""
@@ -396,6 +400,7 @@ def forecast(payload: dict[str, Any]) -> dict[str, Any]:
                 outputs.append({
                     "system": system.name,
                     "target": target.target,
+                    "unit": TARGET_UNITS.get(target.target),
                     "horizon_hours": target.horizon_hours,
                     "status": "missing_current_value",
                     "tier": "unsupported",
@@ -409,9 +414,36 @@ def forecast(payload: dict[str, Any]) -> dict[str, Any]:
                 continue
             precision = _precision_forecast(frame, target)
             if precision is not None:
+                if not _precision_within_contract(precision, current, target):
+                    outputs.append({
+                        "system": system.name,
+                        "target": target.target,
+                        "unit": TARGET_UNITS.get(target.target),
+                        "horizon_hours": target.horizon_hours,
+                        "status": "precision_artifact_outside_physiologic_contract",
+                        "population": {
+                            "point": float(current),
+                            "source": "persistence_safety_fallback",
+                        },
+                        "personalized": {
+                            "point": float(current),
+                            "delta_vs_population": 0.0,
+                            "source": "persistence_safety_fallback",
+                        },
+                        "lower": None,
+                        "upper": None,
+                        "interval_status": "withheld_after_runtime_contract_failure",
+                        "can_personalize": False,
+                        "reason": (
+                            "serialized prediction exceeded the target residual "
+                            "or physical-value contract"
+                        ),
+                    })
+                    continue
                 outputs.append({
                     "system": system.name,
                     "target": target.target,
+                    "unit": TARGET_UNITS.get(target.target),
                     "horizon_hours": target.horizon_hours,
                     "status": "ready",
                     "tier": "validated_artifact",
@@ -427,7 +459,11 @@ def forecast(payload: dict[str, Any]) -> dict[str, Any]:
                         ),
                         "source": "neural_patient_state_artifact",
                     },
-                    "lower": precision.lower,
+                    "lower": (
+                        max(0.0, precision.lower)
+                        if target.target == "urine_output"
+                        else precision.lower
+                    ),
                     "upper": precision.upper,
                     "interval_target_coverage": precision.coverage,
                     "interval_status": "validated_patient_specific_conformal",
@@ -453,9 +489,12 @@ def forecast(payload: dict[str, Any]) -> dict[str, Any]:
                 continue
             adjustment, source = _belief_adjustment(system.name, target, latest_features, latest_row)
             personalized = float(current + adjustment)
+            if target.target == "urine_output":
+                personalized = max(0.0, personalized)
             outputs.append({
                 "system": system.name,
                 "target": target.target,
+                "unit": TARGET_UNITS.get(target.target),
                 "horizon_hours": target.horizon_hours,
                 "status": "illustrative_only",
                 "tier": "illustrative",
@@ -694,6 +733,9 @@ def _precision_forecast(frame: pd.DataFrame, target: TargetSpec):
     artifact = _precision_artifacts().get((target.target, target.horizon_hours))
     if artifact is None:
         return None
+    expected_unit = TARGET_UNITS.get(target.target)
+    if expected_unit is not None and artifact.metadata.get("target_unit") != expected_unit:
+        return None
     columns = list(artifact.metadata["feature_columns"])
     physical = frame.reindex(columns=columns).apply(pd.to_numeric, errors="coerce")
     steps = int(artifact.metadata["history_steps"])
@@ -784,6 +826,17 @@ def _clip_delta(value: float, max_abs_delta: float) -> float:
     if not np.isfinite(value):
         return 0.0
     return float(np.clip(value, -max_abs_delta, max_abs_delta))
+
+
+def _precision_within_contract(precision, current: float, target: TargetSpec) -> bool:
+    points = (precision.population_point, precision.personalized_point)
+    if not all(np.isfinite(point) for point in points):
+        return False
+    if any(abs(float(point) - current) > target.max_abs_delta for point in points):
+        return False
+    if target.target == "urine_output" and any(float(point) < 0.0 for point in points):
+        return False
+    return True
 
 
 def _as_float(value: Any, default: float | None = np.nan) -> float | None:

@@ -5,19 +5,155 @@ from pathlib import Path
 import numpy as np
 
 from whole_body_joint_runtime import (
+    forecast_catalog_value,
     forecast_joint_values,
     forecast_sparse_irregular_value,
+    resolve_catalog_cell,
 )
 
 
 def joint_registry(cells):
     return {
-        "schema": "whole_body_promotion_registry.v2",
+        "schema": "whole_body_promotion_registry.v3",
         "target_horizon_registry": cells,
     }
 
 
 class WholeBodyJointRuntimeTests(unittest.TestCase):
+    def test_current_catalog_resolves_and_serves_regime_cell(self):
+        root = Path(__file__).resolve().parent
+        catalog = root / "whole_body_runtime_candidate_catalog_v12.json"
+        cell = forecast_catalog_value(
+            prediction=101.0,
+            prediction_candidate_id=(
+                "chloride_regime_calibrated_change_hurdle_joint_jepa"
+            ),
+            current=104.0,
+            target="chloride",
+            horizon=12.0,
+            catalog=catalog,
+            input_contract_id=(
+                "joint_asof_whole_body_state_aligned_treatment_"
+                "interval_urine.v1"
+            ),
+            variable_unit="mEq/L",
+        )
+        self.assertTrue(cell["can_move"])
+        self.assertEqual(cell["forecast_point"], 101.0)
+        self.assertEqual(
+            cell["candidate_id"],
+            "chloride_regime_calibrated_change_hurdle_joint_jepa",
+        )
+
+    def test_catalog_rejects_prediction_from_different_candidate(self):
+        root = Path(__file__).resolve().parent
+        cell = forecast_catalog_value(
+            prediction=101.0,
+            prediction_candidate_id="wrong_model",
+            current=104.0,
+            target="chloride",
+            horizon=12.0,
+            catalog=root / "whole_body_runtime_candidate_catalog_v12.json",
+            input_contract_id=(
+                "joint_asof_whole_body_state_aligned_treatment_"
+                "interval_urine.v1"
+            ),
+            variable_unit="mEq/L",
+        )
+        self.assertFalse(cell["can_move"])
+        self.assertEqual(cell["forecast_point"], 104.0)
+        self.assertEqual(cell["fallback_reason"], "prediction_source_mismatch")
+
+    def test_catalog_resolution_fails_closed_on_wrong_contract_or_unit(self):
+        root = Path(__file__).resolve().parent
+        catalog = root / "whole_body_runtime_candidate_catalog_v12.json"
+        for contract, unit in (
+            ("wrong.v1", "mEq/L"),
+            (
+                "joint_asof_whole_body_state_aligned_treatment_interval_urine.v1",
+                "mmol/L",
+            ),
+        ):
+            resolution = resolve_catalog_cell(
+                catalog,
+                target="chloride",
+                horizon=12.0,
+                input_contract_id=contract,
+                variable_unit=unit,
+            )
+            self.assertFalse(resolution["resolved"])
+            self.assertIn(
+                "no_exact_catalog_candidate", resolution["rejection_reasons"]
+            )
+
+    def test_catalog_resolves_domain_invariant_full_body_glucose(self):
+        root = Path(__file__).resolve().parent
+        resolution = resolve_catalog_cell(
+            root / "whole_body_runtime_candidate_catalog_v12.json",
+            target="glucose",
+            horizon=1.0,
+            input_contract_id="eicu_canonical_exact_future_full_cohort.v1",
+            variable_unit="mg/dL",
+        )
+        self.assertTrue(resolution["resolved"])
+        self.assertEqual(
+            resolution["candidate_id"],
+            "adjacent_three_level_glucose_domain_invariant_20260810",
+        )
+
+    def test_catalog_resolution_rejects_ambiguous_exact_sources(self):
+        candidate = {
+            "candidate_id": "one",
+            "runtime_status": "target_gated_factual_research_only",
+            "input_contract_id": "joint.v1",
+            "variable_units": {"glucose": "mg/dL"},
+            "target_horizon_registry": {
+                "glucose@6h": {"validated_for_joint_runtime": True}
+            },
+        }
+        resolution = resolve_catalog_cell(
+            {
+                "schema": "whole_body_runtime_candidate_catalog.v1",
+                "candidates": [candidate, {**candidate, "candidate_id": "two"}],
+            },
+            target="glucose",
+            horizon=6.0,
+            input_contract_id="joint.v1",
+            variable_unit="mg/dL",
+        )
+        self.assertFalse(resolution["resolved"])
+        self.assertIn(
+            "ambiguous_catalog_candidate", resolution["rejection_reasons"]
+        )
+
+    def test_registry_missing_contract_or_units_fails_closed(self):
+        base_registry = {
+                "schema": "whole_body_promotion_registry.v3",
+            "candidate_id": "unsafe_incomplete_registry",
+            "promotion_status": "validated_target_gated_joint_research_only",
+            "target_horizon_registry": {
+                "glucose@6h": {
+                    "validated_for_joint_runtime": True,
+                    "source_model": "unsafe_incomplete_registry",
+                }
+            },
+        }
+        for registry in (
+            base_registry,
+            {**base_registry, "input_contract_id": "joint.v1"},
+        ):
+            cell = forecast_joint_values(
+                prediction=[[110.0]],
+                current=[[120.0]],
+                variables=("glucose",),
+                horizons=6.0,
+                registry=registry,
+                checkpoint_status="validated_target_gated_joint_research_only",
+                input_contract_id="joint.v1",
+                variable_units={"glucose": "mg/dL"},
+            )["forecasts"][0]["glucose"]
+            self.assertFalse(cell["can_move"])
+
     def test_validated_glucose_registries_move_source_specific_cells(self):
         root = Path(__file__).resolve().parent
         aligned = (
@@ -80,7 +216,7 @@ class WholeBodyJointRuntimeTests(unittest.TestCase):
                     "validated_target_gated_joint_research_only"
                 ),
                 input_contract_id=contract,
-                variable_units={"respiratory_rate": "breaths/minute"},
+                variable_units={"respiratory_rate": "breaths/min"},
             )["forecasts"][0]["respiratory_rate"]
             self.assertTrue(result["can_move"])
             self.assertEqual(
@@ -271,16 +407,21 @@ class WholeBodyJointRuntimeTests(unittest.TestCase):
         self.assertIn("input_contract_mismatch", cell["rejection_reasons"])
 
     def test_unvalidated_cells_fall_back_to_persistence(self):
+        registry = joint_registry({
+            "map@6h": {"validated": True},
+            "creatinine@6h": {"validated": False},
+        })
+        registry["input_contract_id"] = "test_joint.v1"
+        registry["variable_units"] = {"map": "mmHg", "creatinine": "mg/dL"}
         result = forecast_joint_values(
             prediction=np.asarray([[110.0, 2.0]], dtype=float),
             current=np.asarray([[70.0, 1.2]], dtype=float),
             variables=("map", "creatinine"),
             horizons=6.0,
-            registry=joint_registry({
-                    "map@6h": {"validated": True},
-                    "creatinine@6h": {"validated": False},
-                }),
+            registry=registry,
             checkpoint_status="validated_target_gated_joint_research_only",
+            input_contract_id="test_joint.v1",
+            variable_units={"map": "mmHg", "creatinine": "mg/dL"},
         )
         self.assertEqual(result["forecasts"][0]["map"]["source"], "joint_jepa_validated")
         self.assertEqual(result["forecasts"][0]["creatinine"]["source"], "persistence_fallback")
@@ -312,21 +453,26 @@ class WholeBodyJointRuntimeTests(unittest.TestCase):
         self.assertFalse(result["forecasts"][0]["map"]["can_move"])
 
     def test_v2_contract_exposes_provenance_without_granting_causality(self):
+        registry = joint_registry({
+            "glucose@6h": {
+                "validated": True,
+                "patient_conformal": True,
+                "hospital_conformal": True,
+                "care_unit_conformal": True,
+                "time_conformal": True,
+            }
+        })
+        registry["input_contract_id"] = "test_joint.v1"
+        registry["variable_units"] = {"glucose": "mg/dL"}
         result = forecast_joint_values(
             prediction=np.asarray([[95.0]], dtype=float),
             current=np.asarray([[90.0]], dtype=float),
             variables=("glucose",),
             horizons=6.0,
-            registry=joint_registry({
-                    "glucose@6h": {
-                        "validated": True,
-                        "patient_conformal": True,
-                        "hospital_conformal": True,
-                        "care_unit_conformal": True,
-                        "time_conformal": True,
-                    }
-                }),
+            registry=registry,
             checkpoint_status="validated_target_gated_joint_research_only",
+            input_contract_id="test_joint.v1",
+            variable_units={"glucose": "mg/dL"},
             lower=np.asarray([[85.0]]),
             upper=np.asarray([[105.0]]),
             observed=np.asarray([[True]]),
@@ -346,16 +492,21 @@ class WholeBodyJointRuntimeTests(unittest.TestCase):
         self.assertFalse(cell["causal_claim_allowed"])
 
     def test_missing_anchor_uses_only_explicitly_validated_nowcast(self):
+        registry = joint_registry({
+            "creatinine@24h": {"validated": True},
+            "bun@24h": {"validated": True},
+        })
+        registry["input_contract_id"] = "test_joint.v1"
+        registry["variable_units"] = {"creatinine": "mg/dL", "bun": "mg/dL"}
         result = forecast_joint_values(
             prediction=np.asarray([[2.0, 3.0]]),
             current=np.asarray([[np.nan, np.nan]]),
             variables=("creatinine", "bun"),
             horizons=24.0,
-            registry=joint_registry({
-                    "creatinine@24h": {"validated": True},
-                    "bun@24h": {"validated": True},
-                }),
+            registry=registry,
             checkpoint_status="validated_target_gated_joint_research_only",
+            input_contract_id="test_joint.v1",
+            variable_units={"creatinine": "mg/dL", "bun": "mg/dL"},
             observed=np.asarray([[False, False]]),
             nowcast=np.asarray([[1.4, 22.0]]),
             nowcast_validated=np.asarray([[True, False]]),

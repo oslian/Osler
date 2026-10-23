@@ -30,6 +30,20 @@ from osler_jepa.waveform_features import read_waveform_feature_window
 DEFAULT_TARGETS = ("heart_rate", "map", "o2sat", "respiratory_rate")
 
 
+def is_waveform_feature(column: str) -> bool:
+    """Recognize both legacy robust and beat-level waveform columns."""
+
+    return str(column).startswith(("wave_", "wavebeat_"))
+
+
+TARGET_WAVEFORM_GROUPS = {
+    "heart_rate": ("ecg", "pleth"),
+    "map": ("arterial_pressure",),
+    "o2sat": ("pleth",),
+    "respiratory_rate": ("respiration",),
+}
+
+
 def parse_master_header(master_path: Path) -> dict[str, object] | None:
     """Parse a MIMIC4WDB multi-segment master header into segment rows."""
 
@@ -176,7 +190,11 @@ def candidate_anchor_rows(
     return eligible.reset_index(drop=True)
 
 
-def attach_waveform_features(rows: pd.DataFrame, seconds: float) -> tuple[pd.DataFrame, dict[str, object]]:
+def attach_waveform_features(
+    rows: pd.DataFrame,
+    seconds: float,
+    feature_mode: str = "robust",
+) -> tuple[pd.DataFrame, dict[str, object]]:
     """Read waveform windows before anchors and append feature columns."""
 
     output_rows = []
@@ -185,7 +203,12 @@ def attach_waveform_features(rows: pd.DataFrame, seconds: float) -> tuple[pd.Dat
         fs = float(row["fs"])
         sampfrom = int(round((row["t"] - row["segment_start"]).total_seconds() * fs - seconds * fs))
         try:
-            record = read_waveform_feature_window(row["segment_path"], sampfrom=sampfrom, seconds=seconds)
+            record = read_waveform_feature_window(
+                row["segment_path"],
+                sampfrom=sampfrom,
+                seconds=seconds,
+                feature_mode=feature_mode,
+            )
         except Exception:
             failures += 1
             continue
@@ -193,12 +216,13 @@ def attach_waveform_features(rows: pd.DataFrame, seconds: float) -> tuple[pd.Dat
         payload.update(record.features)
         output_rows.append(payload)
     frame = pd.DataFrame(output_rows)
-    wave_features = [column for column in frame.columns if column.startswith("wave_")] if not frame.empty else []
+    wave_features = [column for column in frame.columns if is_waveform_feature(column)] if not frame.empty else []
     summary = {
         "candidate_anchor_rows": int(len(rows)),
         "feature_rows": int(len(frame)),
         "read_failures": int(failures),
         "wave_feature_count": int(len(wave_features)),
+        "feature_mode": feature_mode,
         "wave_features": sorted(wave_features),
         "signal_group_counts": (
             frame["signal_groups"].str.get_dummies(sep="|").sum().astype(int).to_dict()
@@ -209,15 +233,28 @@ def attach_waveform_features(rows: pd.DataFrame, seconds: float) -> tuple[pd.Dat
     return frame, summary
 
 
-def wave_feature_sets(frame: pd.DataFrame, target: str) -> dict[str, list[str]]:
+def wave_feature_sets(
+    frame: pd.DataFrame,
+    target: str,
+    profile: str = "target_group",
+) -> dict[str, list[str]]:
     table = forecast_feature_columns(frame, target)
+    groups = TARGET_WAVEFORM_GROUPS.get(target, ())
     wave = [
         column for column in frame.columns
-        if column.startswith("wave_")
+        if is_waveform_feature(column)
+        and any(f"wave_{group}_" in column or f"wavebeat_{group}_" in column for group in groups)
         and pd.to_numeric(frame[column], errors="coerce").notna().any()
     ]
+    if profile == "consensus":
+        wave = [
+            column for column in wave
+            if "_consensus_" in column or "_quality_" in column
+        ]
+    elif profile != "target_group":
+        raise ValueError(f"unknown waveform feature profile: {profile}")
     candidate = sorted(set(table + wave))
-    wave = [column for column in candidate if column.startswith("wave_")]
+    wave = [column for column in candidate if column.startswith(("wave_", "wavebeat_"))]
     baseline = [column for column in candidate if column not in wave]
     return {"baseline": baseline, "candidate": candidate, "wave": wave}
 
@@ -233,9 +270,10 @@ def audit_target_waveform(
     bootstrap_samples: int,
     min_pairs: int,
     min_subjects: int,
+    wave_profile: str,
 ) -> dict[str, object]:
     rows = forecast_rows(frame, target, future_suffix)
-    sets = wave_feature_sets(frame, target)
+    sets = wave_feature_sets(frame, target, profile=wave_profile)
     wave_count = len(sets["wave"])
     random_reports = []
     for seed in seeds:
@@ -318,6 +356,7 @@ def audit_target_waveform(
             "candidate_feature_count": int(len(sets["candidate"])),
             "wave_feature_count": int(wave_count),
             "wave_features": sets["wave"],
+            "wave_profile": wave_profile,
         },
         "random_patient_splits": summary,
         "careunit_holdout": {
@@ -348,7 +387,11 @@ def run_waveform_precision_audit(args) -> dict[str, object]:
         max_anchors=args.max_anchors,
         seed=args.seed,
     )
-    feature_frame, feature_summary = attach_waveform_features(anchors, seconds=args.seconds)
+    feature_frame, feature_summary = attach_waveform_features(
+        anchors,
+        seconds=args.seconds,
+        feature_mode=args.feature_mode,
+    )
     target_reports = {}
     if not feature_frame.empty:
         for target in args.targets:
@@ -364,6 +407,7 @@ def run_waveform_precision_audit(args) -> dict[str, object]:
                 args.bootstrap_samples,
                 args.min_pairs,
                 args.min_subjects,
+                args.wave_profile,
             )
     return {
         "artifact": "MIMIC-IV Waveform factual precision audit",
@@ -393,6 +437,8 @@ def main() -> None:
     parser.add_argument("--mimic-dir", type=Path, default=MIMIC_DIR)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seconds", type=float, default=60.0)
+    parser.add_argument("--feature-mode", choices=("robust", "beat"), default="beat")
+    parser.add_argument("--wave-profile", choices=("target_group", "consensus"), default="target_group")
     parser.add_argument("--max-anchors", type=int, default=500)
     parser.add_argument("--targets", nargs="+", default=list(DEFAULT_TARGETS))
     parser.add_argument("--future-suffix", default="tp6")

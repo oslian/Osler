@@ -17,6 +17,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 from osler_jepa.waveform import classify_signal_name
+from osler_jepa.waveform_encoder import beat_level_array_features
 
 
 @dataclass(frozen=True)
@@ -209,16 +210,26 @@ def waveform_array_features(
     return features
 
 
-def read_waveform_feature_record(record_path: str | Path, seconds: float = 60.0) -> WaveformFeatureRecord:
+def read_waveform_feature_record(
+    record_path: str | Path,
+    seconds: float = 60.0,
+    feature_mode: str = "robust",
+) -> WaveformFeatureRecord:
     """Read a bounded waveform segment and return candidate features."""
 
-    return read_waveform_feature_window(record_path, sampfrom=0, seconds=seconds)
+    return read_waveform_feature_window(
+        record_path,
+        sampfrom=0,
+        seconds=seconds,
+        feature_mode=feature_mode,
+    )
 
 
 def read_waveform_feature_window(
     record_path: str | Path,
     sampfrom: int = 0,
     seconds: float = 60.0,
+    feature_mode: str = "robust",
 ) -> WaveformFeatureRecord:
     """Read a bounded waveform window and return candidate features."""
 
@@ -247,6 +258,20 @@ def read_waveform_feature_window(
     signal_names = tuple(str(name) for name in record.sig_name)
     groups = tuple(sorted({group for group in (classify_signal_name(name) for name in signal_names) if group}))
     seconds_read = float(signal_values.shape[0] / fs) if fs else 0.0
+    if feature_mode == "robust":
+        features = waveform_array_features(
+            signal_values,
+            signal_names,
+            sampling_frequency_hz=fs,
+        )
+    elif feature_mode == "beat":
+        features = beat_level_array_features(
+            signal_values,
+            signal_names,
+            sampling_frequency_hz=fs,
+        )
+    else:
+        raise ValueError(f"unknown feature_mode: {feature_mode}")
     return WaveformFeatureRecord(
         record_name=str(record.record_name),
         source_path=str(record_path),
@@ -254,7 +279,7 @@ def read_waveform_feature_window(
         seconds_read=seconds_read,
         signals=signal_names,
         signal_groups=groups,
-        features=waveform_array_features(signal_values, signal_names, sampling_frequency_hz=fs),
+        features=features,
     )
 
 

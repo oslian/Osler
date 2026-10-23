@@ -1,0 +1,46 @@
+{
+  "schema": "eicu_raw_measurement_time_augmentation.v2",
+  "data_root": "/Users/chunyouchang/Downloads/eicu-collaborative-research-database-2.0",
+  "transition_root": "/Users/chunyouchang/Desktop/llm_project/medical_jepa",
+  "output_root": "/Users/chunyouchang/Desktop/llm_project/medical_jepa/eicu_time_interpolated_smoke",
+  "raw_event_source": "eicu/lab.csv.gz + vitalPeriodic.csv.gz + vitalAperiodic.csv.gz + intakeOutput.csv.gz + respiratoryCharting.csv.gz",
+  "strict_timestamp_rule": "event_offset > anchor_offset",
+  "future_label_rule": "nearest raw event strictly after anchor; exact labels are within the target-specific strict tolerance; near labels are audit-only; dense continuous variables may use a separately marked bracketed-label candidate",
+  "future_delta_t_columns": "future_delta_t_hr_<variable>",
+  "future_quality_columns": "future_label_quality_<variable>",
+  "future_label_mode": "interpolate_dense",
+  "interpolated_label_weight": 0.5,
+  "training_label_weight_rule": "exact=1.0; interpolated_dense=candidate_weight; near/missing=0.0",
+  "row_level_outputs_committed": false,
+  "causal_claim_allowed": false,
+  "files": [
+    {
+      "module": "sepsis",
+      "horizon_hours": 1,
+      "rows": 451009,
+      "stays": 31298,
+      "output": "/Users/chunyouchang/Desktop/llm_project/medical_jepa/eicu_time_interpolated_smoke/eicu_sepsis_transitions_1h.parquet",
+      "label_columns": 18,
+      "observed_label_counts": {
+        "bicarbonate": 408055,
+        "bilirubin": 270345,
+        "bilirubin_direct": 80398,
+        "bun": 421854,
+        "creatinine": 421843,
+        "glucose": 432896,
+        "heart_rate": 446240,
+        "lactate": 134392,
+        "map": 444998,
+        "o2sat": 440550,
+        "ph": 186424,
+        "platelets": 416610,
+        "potassium": 423892,
+        "respiratory_rate": 415364,
+        "sodium": 422568,
+        "temperature": 65662,
+        "urine_output": 324128,
+        "wbc": 418354
+      }
+    }
+  ]
+}

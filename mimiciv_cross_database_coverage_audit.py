@@ -44,6 +44,19 @@ def stable_seed(*parts: object) -> int:
     return int.from_bytes(hashlib.sha256(payload).digest()[:4], "big")
 
 
+def physiology_forecast_feature_columns(
+    frame: pd.DataFrame,
+    target: str,
+) -> list[str]:
+    """Return anchor-time physiology only for the no-treatment audit."""
+
+    return [
+        column
+        for column in forecast_feature_columns(frame, target)
+        if not column.startswith(("hist_", "act_"))
+    ]
+
+
 def add_time_holdout_column(frame: pd.DataFrame, discovery_fraction: float) -> pd.DataFrame:
     frame = frame.copy()
     if "t" not in frame:
@@ -280,11 +293,19 @@ def audit_mimic(
     min_test_rows: int,
     max_targets: int | None,
     max_rows_per_target: int | None,
+    selected_targets: tuple[str, ...],
+    forecast_only: bool = False,
 ) -> dict[str, object]:
     frame = pd.read_parquet(cohort).reset_index(drop=True)
     frame = add_time_holdout_column(frame, discovery_fraction)
     nowcast_targets = list(eligible_current_targets(frame))
     forecast_targets = list(eligible_forecast_targets(frame, future_suffix))
+    if forecast_only:
+        nowcast_targets = []
+    if selected_targets:
+        selected = set(selected_targets)
+        nowcast_targets = [target for target in nowcast_targets if target in selected]
+        forecast_targets = [target for target in forecast_targets if target in selected]
     if max_targets is not None:
         nowcast_targets = nowcast_targets[:max_targets]
         forecast_targets = forecast_targets[:max_targets]
@@ -329,7 +350,7 @@ def audit_mimic(
                 frame,
                 target,
                 rows,
-                forecast_feature_columns(frame, target),
+                physiology_forecast_feature_columns(frame, target),
                 seeds,
                 discovery_fraction,
                 min_pairs,
@@ -409,6 +430,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-subjects", type=int, default=40)
     parser.add_argument("--bootstrap-samples", type=int, default=300)
     parser.add_argument("--future-suffix", default="tp6")
+    parser.add_argument(
+        "--targets",
+        default="",
+        help="Optional comma-separated target subset; blank audits all targets.",
+    )
+    parser.add_argument(
+        "--forecast-only",
+        action="store_true",
+        help="Skip same-time nowcast audits and evaluate only future forecast cells.",
+    )
     parser.add_argument("--conformal-level", type=float, default=0.9)
     parser.add_argument("--min-calibration-rows", type=int, default=200)
     parser.add_argument("--min-test-rows", type=int, default=100)
@@ -427,6 +458,9 @@ def main() -> None:
     seeds = tuple(int(item.strip()) for item in args.seeds.split(",") if item.strip())
     max_targets = None if args.max_targets < 0 else int(args.max_targets)
     max_rows_per_target = None if args.max_rows_per_target <= 0 else int(args.max_rows_per_target)
+    selected_targets = tuple(
+        target.strip() for target in args.targets.split(",") if target.strip()
+    )
     report = audit_mimic(
         args.cohort,
         seeds,
@@ -442,6 +476,8 @@ def main() -> None:
         args.min_test_rows,
         max_targets,
         max_rows_per_target,
+        selected_targets,
+        args.forecast_only,
     )
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps({

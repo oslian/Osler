@@ -5,7 +5,9 @@ provides shared slow context, target-specific fast future latents, and organ
 tokens.  Small zero-initialized residual adapters may improve the router, but
 cannot silently replace it.
 
-Three bounded candidates are compared on identical patient splits:
+Bounded candidates are compared on identical patient splits, including a
+strict adjacent hierarchy whose only representation edges are
+system <-> organ <-> body.
 
 * hierarchical: fast/slow JEPA latents, no explicit organ route;
 * dynamic_route: patient/target/horizon-specific sparse cross-organ attention;
@@ -25,12 +27,31 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.utils.extmath import randomized_svd
 from torch import nn
+
+from osler_jepa.adjacent_hierarchy import (
+    HIERARCHY_MODELS,
+    AdjacentThreeLevelResidualAdapter,
+    split_adjacent_training_epochs,
+)
+from osler_jepa.patient_split import selection_patients
+from osler_jepa.organ_schema import (
+    canonical_organ_adjacency,
+    canonical_target_organ_membership,
+)
+from osler_jepa.interval_personalization import (
+    online_adaptive_interval_widths,
+    patient_weighted_quantile,
+    selective_interval_widths,
+)
 
 from whole_body_joint_gate import (
     _finite_sample_conformal_quantile,
     _patient_paired_bootstrap,
     _split_by_column,
+    _split_forward_time,
+    _split_known_groups,
     _split_train_calibration,
     _validated_router_prediction,
 )
@@ -48,6 +69,8 @@ DEFAULT_TARGETS = (
     "map",
     "heart_rate",
 )
+
+DEFAULT_VARIANTS = ("adjacent_three_level",)
 
 
 def _validate_resume_seed_extension(previous_seeds, requested_seeds, reports):
@@ -129,6 +152,103 @@ def _future_label_support(
             "by_horizon": by_horizon,
         }
     return output
+
+
+def _split_rows_for_mode(
+    frame: pd.DataFrame,
+    mode: str,
+    seed: int,
+    *,
+    train_database: str | None = None,
+    test_database: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Create the requested leakage-safe external evaluation partition."""
+
+    if mode == "subject":
+        return _split_by_column(frame, "subject_id", seed)
+    if mode == "hospital":
+        return _split_known_groups(frame, "hospitalid", seed)
+    if mode == "careunit":
+        return _split_known_groups(frame, "careunit", seed)
+    if mode == "time":
+        return _split_forward_time(frame)
+    if mode == "database":
+        if not train_database or not test_database:
+            raise ValueError(
+                "database split requires train_database and test_database"
+            )
+        database = frame["database"].fillna("").astype(str).str.lower()
+        train = np.flatnonzero(database.eq(str(train_database).lower()))
+        test = np.flatnonzero(database.isin([value.strip().lower() for value in str(test_database).split(",")]))
+        if not len(train) or not len(test):
+            raise ValueError(
+                "database split has no rows for the requested train/test pair"
+            )
+        if set(frame.iloc[train]["subject_id"].astype(str)) & set(
+            frame.iloc[test]["subject_id"].astype(str)
+        ):
+            raise ValueError("database split contains overlapping patients")
+        return train, test
+    raise ValueError(f"Unknown split mode: {mode}")
+
+
+def _load_expert_anchor_registry(path: Path | None) -> dict | None:
+    if path is None:
+        return None
+    registry = json.loads(Path(path).read_text(encoding="utf-8"))
+    cells = registry.get("cells", [])
+    if not cells:
+        raise ValueError("expert anchor registry has no cells")
+    for cell in cells:
+        required = {"cell", "target", "horizon_hours", "anchor_column"}
+        missing = required - set(cell)
+        if missing:
+            raise ValueError(
+                f"expert anchor cell missing fields: {sorted(missing)}"
+            )
+    return registry
+
+
+def _fixed_expert_anchor_prediction(
+    frame: pd.DataFrame,
+    variables: tuple[str, ...],
+    arrays,
+    prediction_rows: np.ndarray,
+    registry: dict,
+) -> tuple[np.ndarray, dict[str, dict[str, object]]]:
+    """Read frozen expert anchors without selecting on held-out labels."""
+
+    scaler = arrays[0]
+    horizon = arrays[8]
+    rows = np.asarray(prediction_rows, dtype=np.int64)
+    output = np.full((len(rows), len(variables)), np.nan, dtype=np.float32)
+    metadata: dict[str, dict[str, object]] = {}
+    for cell in registry["cells"]:
+        if cell.get("task_type") == "binary_event_probability":
+            continue
+        target = str(cell["target"])
+        if target not in variables:
+            continue
+        column = str(cell["anchor_column"])
+        if column not in frame:
+            raise ValueError(f"missing fixed expert anchor column: {column}")
+        target_index = variables.index(target)
+        horizon_value = float(cell["horizon_hours"])
+        local = np.flatnonzero(horizon[rows] == horizon_value)
+        raw = pd.to_numeric(
+            frame.iloc[rows[local]][column], errors="coerce"
+        ).to_numpy(dtype=np.float64)
+        output[local, target_index] = (
+            (raw - scaler.medians[target_index]) / scaler.scales[target_index]
+        ).astype(np.float32)
+        metadata[str(cell["cell"])] = {
+            "selected_source": str(cell.get("source_model", "fixed_expert")),
+            "fixed_external_expert": True,
+            "anchor_column": column,
+            "available_rows": int(np.isfinite(raw).sum()),
+            "heldout_labels_used_for_selection": False,
+        }
+    return output, metadata
 
 
 def _time_features(horizon: torch.Tensor) -> torch.Tensor:
@@ -558,13 +678,28 @@ def _cache_base_features(
                 torch.from_numpy(presence[batch]).float(),
                 torch.from_numpy(horizon[batch]).float(),
             )
-            cached["context"].append(output["context_latent"].cpu())
-            cached["target"].append(
-                output["predicted_target_latent"][:, target_indices].cpu()
+            cached["context"].append(
+                output["context_latent"].detach().cpu().to(torch.float16)
             )
-            cached["organ"].append(output["organ_latents"].cpu())
-            cached["presence"].append(output["organ_presence"].cpu())
+            cached["target"].append(
+                output["predicted_target_latent"][:, target_indices]
+                .detach()
+                .cpu()
+                .to(torch.float16)
+            )
+            cached["organ"].append(
+                output["organ_latents"].detach().cpu().to(torch.float16)
+            )
+            cached["presence"].append(
+                output["organ_presence"].detach().cpu().to(torch.uint8)
+            )
     return {key: torch.cat(value, dim=0) for key, value in cached.items()}
+
+
+def _feature_batch(features, key, rows):
+    """Materialize compressed CPU latent features for model computation."""
+
+    return features[key][rows].to(dtype=torch.float32)
 
 
 def _pairwise_gradient_cosines(gradients):
@@ -629,8 +764,25 @@ def _pcgrad(target_losses, parameters, rng):
     return original_cosines, _pairwise_gradient_cosines(projected)
 
 
-def _adapter_batches(rows, batch_size, rng):
-    order = rng.permutation(np.asarray(rows, dtype=np.int64))
+def _adapter_batches(rows, batch_size, rng, balance_labels=None):
+    rows = np.asarray(rows, dtype=np.int64)
+    if balance_labels is None:
+        order = rng.permutation(rows)
+    else:
+        labels = np.asarray(balance_labels, dtype=object)
+        groups = {
+            label: rows[labels[rows] == label]
+            for label in np.unique(labels[rows])
+        }
+        group_names = np.asarray(sorted(groups), dtype=object)
+        sampled_groups = rng.choice(group_names, size=len(rows), replace=True)
+        order = np.asarray(
+            [
+                rng.choice(groups[label])
+                for label in sampled_groups
+            ],
+            dtype=np.int64,
+        )
     for start in range(0, len(order), batch_size):
         yield order[start : start + batch_size]
 
@@ -652,6 +804,7 @@ def _train_adapter(
     expert_entropy_weight=0.0,
     distributional_weight=0.0,
     horizon_balanced_loss=False,
+    balance_labels=None,
 ):
     (
         _,
@@ -665,8 +818,15 @@ def _train_adapter(
         horizon,
     ) = arrays[:9]
     target_indices = np.asarray(target_indices, dtype=np.int64)
+    trainable_parameters = [
+        parameter
+        for parameter in adapter.parameters()
+        if parameter.requires_grad
+    ]
+    if not trainable_parameters:
+        raise ValueError("adapter has no trainable parameters")
     optimizer = torch.optim.AdamW(
-        adapter.parameters(), lr=5e-4, weight_decay=1e-4
+        trainable_parameters, lr=5e-4, weight_decay=1e-4
     )
     rng = np.random.default_rng(seed)
     losses = []
@@ -674,18 +834,21 @@ def _train_adapter(
     for _ in range(int(epochs)):
         adapter.train()
         epoch_losses = []
-        for batch in _adapter_batches(train_rows, batch_size, rng):
+        for batch in _adapter_batches(
+            train_rows, batch_size, rng, balance_labels=balance_labels
+        ):
+            current_batch = torch.from_numpy(
+                current[batch][:, target_indices]
+            ).float()
             output = adapter(
                 teacher_anchor=torch.from_numpy(
                     teacher[batch][:, target_indices]
                 ).float(),
-                context_latent=features["context"][batch],
-                target_latent=features["target"][batch],
-                organ_latents=features["organ"][batch],
-                organ_presence=features["presence"][batch],
-                current=torch.from_numpy(
-                    current[batch][:, target_indices]
-                ).float(),
+                context_latent=_feature_batch(features, "context", batch),
+                target_latent=_feature_batch(features, "target", batch),
+                organ_latents=_feature_batch(features, "organ", batch),
+                organ_presence=_feature_batch(features, "presence", batch),
+                current=current_batch,
                 current_mask=torch.from_numpy(
                     mask[batch][:, target_indices]
                 ).float(),
@@ -765,13 +928,13 @@ def _train_adapter(
             optimizer.zero_grad(set_to_none=True)
             if pcgrad and len(target_losses) > 1:
                 before, after = _pcgrad(
-                    target_losses, list(adapter.parameters()), rng
+                    target_losses, trainable_parameters, rng
                 )
                 conflict_before.extend(before)
                 conflict_after.extend(after)
             else:
                 torch.stack(target_losses).mean().backward()
-            torch.nn.utils.clip_grad_norm_(adapter.parameters(), 5.0)
+            torch.nn.utils.clip_grad_norm_(trainable_parameters, 5.0)
             optimizer.step()
             epoch_losses.append(
                 float(torch.stack([loss.detach() for loss in target_losses]).mean())
@@ -818,10 +981,10 @@ def _train_distributional_scale_heads(
                 teacher_anchor=torch.from_numpy(
                     teacher[batch][:, target_indices]
                 ).float(),
-                context_latent=features["context"][batch],
-                target_latent=features["target"][batch],
-                organ_latents=features["organ"][batch],
-                organ_presence=features["presence"][batch],
+                context_latent=_feature_batch(features, "context", batch),
+                target_latent=_feature_batch(features, "target", batch),
+                organ_latents=_feature_batch(features, "organ", batch),
+                organ_presence=_feature_batch(features, "presence", batch),
                 current=torch.from_numpy(
                     current[batch][:, target_indices]
                 ).float(),
@@ -899,12 +1062,17 @@ def _predict_adapter(
     *,
     batch_size=4096,
     disable_organ_route=False,
+    disable_organ_coupling=False,
+    disable_body_feedback=False,
     disable_sparse_experts=False,
     disable_target_specific_projections=False,
 ):
     _, _, current, mask, ages, _, _, _, horizon = arrays[:9]
     target_indices = np.asarray(target_indices, dtype=np.int64)
     values, scales, route_weights, timescales, expert_weights = [], [], [], [], []
+    organ_coupling_weights, organ_presence = [], []
+    target_organ_coupling = []
+    target_organ_coupling_weights = []
     adapter.eval()
     with torch.no_grad():
         for start in range(0, len(rows), batch_size):
@@ -913,10 +1081,10 @@ def _predict_adapter(
                 teacher_anchor=torch.from_numpy(
                     teacher[batch][:, target_indices]
                 ).float(),
-                context_latent=features["context"][batch],
-                target_latent=features["target"][batch],
-                organ_latents=features["organ"][batch],
-                organ_presence=features["presence"][batch],
+                context_latent=_feature_batch(features, "context", batch),
+                target_latent=_feature_batch(features, "target", batch),
+                organ_latents=_feature_batch(features, "organ", batch),
+                organ_presence=_feature_batch(features, "presence", batch),
                 current=torch.from_numpy(
                     current[batch][:, target_indices]
                 ).float(),
@@ -928,6 +1096,8 @@ def _predict_adapter(
                 ).float(),
                 horizon=torch.from_numpy(horizon[batch]).float(),
                 disable_organ_route=disable_organ_route,
+                disable_organ_coupling=disable_organ_coupling,
+                disable_body_feedback=disable_body_feedback,
                 disable_sparse_experts=disable_sparse_experts,
                 disable_target_specific_projections=(
                     disable_target_specific_projections
@@ -940,12 +1110,39 @@ def _predict_adapter(
                 output["timescale_fast_weight"].cpu().numpy()
             )
             expert_weights.append(output["expert_weights"].cpu().numpy())
+            organ_presence.append(output["organ_presence"].cpu().numpy())
+            if "organ_coupling_weights" in output:
+                organ_coupling_weights.append(
+                    output["organ_coupling_weights"].cpu().numpy()
+                )
+                target_organ_coupling.append(
+                    output["target_organ_coupling"].cpu().numpy()
+                )
+                target_organ_coupling_weights.append(
+                    output["target_organ_coupling_weights"].cpu().numpy()
+                )
     return {
         "value": np.concatenate(values),
         "scale": np.concatenate(scales),
         "route_weights": np.concatenate(route_weights),
         "timescale_fast_weight": np.concatenate(timescales),
         "expert_weights": np.concatenate(expert_weights),
+        "organ_presence": np.concatenate(organ_presence),
+        "organ_coupling_weights": (
+            np.concatenate(organ_coupling_weights)
+            if organ_coupling_weights
+            else None
+        ),
+        "target_organ_coupling": (
+            np.concatenate(target_organ_coupling)
+            if target_organ_coupling
+            else None
+        ),
+        "target_organ_coupling_weights": (
+            np.concatenate(target_organ_coupling_weights)
+            if target_organ_coupling_weights
+            else None
+        ),
     }
 
 
@@ -1110,6 +1307,146 @@ def _evaluate_route_ablation(
                 f"{baseline_label}_bootstrap": comparison,
             }
     return report
+
+
+def _select_coupling_paths(
+    frame,
+    arrays,
+    calibration_rows,
+    target_names,
+    target_indices,
+    path_predictions,
+    *,
+    seed,
+):
+    """Select one hierarchy path per cell using the calibration set's selection patients only.
+
+    ``path_predictions`` are aligned with ``calibration_rows``; conformal
+    patients (``osler_jepa.patient_split``) never influence the choice.
+    """
+
+    choosing = selection_patients(frame.iloc[np.asarray(calibration_rows, dtype=np.int64)]["subject_id"].to_numpy())
+    calibration_rows = np.asarray(calibration_rows, dtype=np.int64)[choosing]
+    path_predictions = {path: np.asarray(values)[choosing] for path, values in path_predictions.items()}
+    system_only = path_predictions["system_only"]
+    comparisons = {}
+    for path in ("direct_organ", "body_mediated", "full"):
+        comparisons[path] = _evaluate_route_ablation(
+            frame,
+            arrays,
+            calibration_rows,
+            target_names,
+            target_indices,
+            path_predictions[path],
+            system_only,
+            seed=seed + {"direct_organ": 1, "body_mediated": 2, "full": 3}[path],
+            baseline_label="system_only",
+        )
+    cells = sorted(
+        {
+            cell
+            for report in comparisons.values()
+            for cell in report
+        }
+    )
+    selection = {}
+    for cell in cells:
+        eligible = []
+        evidence = {}
+        for path, report in comparisons.items():
+            value = report.get(cell)
+            if value is None:
+                continue
+            bootstrap = value["system_only_bootstrap"]
+            delta = float(value["delta_vs_system_only"])
+            evidence[path] = {
+                "delta_vs_system_only": delta,
+                "patient_equal_delta": bootstrap["patient_equal_delta"],
+                "bootstrap_low": bootstrap["bootstrap_low"],
+                "bootstrap_high": bootstrap["bootstrap_high"],
+                "pass": bool(bootstrap["pass"]),
+            }
+            if bootstrap["pass"] and delta < 0.0:
+                eligible.append((delta, path))
+        selected_path = min(eligible)[1] if eligible else "system_only"
+        selection[cell] = {
+            "selected_path": selected_path,
+            "selection_rows_are_calibration_selection_patients_only": True,
+            "test_labels_used_for_selection": False,
+            "evidence": evidence,
+        }
+    return selection
+
+
+def _export_predictions(frame, arrays, rows, target_names, target_indices, teacher, models, split: str = "test") -> pd.DataFrame:
+    """Labelled-row predictions of the frozen expert anchor and every matched hierarchy model.
+
+    ``models`` maps each ``HIERARCHY_MODELS`` name to its predictions on ``rows``
+    (normalized space).  Path choice and matched-ablation tests happen downstream
+    (``jepa_gate.py``) on selection patients and per test database.
+    ``hours_since_onset`` is the loader's (complete event stream: every anchor of
+    the stay, labelled or not); ``label_available_hr`` = horizon + |measurement
+    time - target time| is when the outcome could first be used for online adaptation.
+    """
+
+    scaler, _, current, _, _, future, future_mask, _, horizon = arrays[:9]
+    rows = np.asarray(rows, dtype=np.int64)
+    meta = frame.iloc[rows].reset_index(drop=True)
+    onset = frame["hours_since_onset"].to_numpy(dtype=float)
+    pieces = []
+    for local_index, (target, target_index) in enumerate(zip(target_names, target_indices)):
+        labelled = np.flatnonzero(future_mask[rows, target_index] > 0.0)
+        if not len(labelled):
+            continue
+        selected = rows[labelled]
+        scale, median = scaler.scales[target_index], scaler.medians[target_index]
+        hours = horizon[selected]
+        pieces.append(pd.DataFrame({
+            "subject_id": meta.loc[labelled, "subject_id"].astype(str).to_numpy(),
+            "stay_id": meta.loc[labelled, "stay_id"].astype(str).to_numpy(),
+            "hospitalid": meta.loc[labelled, "hospitalid"].astype(str).to_numpy() if "hospitalid" in meta else "unknown",
+            "careunit": meta.loc[labelled, "careunit"].astype(str).to_numpy() if "careunit" in meta else "unknown",
+            "database": meta.loc[labelled, "database"].astype(str).to_numpy() if "database" in meta else "unknown",
+            "anchor_time": pd.to_datetime(meta.loc[labelled, "t"]).to_numpy(),
+            "horizon_hours": hours,
+            "hours_since_onset": onset[selected],
+            "label_available_hr": hours + np.abs(
+                pd.to_numeric(frame[f"future_delta_t_hr_{target}"], errors="coerce").to_numpy()[selected] - hours),
+            "target": target,
+            "cell": [f"{target}@{int(h) if float(h).is_integer() else h}h" for h in hours],
+            "current": current[selected, target_index] * scale + median,
+            "future": future[selected, target_index] * scale + median,
+            "anchor": teacher[selected, target_index] * scale + median,
+            **{name: np.asarray(values)[labelled, local_index] * scale + median for name, values in models.items()},
+            "split": split,
+        }))
+    return pd.concat(pieces, ignore_index=True)
+
+
+def _compose_coupling_path_prediction(
+    rows,
+    arrays,
+    target_names,
+    path_predictions,
+    selection,
+):
+    """Apply calibration-selected paths without consulting test labels."""
+
+    horizon = arrays[8]
+    rows = np.asarray(rows, dtype=np.int64)
+    output = np.asarray(path_predictions["system_only"]).copy()
+    for local_index, target in enumerate(target_names):
+        for horizon_value in sorted(set(horizon[rows])):
+            label = int(horizon_value) if float(horizon_value).is_integer() else horizon_value
+            cell = f"{target}@{label}h"
+            path = selection.get(cell, {}).get("selected_path", "system_only")
+            selected_local = np.flatnonzero(
+                horizon[rows] == float(horizon_value)
+            )
+            output[selected_local, local_index] = path_predictions[path][
+                selected_local, local_index
+            ]
+    return output
 
 
 def _adaptive_conformal_quantile(
@@ -1575,6 +1912,206 @@ def _patient_coverage_diagnostics(
     }
 
 
+def _interval_personalization_diagnostics(
+    frame,
+    calibration_rows,
+    test_rows,
+    target,
+    calibration_normalized_residual,
+    calibration_scale,
+    test_scale,
+    test_point,
+    test_observed,
+    *,
+    seed,
+    coverage=0.90,
+):
+    """Audit selective and causal-order online interval personalization."""
+
+    calibration_rows = np.asarray(calibration_rows, dtype=np.int64)
+    test_rows = np.asarray(test_rows, dtype=np.int64)
+    calibration_subjects = (
+        frame.iloc[calibration_rows]["subject_id"].astype(str).to_numpy()
+    )
+    test_subjects = frame.iloc[test_rows]["subject_id"].astype(str).to_numpy()
+    global_quantile = patient_weighted_quantile(
+        calibration_normalized_residual,
+        calibration_subjects,
+        coverage=coverage,
+    )
+    global_width = np.maximum(test_scale, 1.0e-8) * global_quantile
+
+    def summarize(rows, widths, *, reference_widths, extra=None):
+        rows = np.asarray(rows, dtype=np.int64)
+        widths = np.asarray(widths, dtype=np.float64)
+        reference_widths = np.asarray(reference_widths, dtype=np.float64)
+        if not len(rows):
+            return {
+                "test_n": 0,
+                "test_subjects": 0,
+                "pass": False,
+                **(extra or {}),
+            }
+        row_to_local = {
+            int(row): index for index, row in enumerate(test_rows.tolist())
+        }
+        local_indices = np.asarray(
+            [row_to_local[int(row)] for row in rows], dtype=np.int64
+        )
+        covered = (
+            np.abs(test_observed[local_indices] - test_point[local_indices])
+            <= widths
+        )
+        diagnostics = _patient_coverage_diagnostics(
+            frame,
+            rows,
+            covered,
+            seed=seed,
+        )
+        median_width = float(np.median(widths))
+        reference_median = float(np.median(reference_widths))
+        return {
+            "test_n": int(len(rows)),
+            "test_subjects": diagnostics["test_subjects"],
+            "median_half_width": median_width,
+            "reference_global_median_half_width": reference_median,
+            "median_width_change_fraction": float(
+                median_width / max(reference_median, 1.0e-8) - 1.0
+            ),
+            "row_coverage": diagnostics["row_coverage"],
+            "patient_equalized_coverage": diagnostics[
+                "patient_equalized_coverage"
+            ],
+            "patient_coverage_ci95": diagnostics["patient_coverage_ci95"],
+            "pass": bool(
+                diagnostics["test_subjects"] >= 20
+                and 0.87
+                <= diagnostics["patient_equalized_coverage"]
+                <= 0.93
+            ),
+            **(extra or {}),
+        }
+
+    try:
+        selective = selective_interval_widths(
+            calibration_normalized_residual,
+            calibration_scale,
+            calibration_subjects,
+            test_scale,
+            coverage=coverage,
+        )
+    except ValueError as error:
+        selective = None
+        selected_indices = np.asarray([], dtype=np.int64)
+        selected_rows = np.asarray([], dtype=np.int64)
+        selective_summary = {
+            "available": False,
+            "reason": str(error),
+            "test_n": 0,
+            "test_subjects": 0,
+            "pass": False,
+        }
+    else:
+        selected_indices = np.flatnonzero(selective.selected)
+        selected_rows = test_rows[selected_indices]
+        selective_summary = summarize(
+            selected_rows,
+            selective.widths[selected_indices],
+            reference_widths=global_width[selected_indices],
+            extra={
+                "available": True,
+                "selection_rate": float(selective.selected.mean()),
+                "abstained_n": int((~selective.selected).sum()),
+                "scale_threshold": selective.scale_threshold,
+                "normalized_quantile": selective.normalized_quantile,
+                "high_risk_policy": "abstain_no_interval",
+                "selection_uses_test_labels": False,
+            },
+        )
+
+    future_time_column = f"future_event_time_{target}"
+    if future_time_column not in frame:
+        online_summary = {
+            "available": False,
+            "reason": f"missing_{future_time_column}",
+            "pass": False,
+        }
+        selective_online_summary = {
+            "available": False,
+            "reason": f"missing_{future_time_column}",
+            "pass": False,
+        }
+    else:
+        online = online_adaptive_interval_widths(
+            calibration_normalized_residual,
+            calibration_subjects,
+            test_subjects,
+            frame.iloc[test_rows]["anchor_time"],
+            frame.iloc[test_rows][future_time_column],
+            test_scale,
+            test_point,
+            test_observed,
+            coverage=coverage,
+        )
+        online_summary = summarize(
+            test_rows,
+            online.widths,
+            reference_widths=global_width,
+            extra={
+                "available": True,
+                "personalized_n": int(online.personalized.sum()),
+                "personalized_rate": float(online.personalized.mean()),
+                "median_prior_resolved_count": float(
+                    np.median(online.prior_resolved_count)
+                ),
+                "median_effective_alpha": float(
+                    np.median(online.effective_alpha)
+                ),
+                "current_or_future_test_labels_used": False,
+                "historically_resolved_test_outcomes_used": True,
+                "first_forecast_uses_population_interval": True,
+                "duplicate_future_measurements_deduplicated": True,
+            },
+        )
+        if selective is None:
+            selective_online_summary = {
+                "available": False,
+                "reason": selective_summary["reason"],
+                "pass": False,
+            }
+        else:
+            selective_online_summary = summarize(
+                selected_rows,
+                online.widths[selected_indices],
+                reference_widths=global_width[selected_indices],
+                extra={
+                    "available": True,
+                    "selection_rate": float(selective.selected.mean()),
+                    "abstained_n": int((~selective.selected).sum()),
+                    "personalized_selected_n": int(
+                        online.personalized[selected_indices].sum()
+                    ),
+                    "high_risk_policy": "abstain_no_interval",
+                    "current_or_future_test_labels_used": False,
+                    "historically_resolved_test_outcomes_used": True,
+                },
+            )
+
+    return {
+        "schema": "target_horizon_interval_personalization_audit.v1",
+        "global_distributional_reference": {
+            "normalized_quantile": float(global_quantile),
+            "median_half_width": float(np.median(global_width)),
+        },
+        "selective_low_risk": selective_summary,
+        "online_patient_adaptive": online_summary,
+        "selective_online_patient_adaptive": selective_online_summary,
+        "physiology_latent_detached": True,
+        "causal_claim_allowed": False,
+        "runtime_promotion_allowed": False,
+    }
+
+
 def _conformal_scale_features(
     arrays,
     rows,
@@ -1863,6 +2400,119 @@ def _distributional_asymmetric_widths(
             "test_labels_used": False,
         },
     )
+
+
+def _distributional_asymmetric_adaptive_widths(
+    frame,
+    calibration_rows,
+    signed_normalized_error,
+    test_scale,
+    *,
+    seed,
+    coverage=0.90,
+    candidate_coverages=None,
+    cv_folds=5,
+):
+    """Select asymmetric tail coverage by calibration-patient CV only."""
+
+    rows = np.asarray(calibration_rows, dtype=np.int64)
+    error = np.asarray(signed_normalized_error, dtype=np.float64)
+    test_scale = np.asarray(test_scale, dtype=np.float64)
+    subjects = frame.iloc[rows]["subject_id"].astype(str).to_numpy()
+    unique_subjects = np.unique(subjects)
+    if candidate_coverages is None:
+        candidate_coverages = np.round(np.arange(0.80, 0.911, 0.01), 2)
+    fallback = _distributional_asymmetric_widths(
+        frame,
+        rows,
+        -error,
+        error,
+        test_scale,
+        coverage=coverage,
+    )
+    if len(rows) < 120 or len(unique_subjects) < max(25, cv_folds * 5):
+        lower, upper, metadata = fallback
+        return lower, upper, {
+            **metadata,
+            "method": "distributional_asymmetric_adaptive_fallback",
+            "selected_nominal_coverage": float(coverage),
+        }
+
+    rng = np.random.default_rng(seed)
+    shuffled = unique_subjects.copy()
+    rng.shuffle(shuffled)
+    folds = np.array_split(shuffled, int(cv_folds))
+    coverage_by_candidate = {}
+    for nominal in (float(value) for value in candidate_coverages):
+        patient_coverages = []
+        for heldout_subjects in folds:
+            heldout = set(heldout_subjects.tolist())
+            check = np.asarray(
+                [subject in heldout for subject in subjects], dtype=bool
+            )
+            fit = ~check
+            if int(fit.sum()) < 60 or int(check.sum()) < 20:
+                continue
+            lower, upper, _ = _distributional_asymmetric_widths(
+                frame,
+                rows[fit],
+                -error[fit],
+                error[fit],
+                np.ones(int(check.sum()), dtype=np.float64),
+                coverage=nominal,
+            )
+            covered = (error[check] >= -lower) & (error[check] <= upper)
+            fold = pd.DataFrame(
+                {
+                    "subject_id": subjects[check],
+                    "covered": covered,
+                }
+            )
+            patient_coverages.extend(
+                fold.groupby("subject_id", sort=False)["covered"]
+                .mean()
+                .to_list()
+            )
+        if patient_coverages:
+            coverage_by_candidate[nominal] = float(
+                np.mean(patient_coverages)
+            )
+    if not coverage_by_candidate:
+        lower, upper, metadata = fallback
+        return lower, upper, {
+            **metadata,
+            "method": "distributional_asymmetric_adaptive_fallback",
+            "selected_nominal_coverage": float(coverage),
+        }
+    selected = min(
+        coverage_by_candidate,
+        key=lambda nominal: (
+            abs(coverage_by_candidate[nominal] - float(coverage)),
+            abs(nominal - float(coverage)),
+        ),
+    )
+    lower, upper, metadata = _distributional_asymmetric_widths(
+        frame,
+        rows,
+        -error,
+        error,
+        test_scale,
+        coverage=selected,
+    )
+    return lower, upper, {
+        **metadata,
+        "method": "distributional_asymmetric_patient_crossfit_adaptive",
+        "selected_nominal_coverage": float(selected),
+        "target_empirical_coverage": float(coverage),
+        "cv_folds": int(cv_folds),
+        "cv_coverage": float(coverage_by_candidate[selected]),
+        "candidate_cv_coverage": {
+            f"{nominal:.2f}": value
+            for nominal, value in coverage_by_candidate.items()
+        },
+        "all_calibration_rows_used_after_crossfit_selection": True,
+        "test_labels_used": False,
+    }
 
 
 def _distributional_shape_adaptive_widths(
@@ -2396,6 +3046,46 @@ def _evaluate_conformal(
                         "scale_head_test_labels_used": False,
                     }
                 )
+            elif method == "distributional_asymmetric_adaptive":
+                if calibration_scale is None or test_scale is None:
+                    raise ValueError(
+                        "distributional_asymmetric_adaptive conformal "
+                        "requires predicted scales"
+                    )
+                cal_scale_raw = np.maximum(
+                    calibration_scale[calibration_mask, local_index]
+                    * scaler.scales[target_index],
+                    1.0e-6,
+                )
+                test_scale_raw = np.maximum(
+                    test_scale[test_mask, local_index]
+                    * scaler.scales[target_index],
+                    1.0e-6,
+                )
+                signed_error = (
+                    future_raw[cal_rows, target_index] - cal_raw
+                ) / cal_scale_raw
+                lower_widths, upper_widths, calibration = (
+                    _distributional_asymmetric_adaptive_widths(
+                        frame,
+                        cal_rows,
+                        signed_error,
+                        test_scale_raw,
+                        seed=calibration_seed,
+                        coverage=nominal_coverage,
+                    )
+                )
+                calibration.update(
+                    {
+                        "median_calibration_predicted_scale": float(
+                            np.median(cal_scale_raw)
+                        ),
+                        "median_test_predicted_scale": float(
+                            np.median(test_scale_raw)
+                        ),
+                        "scale_head_test_labels_used": False,
+                    }
+                )
             elif method == "distributional_shape_adaptive":
                 if calibration_scale is None or test_scale is None:
                     raise ValueError(
@@ -2445,6 +3135,7 @@ def _evaluate_conformal(
                 raise ValueError(f"Unknown conformal method: {method}")
             if method not in (
                 "distributional_asymmetric",
+                "distributional_asymmetric_adaptive",
                 "distributional_shape_adaptive",
             ):
                 lower_widths = widths
@@ -2454,6 +3145,37 @@ def _evaluate_conformal(
                 (observed >= test_raw - lower_widths)
                 & (observed <= test_raw + upper_widths)
             )
+            interval_personalization = None
+            if (
+                method.startswith("distributional")
+                and calibration_scale is not None
+                and test_scale is not None
+            ):
+                personalization_calibration_scale = np.maximum(
+                    calibration_scale[calibration_mask, local_index]
+                    * scaler.scales[target_index],
+                    1.0e-6,
+                )
+                personalization_test_scale = np.maximum(
+                    test_scale[test_mask, local_index]
+                    * scaler.scales[target_index],
+                    1.0e-6,
+                )
+                interval_personalization = (
+                    _interval_personalization_diagnostics(
+                        frame,
+                        cal_rows,
+                        heldout_rows,
+                        target,
+                        residual / personalization_calibration_scale,
+                        personalization_calibration_scale,
+                        personalization_test_scale,
+                        test_raw,
+                        observed,
+                        seed=calibration_seed + 701,
+                        coverage=nominal_coverage,
+                    )
+                )
             coverage = _patient_coverage_diagnostics(
                 frame,
                 heldout_rows,
@@ -2492,6 +3214,7 @@ def _evaluate_conformal(
                 ),
                 "finite_sample_corrected": True,
                 "adaptive_calibration": calibration,
+                "interval_personalization": interval_personalization,
                 "calibration_rows_untouched_during_training": True,
                 "test_labels_used_for_calibration": False,
             }
@@ -2520,6 +3243,98 @@ def _summarize_routes(
             ],
         }
     return output
+
+
+def _summarize_organ_coupling(
+    coupling_weights,
+    organ_presence,
+    target_coupling,
+    target_coupling_weights,
+    target_names,
+    organ_names,
+    coupling_gates=None,
+):
+    """Report whether canonical organ edges are observable and actually used."""
+
+    if coupling_weights is None or target_coupling is None:
+        return {
+            "available": False,
+            "reason": "variant_has_no_canonical_organ_graph",
+        }
+    coupling_weights = np.asarray(coupling_weights, dtype=np.float64)
+    organ_presence = np.asarray(organ_presence, dtype=np.float64)
+    target_coupling = np.asarray(target_coupling, dtype=np.float64)
+    target_coupling_weights = np.asarray(
+        target_coupling_weights, dtype=np.float64
+    )
+    adjacency = np.asarray(
+        canonical_organ_adjacency(organ_names), dtype=np.float64
+    )
+    gates = (
+        np.asarray(coupling_gates, dtype=np.float64)
+        if coupling_gates is not None
+        else np.full(len(organ_names), np.nan)
+    )
+    edges = []
+    for left in range(len(organ_names)):
+        for right in range(left + 1, len(organ_names)):
+            if adjacency[left, right] <= 0.0:
+                continue
+            supported = (
+                (organ_presence[:, left] > 0.0)
+                & (organ_presence[:, right] > 0.0)
+            )
+            support_rows = int(supported.sum())
+            edges.append(
+                {
+                    "left": str(organ_names[left]),
+                    "right": str(organ_names[right]),
+                    "coobserved_rows": support_rows,
+                    "coobserved_fraction": float(supported.mean()),
+                    "left_receives_from_right": (
+                        float(coupling_weights[supported, left, right].mean())
+                        if support_rows
+                        else None
+                    ),
+                    "right_receives_from_left": (
+                        float(coupling_weights[supported, right, left].mean())
+                        if support_rows
+                        else None
+                    ),
+                    "left_gate": (
+                        float(gates[left]) if np.isfinite(gates[left]) else None
+                    ),
+                    "right_gate": (
+                        float(gates[right]) if np.isfinite(gates[right]) else None
+                    ),
+                }
+            )
+    target_signal = {}
+    for index, target in enumerate(target_names):
+        magnitude = np.linalg.norm(target_coupling[:, index], axis=-1)
+        target_signal[str(target)] = {
+            "mean_l2": float(magnitude.mean()),
+            "median_l2": float(np.median(magnitude)),
+            "nonzero_fraction": float(np.mean(magnitude > 1.0e-8)),
+            "top_neighbor_organs": [
+                {
+                    "organ": str(organ_names[organ_index]),
+                    "mean_weight": float(
+                        target_coupling_weights[:, index, organ_index].mean()
+                    ),
+                }
+                for organ_index in np.argsort(
+                    -target_coupling_weights[:, index].mean(axis=0)
+                )[:3]
+                if target_coupling_weights[:, index, organ_index].mean() > 0.0
+            ],
+        }
+    return {
+        "available": True,
+        "rows": int(len(organ_presence)),
+        "edges": edges,
+        "target_signal": target_signal,
+    }
 
 
 def _summarize_experts(expert_weights, target_names):
@@ -2563,15 +3378,50 @@ def _summarize_scales(scales, target_names):
     return output
 
 
-def _latent_svd_stability(features, fit_rows, test_rows):
+def _latent_svd_stability(
+    frame,
+    features,
+    fit_rows,
+    test_rows,
+    *,
+    max_rows=4096,
+    seed=0,
+):
+    def patient_equalized_sample(rows, sample_seed):
+        rows = np.asarray(rows, dtype=np.int64)
+        if len(rows) <= int(max_rows):
+            return rows
+        subjects = frame.iloc[rows]["subject_id"].astype(str).to_numpy()
+        unique_subjects = np.unique(subjects)
+        rng = np.random.default_rng(sample_seed)
+        rng.shuffle(unique_subjects)
+        if len(unique_subjects) > int(max_rows):
+            unique_subjects = unique_subjects[: int(max_rows)]
+        per_subject = max(1, int(max_rows) // len(unique_subjects))
+        selected = []
+        leftovers = []
+        for subject in unique_subjects:
+            candidates = rows[subjects == subject].copy()
+            rng.shuffle(candidates)
+            selected.extend(candidates[:per_subject].tolist())
+            leftovers.extend(candidates[per_subject:].tolist())
+        remaining = int(max_rows) - len(selected)
+        if remaining > 0 and leftovers:
+            leftovers = np.asarray(leftovers, dtype=np.int64)
+            rng.shuffle(leftovers)
+            selected.extend(leftovers[:remaining].tolist())
+        return np.asarray(selected[: int(max_rows)], dtype=np.int64)
+
     def matrix(rows):
         rows = np.asarray(rows, dtype=np.int64)
         context = features["context"][rows].cpu().numpy()
         target = features["target"][rows].cpu().numpy().reshape(len(rows), -1)
-        return np.concatenate((context, target), axis=1).astype(np.float64)
+        return np.concatenate((context, target), axis=1).astype(np.float32)
 
-    fit = matrix(fit_rows)
-    test = matrix(test_rows)
+    sampled_fit_rows = patient_equalized_sample(fit_rows, seed + 1)
+    sampled_test_rows = patient_equalized_sample(test_rows, seed + 2)
+    fit = matrix(sampled_fit_rows)
+    test = matrix(sampled_test_rows)
     center = fit.mean(axis=0, keepdims=True)
     scale = fit.std(axis=0, keepdims=True)
     scale[scale < 1.0e-6] = 1.0
@@ -2580,7 +3430,13 @@ def _latent_svd_stability(features, fit_rows, test_rows):
 
     def decompose(values):
         values = values - values.mean(axis=0, keepdims=True)
-        _, singular, right = np.linalg.svd(values, full_matrices=False)
+        components = min(64, values.shape[0] - 1, values.shape[1])
+        _, singular, right = randomized_svd(
+            values,
+            n_components=components,
+            n_iter=5,
+            random_state=seed,
+        )
         power = np.square(singular)
         probability = power / max(float(power.sum()), 1.0e-12)
         effective_rank = float(
@@ -2607,6 +3463,11 @@ def _latent_svd_stability(features, fit_rows, test_rows):
         "test_effective_rank": test_rank,
         "rank_ratio": float(ratio),
         "mean_top_subspace_cosine": mean_overlap,
+        "fit_sample_rows": int(len(sampled_fit_rows)),
+        "test_sample_rows": int(len(sampled_test_rows)),
+        "patient_equalized_sampling": True,
+        "svd_components": int(min(64, fit.shape[0] - 1, fit.shape[1])),
+        "truncated_randomized_svd": True,
         "pass": bool(
             fit_rank >= 2.0
             and test_rank >= 2.0
@@ -2624,6 +3485,11 @@ def run(args):
     horizons = tuple(
         int(value) for value in args.horizons.split(",") if value.strip()
     )
+    requested_event_time_targets = tuple(
+        value.strip()
+        for value in args.targets.split(",")
+        if value.strip() and value.strip().lower() != "all"
+    )
     frame, variables, module_names = load_joint_event_examples(
         args.event_examples,
         modules,
@@ -2637,16 +3503,23 @@ def run(args):
             for value in args.history_lags_hours.split(",")
             if value.strip()
         ),
+        event_time_targets=(
+            requested_event_time_targets or None
+        ),
     )
     target_names = _select_targets(args.targets, variables)
     if not target_names:
         raise ValueError("No requested target is available")
     target_indices = tuple(variables.index(value) for value in target_names)
     target_support = _future_label_support(frame, target_names, horizons)
+    expert_anchor_registry = _load_expert_anchor_registry(
+        getattr(args, "expert_anchor_registry", None)
+    )
     seeds = tuple(
         int(value) for value in args.seeds.split(",") if value.strip()
     )
     variant_configuration = {
+        "adjacent_three_level": (False, False, True, True, True, False),
         "hierarchical": (False, False, False, False, False, False),
         "sparse_experts": (False, False, True, False, False, False),
         "sparse_distributional": (False, False, True, True, False, False),
@@ -2689,6 +3562,20 @@ def run(args):
         "conformal_nominal_coverage": float(
             args.conformal_nominal_coverage
         ),
+        "split_mode": str(args.split_mode),
+        "train_database": getattr(args, "train_database", None),
+        "test_database": getattr(args, "test_database", None),
+        "expert_anchor_registry": (
+            str(Path(args.expert_anchor_registry).resolve())
+            if getattr(args, "expert_anchor_registry", None)
+            else None
+        ),
+        "candidate_coupling_path": str(args.candidate_coupling_path),
+        "adapter_balance_columns": [
+            value.strip()
+            for value in args.adapter_balance_columns.split(",")
+            if value.strip()
+        ],
     }
     reports = []
     if getattr(args, "resume", False) and progress_path.exists():
@@ -2704,6 +3591,31 @@ def run(args):
     completed_seeds = {
         int(report["seed"]) for report in reports if "seed" in report
     }
+    adapter_balance_columns = tuple(
+        value.strip()
+        for value in args.adapter_balance_columns.split(",")
+        if value.strip()
+    )
+    missing_balance_columns = sorted(
+        set(adapter_balance_columns) - set(frame.columns)
+    )
+    if missing_balance_columns:
+        raise ValueError(
+            "Adapter balance columns missing from frame: "
+            f"{missing_balance_columns}"
+        )
+    adapter_balance_labels = None
+    if adapter_balance_columns:
+        label_parts = [
+            column
+            + "="
+            + frame[column].fillna("__missing__").astype(str)
+            for column in adapter_balance_columns
+        ]
+        labels = label_parts[0]
+        for part in label_parts[1:]:
+            labels = labels + "|" + part
+        adapter_balance_labels = labels.to_numpy(dtype=object)
     for seed in seeds:
         if seed in completed_seeds:
             print(
@@ -2711,7 +3623,13 @@ def run(args):
                 flush=True,
             )
             continue
-        train_rows, test_rows = _split_by_column(frame, "subject_id", seed)
+        train_rows, test_rows = _split_rows_for_mode(
+            frame,
+            args.split_mode,
+            seed,
+            train_database=getattr(args, "train_database", None),
+            test_database=getattr(args, "test_database", None),
+        )
         fit_rows, calibration_rows = _split_train_calibration(
             frame, train_rows, seed + 1001
         )
@@ -2758,17 +3676,26 @@ def run(args):
             frame, fit_rows, seed + 9001
         )
         all_rows = np.arange(len(frame), dtype=np.int64)
-        teacher, teacher_metadata = _validated_router_prediction(
-            frame,
-            variables,
-            module_names,
-            arrays,
-            teacher_fit,
-            teacher_selection,
-            all_rows,
-            include_treatment_context=True,
-            seed=seed + 30_000,
-        )
+        if expert_anchor_registry is None:
+            teacher, teacher_metadata = _validated_router_prediction(
+                frame,
+                variables,
+                module_names,
+                arrays,
+                teacher_fit,
+                teacher_selection,
+                all_rows,
+                include_treatment_context=True,
+                seed=seed + 30_000,
+            )
+        else:
+            teacher, teacher_metadata = _fixed_expert_anchor_prediction(
+                frame,
+                variables,
+                arrays,
+                all_rows,
+                expert_anchor_registry,
+            )
         features = _cache_base_features(
             model,
             arrays,
@@ -2776,9 +3703,10 @@ def run(args):
             all_rows,
             batch_size=args.batch_size,
         )
-        membership = model.variable_module_membership[
-            :, list(target_indices)
-        ].detach().cpu().numpy().T
+        membership = canonical_target_organ_membership(
+            target_names,
+            module_names,
+        )
         variants = {}
         for name in variant_names:
             (
@@ -2792,6 +3720,7 @@ def run(args):
             torch.manual_seed(
                 seed
                 + {
+                    "adjacent_three_level": 97,
                     "hierarchical": 101,
                     "sparse_experts": 151,
                     "sparse_distributional": 151,
@@ -2801,36 +3730,100 @@ def run(args):
                     "dynamic_route_pcgrad": 303,
                 }[name]
             )
-            adapter = TeacherAnchoredResidualAdapter(
-                target_indices=target_indices,
-                target_module_membership=membership,
-                latent_dim=model.latent,
-                organ_dim=model.token_dim,
-                module_count=len(module_names),
-                dynamic_organ_route=dynamic_route,
-                sparse_experts=sparse_experts,
-                distributional_scale=distributional_scale,
-                target_specific_projections=target_specific_projections,
-            )
-            training = _train_adapter(
-                adapter,
-                features,
-                arrays,
-                teacher,
-                fit_rows,
-                target_indices,
-                epochs=args.adapter_epochs,
-                batch_size=args.batch_size,
-                seed=seed + 40_000,
-                pcgrad=pcgrad,
-                route_entropy_weight=args.route_entropy_weight,
-                expert_entropy_weight=args.expert_entropy_weight,
-                residual_l1_weight=args.residual_l1_weight,
-                distributional_weight=(
-                    0.0 if distributional_scale else args.distributional_weight
-                ),
-                horizon_balanced_loss=horizon_balanced_loss,
-            )
+            hierarchy, training_stages = {}, {}
+            if name == "adjacent_three_level":
+                # Every matched hierarchy model starts from identical weights and
+                # gets the same per-stage epoch budget; a structurally disabled
+                # layer's stage is skipped (it has nothing to train).
+                system_epochs, organ_epochs, body_epochs = (
+                    split_adjacent_training_epochs(args.adapter_epochs)
+                )
+                stage_settings = {
+                    "system": (system_epochs, 40_000, 0.0, args.expert_entropy_weight),
+                    "organ": (organ_epochs, 41_000, args.route_entropy_weight, 0.0),
+                    "body": (body_epochs, 42_000, args.route_entropy_weight, 0.0),
+                }
+                for model_name, disabled_paths in HIERARCHY_MODELS.items():
+                    torch.manual_seed(seed + 97)
+                    model_adapter = AdjacentThreeLevelResidualAdapter(
+                        target_indices=target_indices,
+                        target_module_membership=membership,
+                        latent_dim=model.latent,
+                        organ_dim=model.token_dim,
+                        module_count=len(module_names),
+                        organ_names=module_names,
+                        distributional_scale=distributional_scale,
+                        disabled_paths=disabled_paths,
+                    )
+                    for stage in model_adapter.trainable_stages():
+                        epochs, stage_seed, route_weight, expert_weight = stage_settings[stage]
+                        model_adapter.set_training_stage(stage)
+                        training_stages[f"{model_name}:{stage}"] = _train_adapter(
+                            model_adapter,
+                            features,
+                            arrays,
+                            teacher,
+                            fit_rows,
+                            target_indices,
+                            epochs=epochs,
+                            batch_size=args.batch_size,
+                            seed=seed + stage_seed,
+                            pcgrad=False,
+                            route_entropy_weight=route_weight,
+                            expert_entropy_weight=expert_weight,
+                            residual_l1_weight=args.residual_l1_weight,
+                            distributional_weight=0.0,
+                            horizon_balanced_loss=horizon_balanced_loss,
+                            balance_labels=adapter_balance_labels,
+                        )
+                    model_adapter.set_training_stage("all")
+                    hierarchy[model_name] = model_adapter
+                adapter = hierarchy["full"]
+                training = {
+                    "loss_history": [
+                        loss
+                        for stage in adapter.trainable_stages()
+                        for loss in training_stages[f"full:{stage}"]["loss_history"]
+                    ],
+                    "gradient_cosine_before": [],
+                    "gradient_cosine_after": [],
+                    "matched_models_trained": sorted(hierarchy),
+                }
+            else:
+                adapter = TeacherAnchoredResidualAdapter(
+                    target_indices=target_indices,
+                    target_module_membership=membership,
+                    latent_dim=model.latent,
+                    organ_dim=model.token_dim,
+                    module_count=len(module_names),
+                    dynamic_organ_route=dynamic_route,
+                    sparse_experts=sparse_experts,
+                    distributional_scale=distributional_scale,
+                    target_specific_projections=target_specific_projections,
+                )
+            if not hierarchy:
+                training = _train_adapter(
+                    adapter,
+                    features,
+                    arrays,
+                    teacher,
+                    fit_rows,
+                    target_indices,
+                    epochs=args.adapter_epochs,
+                    batch_size=args.batch_size,
+                    seed=seed + 40_000,
+                    pcgrad=pcgrad,
+                    route_entropy_weight=args.route_entropy_weight,
+                    expert_entropy_weight=args.expert_entropy_weight,
+                    residual_l1_weight=args.residual_l1_weight,
+                    distributional_weight=(
+                        0.0
+                        if distributional_scale
+                        else args.distributional_weight
+                    ),
+                    horizon_balanced_loss=horizon_balanced_loss,
+                    balance_labels=adapter_balance_labels,
+                )
             scale_training = _train_distributional_scale_heads(
                 adapter,
                 features,
@@ -2861,15 +3854,65 @@ def run(args):
                 target_indices,
                 batch_size=args.batch_size,
             )
+            calibration_no_route = _predict_adapter(
+                hierarchy["system_only"] if hierarchy else adapter,
+                features,
+                arrays,
+                teacher,
+                calibration_rows,
+                target_indices,
+                batch_size=args.batch_size,
+                **({} if hierarchy else {"disable_organ_route": True}),
+            )
+            calibration_no_organ_coupling = _predict_adapter(
+                hierarchy["body_mediated"] if hierarchy else adapter,
+                features,
+                arrays,
+                teacher,
+                calibration_rows,
+                target_indices,
+                batch_size=args.batch_size,
+                **({} if hierarchy else {"disable_organ_coupling": True}),
+            )
+            calibration_no_body_feedback = _predict_adapter(
+                hierarchy["direct_organ"] if hierarchy else adapter,
+                features,
+                arrays,
+                teacher,
+                calibration_rows,
+                target_indices,
+                batch_size=args.batch_size,
+                **({} if hierarchy else {"disable_body_feedback": True}),
+            )
             no_route = _predict_adapter(
-                adapter,
+                hierarchy["system_only"] if hierarchy else adapter,
                 features,
                 arrays,
                 teacher,
                 test_rows,
                 target_indices,
                 batch_size=args.batch_size,
-                disable_organ_route=True,
+                **({} if hierarchy else {"disable_organ_route": True}),
+            )
+            no_organ_coupling = _predict_adapter(
+                hierarchy["body_mediated"] if hierarchy else adapter,
+                features,
+                arrays,
+                teacher,
+                test_rows,
+                target_indices,
+                batch_size=args.batch_size,
+                **({} if hierarchy else {"disable_organ_coupling": True}),
+            )
+            no_body_feedback = _predict_adapter(
+                hierarchy["direct_organ"] if hierarchy else adapter,
+                features,
+                arrays,
+                teacher,
+                test_rows,
+                target_indices,
+                batch_size=args.batch_size,
+                **({} if hierarchy else {"disable_body_feedback": True}),
             )
             no_expert = _predict_adapter(
                 adapter,
@@ -2891,6 +3934,70 @@ def run(args):
                 batch_size=args.batch_size,
                 disable_target_specific_projections=True,
             )
+            candidate_path = (
+                args.candidate_coupling_path
+                if name == "adjacent_three_level"
+                else "full"
+            )
+            test_path_outputs = {
+                "full": prediction,
+                "direct_organ": no_body_feedback,
+                "body_mediated": no_organ_coupling,
+            }
+            calibration_path_outputs = {
+                "full": calibration_prediction,
+                "direct_organ": calibration_no_body_feedback,
+                "body_mediated": calibration_no_organ_coupling,
+            }
+            candidate_prediction = test_path_outputs[candidate_path]
+            candidate_calibration = calibration_path_outputs[candidate_path]
+            coupling_path_selection = _select_coupling_paths(
+                frame,
+                arrays,
+                calibration_rows,
+                target_names,
+                target_indices,
+                {
+                    "system_only": calibration_no_route["value"],
+                    "direct_organ": calibration_no_body_feedback["value"],
+                    "body_mediated": calibration_no_organ_coupling["value"],
+                    "full": calibration_prediction["value"],
+                },
+                seed=seed + 680_000,
+            )
+            selected_coupling_prediction = _compose_coupling_path_prediction(
+                test_rows,
+                arrays,
+                target_names,
+                {
+                    "system_only": no_route["value"],
+                    "direct_organ": no_body_feedback["value"],
+                    "body_mediated": no_organ_coupling["value"],
+                    "full": prediction["value"],
+                },
+                coupling_path_selection,
+            )
+            if hierarchy and getattr(args, "export_predictions", None):
+                def hierarchy_predictions(rows, known):
+                    return {
+                        model_name: known[model_name] if model_name in known else _predict_adapter(
+                            hierarchy[model_name], features, arrays, teacher, rows, target_indices,
+                            batch_size=args.batch_size)["value"]
+                        for model_name in HIERARCHY_MODELS
+                    }
+
+                pd.concat([
+                    _export_predictions(frame, arrays, test_rows, target_names, target_indices, teacher, hierarchy_predictions(
+                        test_rows, {"full": prediction["value"], "direct_organ": no_body_feedback["value"],
+                                    "body_mediated": no_organ_coupling["value"], "system_only": no_route["value"]}),
+                        split="test"),
+                    _export_predictions(frame, arrays, calibration_rows, target_names, target_indices, teacher, hierarchy_predictions(
+                        calibration_rows, {"full": calibration_prediction["value"],
+                                           "direct_organ": calibration_no_body_feedback["value"],
+                                           "body_mediated": calibration_no_organ_coupling["value"],
+                                           "system_only": calibration_no_route["value"]}),
+                        split="calibration"),
+                ], ignore_index=True).to_parquet(Path(args.export_predictions).with_suffix(f".seed{seed}.parquet"), index=False)
             before = training["gradient_cosine_before"]
             after = training["gradient_cosine_after"]
             variants[name] = {
@@ -2900,9 +4007,31 @@ def run(args):
                     test_rows,
                     target_names,
                     target_indices,
-                    prediction["value"],
+                    candidate_prediction["value"],
                     teacher,
                     seed=seed,
+                ),
+                "selected_coupling_cells": _evaluate(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    selected_coupling_prediction,
+                    teacher,
+                    seed=seed + 681_000,
+                ),
+                "coupling_path_selection": coupling_path_selection,
+                "selected_coupling_ablation": _evaluate_route_ablation(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    selected_coupling_prediction,
+                    no_route["value"],
+                    seed=seed + 682_000,
+                    baseline_label="system_only",
                 ),
                 "no_route_cells": _evaluate(
                     frame,
@@ -2920,9 +4049,53 @@ def run(args):
                     test_rows,
                     target_names,
                     target_indices,
-                    prediction["value"],
+                    candidate_prediction["value"],
                     no_route["value"],
                     seed=seed,
+                ),
+                "organ_coupling_ablation": _evaluate_route_ablation(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    candidate_prediction["value"],
+                    no_organ_coupling["value"],
+                    seed=seed + 600_000,
+                    baseline_label="no_organ_coupling",
+                ),
+                "body_feedback_ablation": _evaluate_route_ablation(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    prediction["value"],
+                    no_body_feedback["value"],
+                    seed=seed + 650_000,
+                    baseline_label="no_body_feedback",
+                ),
+                "body_mediated_coupling_ablation": _evaluate_route_ablation(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    no_organ_coupling["value"],
+                    no_route["value"],
+                    seed=seed + 660_000,
+                    baseline_label="system_only",
+                ),
+                "direct_organ_coupling_ablation": _evaluate_route_ablation(
+                    frame,
+                    arrays,
+                    test_rows,
+                    target_names,
+                    target_indices,
+                    no_body_feedback["value"],
+                    no_route["value"],
+                    seed=seed + 670_000,
+                    baseline_label="system_only",
                 ),
                 "expert_ablation": _evaluate_route_ablation(
                     frame,
@@ -2953,16 +4126,40 @@ def run(args):
                     test_rows,
                     target_names,
                     target_indices,
-                    calibration_prediction["value"],
-                    prediction["value"],
+                    candidate_calibration["value"],
+                    candidate_prediction["value"],
                     method=args.conformal_method,
                     nominal_coverage=args.conformal_nominal_coverage,
                     seed=seed,
-                    calibration_scale=calibration_prediction["scale"],
-                    test_scale=prediction["scale"],
+                    calibration_scale=candidate_calibration["scale"],
+                    test_scale=candidate_prediction["scale"],
+                ),
+                "conformal_global_baseline": (
+                    _evaluate_conformal(
+                        frame,
+                        arrays,
+                        calibration_rows,
+                        test_rows,
+                        target_names,
+                        target_indices,
+                        candidate_calibration["value"],
+                        candidate_prediction["value"],
+                        method="patient_cluster_cv_adaptive",
+                        nominal_coverage=args.conformal_nominal_coverage,
+                        seed=seed,
+                        calibration_scale=None,
+                        test_scale=None,
+                    )
+                    if str(args.conformal_method).startswith("distributional")
+                    else {}
                 ),
                 "training": {
+                    "candidate_coupling_path": candidate_path,
                     "loss_history": training["loss_history"],
+                    "stages": {
+                        stage: result["loss_history"]
+                        for stage, result in training_stages.items()
+                    },
                     "gradient_pairs": len(before),
                     "negative_gradient_fraction_before": (
                         float(np.mean(np.asarray(before) < 0.0))
@@ -2991,6 +4188,22 @@ def run(args):
                     target_names,
                     module_names,
                 ),
+                "organ_coupling": _summarize_organ_coupling(
+                    prediction["organ_coupling_weights"],
+                    prediction["organ_presence"],
+                    prediction["target_organ_coupling"],
+                    prediction["target_organ_coupling_weights"],
+                    target_names,
+                    module_names,
+                    coupling_gates=(
+                        torch.sigmoid(adapter.organ_coupling_gates)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                        if hasattr(adapter, "organ_coupling_gates")
+                        else None
+                    ),
+                ),
                 "expert_usage": _summarize_experts(
                     prediction["expert_weights"], target_names
                 ),
@@ -3006,7 +4219,11 @@ def run(args):
                 "test_rows": int(len(test_rows)),
                 "base_loss": float(losses[-1]),
                 "latent_svd": _latent_svd_stability(
-                    features, fit_rows, test_rows
+                    frame,
+                    features,
+                    fit_rows,
+                    test_rows,
+                    seed=seed,
                 ),
                 "teacher_selection": {
                     key: value
@@ -3060,6 +4277,14 @@ def run(args):
                 for report in reports
                 if cell in report["variants"][variant]["cells"]
             ]
+            selected_values = [
+                report["variants"][variant]["selected_coupling_cells"][cell]
+                for report in reports
+                if cell
+                in report["variants"][variant].get(
+                    "selected_coupling_cells", {}
+                )
+            ]
             aggregate[variant][cell] = {
                 "evaluated_splits": len(values),
                 "beats_teacher_splits": int(
@@ -3074,6 +4299,35 @@ def run(args):
                         for value in values
                     )
                 ),
+                "selected_path_beats_teacher_splits": int(
+                    sum(
+                        value["teacher_bootstrap"]["pass"]
+                        for value in selected_values
+                    )
+                ),
+                "selected_path_beats_persistence_splits": int(
+                    sum(
+                        value["persistence_bootstrap"]["pass"]
+                        for value in selected_values
+                    )
+                ),
+                "selected_path_beats_system_only_splits": int(
+                    sum(
+                        report["variants"][variant]
+                        .get("selected_coupling_ablation", {})
+                        .get(cell, {})
+                        .get("system_only_bootstrap", {})
+                        .get("pass", False)
+                        for report in reports
+                    )
+                ),
+                "selected_paths": [
+                    report["variants"][variant]
+                    .get("coupling_path_selection", {})
+                    .get(cell, {})
+                    .get("selected_path", "system_only")
+                    for report in reports
+                ],
                 "median_delta_vs_teacher": float(
                     np.median(
                         [value["delta_vs_teacher"] for value in values]
@@ -3084,6 +4338,33 @@ def run(args):
                         [value["delta_vs_persistence"] for value in values]
                     )
                 ),
+                "selected_path_median_delta_vs_teacher": float(
+                    np.median(
+                        [value["delta_vs_teacher"] for value in selected_values]
+                    )
+                ),
+                "selected_path_median_delta_vs_persistence": float(
+                    np.median(
+                        [
+                            value["delta_vs_persistence"]
+                            for value in selected_values
+                        ]
+                    )
+                ),
+                "selected_path_median_delta_vs_system_only": float(
+                    np.median(
+                        [
+                            report["variants"][variant][
+                                "selected_coupling_ablation"
+                            ][cell]["delta_vs_system_only"]
+                            for report in reports
+                            if cell
+                            in report["variants"][variant].get(
+                                "selected_coupling_ablation", {}
+                            )
+                        ]
+                    )
+                ),
                 "beats_no_route_splits": int(
                     sum(
                         report["variants"][variant]["route_ablation"]
@@ -3091,6 +4372,102 @@ def run(args):
                         .get("no_route_bootstrap", {})
                         .get("pass", False)
                         for report in reports
+                    )
+                ),
+                "beats_no_organ_coupling_splits": int(
+                    sum(
+                        report["variants"][variant]
+                        .get("organ_coupling_ablation", {})
+                        .get(cell, {})
+                        .get("no_organ_coupling_bootstrap", {})
+                        .get("pass", False)
+                        for report in reports
+                    )
+                ),
+                "beats_no_body_feedback_splits": int(
+                    sum(
+                        report["variants"][variant]
+                        .get("body_feedback_ablation", {})
+                        .get(cell, {})
+                        .get("no_body_feedback_bootstrap", {})
+                        .get("pass", False)
+                        for report in reports
+                    )
+                ),
+                "body_mediated_beats_system_only_splits": int(
+                    sum(
+                        report["variants"][variant]
+                        .get("body_mediated_coupling_ablation", {})
+                        .get(cell, {})
+                        .get("system_only_bootstrap", {})
+                        .get("pass", False)
+                        for report in reports
+                    )
+                ),
+                "direct_organ_beats_system_only_splits": int(
+                    sum(
+                        report["variants"][variant]
+                        .get("direct_organ_coupling_ablation", {})
+                        .get(cell, {})
+                        .get("system_only_bootstrap", {})
+                        .get("pass", False)
+                        for report in reports
+                    )
+                ),
+                "median_delta_vs_no_organ_coupling": float(
+                    np.median(
+                        [
+                            report["variants"][variant][
+                                "organ_coupling_ablation"
+                            ][cell]["delta_vs_no_organ_coupling"]
+                            for report in reports
+                            if cell
+                            in report["variants"][variant].get(
+                                "organ_coupling_ablation", {}
+                            )
+                        ]
+                    )
+                ),
+                "median_delta_vs_no_body_feedback": float(
+                    np.median(
+                        [
+                            report["variants"][variant][
+                                "body_feedback_ablation"
+                            ][cell]["delta_vs_no_body_feedback"]
+                            for report in reports
+                            if cell
+                            in report["variants"][variant].get(
+                                "body_feedback_ablation", {}
+                            )
+                        ]
+                    )
+                ),
+                "median_body_mediated_delta_vs_system_only": float(
+                    np.median(
+                        [
+                            report["variants"][variant][
+                                "body_mediated_coupling_ablation"
+                            ][cell]["delta_vs_system_only"]
+                            for report in reports
+                            if cell
+                            in report["variants"][variant].get(
+                                "body_mediated_coupling_ablation", {}
+                            )
+                        ]
+                    )
+                ),
+                "median_direct_organ_delta_vs_system_only": float(
+                    np.median(
+                        [
+                            report["variants"][variant][
+                                "direct_organ_coupling_ablation"
+                            ][cell]["delta_vs_system_only"]
+                            for report in reports
+                            if cell
+                            in report["variants"][variant].get(
+                                "direct_organ_coupling_ablation", {}
+                            )
+                        ]
                     )
                 ),
                 "median_delta_vs_no_route": float(
@@ -3161,7 +4538,7 @@ def run(args):
                 ),
             }
     return {
-        "schema": "teacher_anchored_joint_jepa_audit.v3",
+        "schema": "teacher_anchored_joint_jepa_audit.v5",
         "status": "bounded_candidate_only",
         "rows": int(len(frame)),
         "subjects": int(frame["subject_id"].nunique()),
@@ -3176,36 +4553,59 @@ def run(args):
         "target_future_label_support": target_support,
         "horizons": list(horizons),
         "seeds": list(seeds),
+        "split_mode": str(args.split_mode),
         "architecture": {
+            "strict_adjacent_three_level_candidate": True,
+            "three_level_path": "system <-> organ <-> body",
+            "organ_layer_graph": "canonical_sparse_organ_to_organ",
+            "direct_system_body_path": False,
+            "validated_expert_projection_layer": "system",
+            "adjacent_training_schedule": (
+                "train_system_then_organ_then_body"
+            ),
+            "matched_system_only_ablation_required": True,
+            "path_specific_matched_ablation_required": True,
+            "candidate_coupling_path": str(args.candidate_coupling_path),
+            "direct_organ_must_beat_system_only": True,
+            "body_mediated_must_beat_system_only": True,
             "validated_router_teacher_anchor": True,
+            "fixed_external_expert_anchor_registry": bool(
+                expert_anchor_registry is not None
+            ),
             "zero_initialized_bounded_residual": True,
-            "two_level_latent_hierarchy": True,
-            "level_1_shared_whole_body_latent": True,
+            "three_level_latent_hierarchy": True,
+            "level_1_validated_system_experts": True,
             "level_2_canonical_organ_latent_tokens": True,
-            "target_heads_above_two_level_latents": True,
+            "level_3_shared_whole_body_latent": True,
+            "target_heads_anchored_at_system_layer": True,
             "shared_slow_context_latent": True,
             "target_specific_fast_future_latent": True,
             "target_horizon_sparse_experts": True,
             "optional_target_specific_projection_residuals": True,
-            "target_specific_distributional_scale_heads": True,
+            "target_specific_distributional_scale_heads": bool(
+                variant_configuration["adjacent_three_level"][3]
+            ),
             "scale_loss_detached_from_physiology_context": True,
             "two_stage_point_then_scale_training": True,
             "matched_no_expert_ablation_required": True,
-            "patient_target_horizon_dynamic_cross_organ_routing": True,
+            "target_specific_sparse_canonical_organ_routing": True,
             "target_own_organ_excluded_from_route": True,
             "patient_bootstrap_route_ablation_required": True,
-            "pcgrad_variant": True,
+            "pcgrad_variant": False,
             "calibration_rows_used_for_training": False,
             "conformal_method": args.conformal_method,
-        "conformal_nominal_coverage": float(
-            args.conformal_nominal_coverage
-        ),
-        "domain_invariance_weight": float(args.domain_invariance_weight),
-        "domain_invariance_columns": [
-            value.strip()
-            for value in args.domain_invariance_columns.split(",")
-            if value.strip()
-        ],
+            "conformal_nominal_coverage": float(
+                args.conformal_nominal_coverage
+            ),
+            "domain_invariance_weight": float(
+                args.domain_invariance_weight
+            ),
+            "domain_invariance_columns": [
+                value.strip()
+                for value in args.domain_invariance_columns.split(",")
+                if value.strip()
+            ],
+            "adapter_balance_columns": list(adapter_balance_columns),
             "causal_claim_allowed": False,
             "clinical_promotion_allowed": False,
         },
@@ -3237,22 +4637,43 @@ def main():
     parser.add_argument("--min-modules", type=int, default=2)
     parser.add_argument("--seeds", default="7,19,31")
     parser.add_argument(
+        "--split-mode",
+        choices=("subject", "hospital", "careunit", "time", "database"),
+        default="subject",
+    )
+    parser.add_argument("--train-database", default=None)
+    parser.add_argument("--test-database", default=None)
+    parser.add_argument(
+        "--expert-anchor-registry",
+        type=Path,
+        default=None,
+        help="Frozen target-horizon expert columns used as system anchors.",
+    )
+    parser.add_argument(
         "--variants",
-        default=(
-            "hierarchical,sparse_experts,dynamic_route,"
-            "sparse_distributional,sparse_target_distributional,"
-            "sparse_horizon_balanced_distributional,"
-            "dynamic_route_pcgrad"
+        default=",".join(DEFAULT_VARIANTS),
+        help=(
+            "Canonical training defaults to adjacent_three_level. Other "
+            "variants must be named explicitly and are ablation-only."
         ),
     )
     parser.add_argument("--base-epochs", type=int, default=1)
-    parser.add_argument("--adapter-epochs", type=int, default=2)
+    parser.add_argument("--adapter-epochs", type=int, default=3)
     parser.add_argument("--scale-epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=2048)
     parser.add_argument("--route-entropy-weight", type=float, default=0.001)
     parser.add_argument("--expert-entropy-weight", type=float, default=0.0005)
     parser.add_argument("--distributional-weight", type=float, default=0.25)
     parser.add_argument("--residual-l1-weight", type=float, default=0.01)
+    parser.add_argument(
+        "--candidate-coupling-path",
+        choices=("full", "direct_organ", "body_mediated"),
+        default="full",
+        help=(
+            "Evaluate the deployable adjacent path as the primary candidate. "
+            "All path-specific matched ablations remain required."
+        ),
+    )
     parser.add_argument(
         "--domain-invariance-weight",
         type=float,
@@ -3268,6 +4689,14 @@ def main():
         ),
     )
     parser.add_argument(
+        "--adapter-balance-columns",
+        default="",
+        help=(
+            "Comma-separated provenance columns sampled with equal group "
+            "probability during residual-adapter training."
+        ),
+    )
+    parser.add_argument(
         "--conformal-method",
         choices=(
             "fixed",
@@ -3280,9 +4709,10 @@ def main():
             "distributional_mondrian",
             "distributional_adaptive",
             "distributional_asymmetric",
+            "distributional_asymmetric_adaptive",
             "distributional_shape_adaptive",
         ),
-        default="fixed",
+        default="distributional_adaptive",
     )
     parser.add_argument(
         "--conformal-nominal-coverage", type=float, default=0.90
@@ -3291,6 +4721,12 @@ def main():
         "--resume",
         action="store_true",
         help="Resume completed seeds from OUTPUT.progress.json.",
+    )
+    parser.add_argument(
+        "--export-predictions",
+        type=Path,
+        default=None,
+        help="Write labelled test-row anchor and selected-path predictions (one parquet per seed).",
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

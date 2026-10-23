@@ -659,9 +659,9 @@ def run_crossfit(examples, seed=17):
                     "active_safe_hybrid": float(active_safe_prediction[local]),
                     **{
                         f"ensemble_{ablation_mode}": float(
-                            predictions[local]
+                            ablation_predictions[ablation_mode][local]
                         )
-                        for ablation_mode, predictions in ablation_predictions.items()
+                        for ablation_mode in ablation_predictions
                     },
                     "ensemble_std": float(ensemble_std[local]),
                     "ensemble_direction_agreement": float(agreement[local]),

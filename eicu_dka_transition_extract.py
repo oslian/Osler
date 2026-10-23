@@ -19,6 +19,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from osler_jepa.urine_output import derive_interval_urine_rate
+
 from dka_action_contract import ACTION_KEYS, INSULIN_KEYS
 from eicu_demo_action_audit import (
     DKA_COOCCUR_HOURS,
@@ -197,27 +199,15 @@ def read_urine_output(data_root: Path) -> pd.DataFrame:
     path = data_root / "intakeOutput.csv.gz"
     if not path.exists():
         return empty_measurements()
-    columns = [EICU_ID, "intakeoutputoffset", "celllabel", "cellvaluenumeric"]
-    frame = pd.read_csv(path, usecols=columns)
-    labels = frame["celllabel"].fillna("").astype(str).str.lower()
-    urine = labels.str.contains("urine|foley|urinary|void", regex=True)
-    frame = frame[urine].copy()
-    frame["valuenum"] = clean_state_values("urine_output", frame["cellvaluenumeric"])
-    frame = frame.dropna(subset=["valuenum"])
-    if frame.empty:
-        return empty_measurements()
-    frame["offset"] = pd.to_numeric(frame["intakeoutputoffset"], errors="coerce")
-    frame = frame[np.isfinite(frame["offset"])]
-    frame["hour"] = np.floor(frame["offset"] / 60.0).astype("int32")
-    grouped = (
-        frame.groupby([EICU_ID, "hour"], sort=False)["valuenum"].sum().reset_index()
-    )
-    grouped["offset"] = grouped["hour"] * 60.0
-    grouped["valuenum"] = grouped["valuenum"] / 4.0
-    grouped["var"] = "urine_output"
-    return grouped.rename(columns={EICU_ID: "stay_id"})[
-        ["stay_id", "offset", "var", "valuenum"]
+    columns = [
+        EICU_ID,
+        "intakeoutputoffset",
+        "cellpath",
+        "celllabel",
+        "cellvaluenumeric",
     ]
+    frame = pd.read_csv(path, usecols=columns)
+    return derive_interval_urine_rate(frame, id_column=EICU_ID)
 
 
 def empty_measurements() -> pd.DataFrame:

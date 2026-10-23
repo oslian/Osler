@@ -7,8 +7,10 @@ import torch
 from osler_jepa.adjacent_hierarchy import AdjacentThreeLevelResidualAdapter
 from osler_jepa.patient_state import (
     NeuralBeliefFilter,
+    GatedSharedPrivateRenalForecaster,
     PatientStateAdapter,
     PatientStateResidualForecaster,
+    SharedRenalPatientStateForecaster,
     load_patient_state_artifact,
     predict_patient_state_artifact,
 )
@@ -122,6 +124,55 @@ class PatientStateAdapterTest(unittest.TestCase):
         )
         torch.testing.assert_close(prediction, anchor)
         self.assertTrue(torch.all(scale > 0.0))
+
+    def test_shared_renal_forecaster_uses_one_state_and_task_specific_heads(self):
+        model = SharedRenalPatientStateForecaster(
+            feature_dim=5,
+            belief_dim=3,
+            task_count=4,
+            hidden=8,
+        )
+        anchors = torch.randn(3, 4)
+        prediction, scale = model(
+            torch.randn(3, 5),
+            torch.randn(3, 6, 6),
+            torch.ones(3, 6, dtype=torch.bool),
+            torch.randn(3, 3),
+            anchors,
+            torch.randn(3, 4),
+        )
+        torch.testing.assert_close(prediction, anchors)
+        self.assertEqual(tuple(scale.shape), (3, 4))
+        self.assertEqual(len(model.point_heads), 4)
+        self.assertTrue(torch.all(scale > 0.0))
+        self.assertEqual(
+            model.architecture_contract["placement"], "kidney_organ_layer"
+        )
+
+    def test_gated_shared_private_has_matched_no_coupling_path(self):
+        model = GatedSharedPrivateRenalForecaster(
+            feature_dim=5,
+            belief_dim=3,
+            task_count=3,
+            hidden=8,
+        )
+        inputs = (
+            torch.randn(2, 5),
+            torch.randn(2, 4, 6),
+            torch.ones(2, 4, dtype=torch.bool),
+            torch.randn(2, 3),
+            torch.randn(2, 3),
+            torch.randn(2, 3),
+        )
+        coupled_point, coupled_scale = model(*inputs)
+        private_point, private_scale = model(*inputs, disable_shared=True)
+        torch.testing.assert_close(coupled_point, inputs[4])
+        torch.testing.assert_close(private_point, inputs[4])
+        self.assertEqual(tuple(coupled_scale.shape), (2, 3))
+        self.assertEqual(tuple(private_scale.shape), (2, 3))
+        self.assertEqual(
+            model.architecture_contract["matched_ablation"], "disable_shared"
+        )
 
     def test_promoted_artifact_is_loadable_when_present(self):
         artifact = Path("patient_state_creatinine24_v1")

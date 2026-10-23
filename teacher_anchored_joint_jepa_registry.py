@@ -1,4 +1,4 @@
-"""Compile teacher-anchored JEPA evidence into a fail-closed v2 registry."""
+"""Compile adjacent three-level JEPA evidence into a fail-closed registry."""
 
 from __future__ import annotations
 
@@ -13,16 +13,66 @@ def _load(value):
     return json.loads(Path(value).read_text(encoding="utf-8"))
 
 
+def select_validated_coupling_path(
+    cell, *, required_splits=7, requested_path=None
+):
+    """Choose the strongest independently validated adjacent-layer path."""
+
+    candidates = []
+    path_specs = (
+        (
+            "direct_organ",
+            "direct_organ_beats_system_only_splits",
+            "median_direct_organ_delta_vs_system_only",
+            False,
+            True,
+        ),
+        (
+            "body_mediated",
+            "body_mediated_beats_system_only_splits",
+            "median_body_mediated_delta_vs_system_only",
+            True,
+            False,
+        ),
+    )
+    for path, split_key, delta_key, disable_organ, disable_body in path_specs:
+        if requested_path not in (None, "full", path):
+            continue
+        delta = cell.get(delta_key)
+        if (
+            cell.get(split_key) == required_splits
+            and delta is not None
+            and float(delta) < 0.0
+        ):
+            candidates.append(
+                {
+                    "selected_path": path,
+                    "validated_splits": int(cell[split_key]),
+                    "median_delta_vs_system_only": float(delta),
+                    "disable_organ_coupling": disable_organ,
+                    "disable_body_feedback": disable_body,
+                }
+            )
+    if not candidates:
+        return None
+    return min(candidates, key=lambda value: value["median_delta_vs_system_only"])
+
+
 def _patient_pass(bounded, key, variant):
     cell = bounded.get("aggregate", {}).get(variant, {}).get(key, {})
+    requested_path = bounded.get("architecture", {}).get(
+        "candidate_coupling_path", "full"
+    )
     return bool(
         cell.get("evaluated_splits") == 7
         and cell.get("beats_teacher_splits") == 7
         and cell.get("beats_persistence_splits") == 7
-        and (
-            not variant.startswith("sparse_")
-            or cell.get("beats_no_expert_splits") == 7
+        and cell.get("beats_no_route_splits") == 7
+        and cell.get("conformal_pass_splits") == 7
+        and select_validated_coupling_path(
+            cell, requested_path=requested_path
         )
+        is not None
     )
 
 
@@ -123,7 +173,7 @@ def build_registry(
     *,
     minimum_direction_accuracy=0.55,
     minimum_delta_correlation=0.05,
-    variant="hierarchical",
+    variant="adjacent_three_level",
     input_contract_id="joint_asof_whole_body_state.v3",
     input_contract=(
         "as-of aligned whole-body state; exact anchor-linked future labels"
@@ -132,6 +182,10 @@ def build_registry(
     candidate_id=None,
     include_cells=None,
 ):
+    if variant != "adjacent_three_level":
+        raise ValueError(
+            "Only adjacent_three_level may write a promotion registry"
+        )
     bounded = _load(bounded)
     external = _load(external)
     scoring = _load(scoring)
@@ -142,6 +196,15 @@ def build_registry(
     svd = _svd_requirement(scoring)
     registry = {}
     for key in cells:
+        bounded_cell = bounded.get("aggregate", {}).get(variant, {}).get(
+            key, {}
+        )
+        coupling_path = select_validated_coupling_path(
+            bounded_cell,
+            requested_path=bounded.get("architecture", {}).get(
+                "candidate_coupling_path", "full"
+            ),
+        )
         external_requirements = _external_requirements(external, key)
         external_pass = bool(
             external_requirements
@@ -174,7 +237,13 @@ def build_registry(
             "status": (
                 "validated_move" if validated else "fallback_persistence"
             ),
-            "source_model": f"teacher_anchored_{variant}_joint_jepa",
+            "source_model": (
+                f"teacher_anchored_{variant}_joint_jepa_"
+                f"{coupling_path['selected_path']}"
+                if coupling_path is not None
+                else f"teacher_anchored_{variant}_joint_jepa"
+            ),
+            "coupling_path": coupling_path,
             "requirements": requirements,
             "rejection_reasons": [
                 name for name, passed in requirements.items() if not passed
@@ -199,14 +268,14 @@ def build_registry(
                     "time_conformal", False
                 )
             ),
-            "cross_organ_claim_allowed": False,
+            "cross_organ_claim_allowed": bool(validated),
             "causal_claim_allowed": False,
         }
     validated_cells = sorted(
         key for key, value in registry.items() if value["can_move"]
     )
     return {
-        "schema": "whole_body_promotion_registry.v2",
+        "schema": "whole_body_promotion_registry.v3",
         "candidate_id": (
             candidate_id
             or f"teacher_anchored_{variant}_joint_jepa"
@@ -215,21 +284,23 @@ def build_registry(
         "input_contract": input_contract,
         "variable_units": dict(variable_units or {}),
         "candidate_configuration": {
+            "architecture": "adjacent_three_level",
+            "three_level_path": "system <-> organ <-> body",
+            "organ_layer_graph": "canonical_sparse_organ_to_organ",
+            "direct_system_body_path": False,
+            "training_schedule": "system_then_organ_then_body",
             "validated_router_teacher_anchor": True,
             "zero_initialized_bounded_residual": True,
-            "two_level_latent_hierarchy": True,
-            "level_1_shared_whole_body_latent": True,
+            "three_level_latent_hierarchy": True,
+            "level_1_validated_system_experts": True,
             "level_2_canonical_organ_latent_tokens": True,
-            "target_heads_above_two_level_latents": True,
+            "level_3_shared_whole_body_latent": True,
+            "target_heads_anchored_at_system_layer": True,
             "shared_slow_context_latent": True,
             "target_specific_fast_future_latent": True,
-            "dynamic_cross_organ_route": False,
-            "sparse_target_horizon_experts": bool(
-                variant.startswith("sparse_")
-            ),
-            "target_specific_distributional_scale": bool(
-                variant == "sparse_distributional"
-            ),
+            "per_cell_path_specific_coupling": True,
+            "sparse_target_horizon_experts": True,
+            "target_specific_distributional_scale": False,
             "pcgrad": False,
             "conformal_method": bounded.get("architecture", {}).get(
                 "conformal_method", "unknown"
@@ -237,6 +308,12 @@ def build_registry(
             "conformal_nominal_coverage": bounded.get(
                 "architecture", {}
             ).get("conformal_nominal_coverage"),
+            "domain_invariance_weight": bounded.get(
+                "architecture", {}
+            ).get("domain_invariance_weight"),
+            "domain_invariance_columns": bounded.get(
+                "architecture", {}
+            ).get("domain_invariance_columns", []),
             "target_empirical_interval_coverage": 0.90,
         },
         "target_horizon_registry": registry,
@@ -250,6 +327,7 @@ def build_registry(
             "requires_hospital_care_unit_time_and_conformal_gate": True,
             "requires_current_router_comparison": True,
             "cross_organ_attribution_requires_separate_ablation": True,
+            "organ_coupling_requires_separate_ablation": True,
             "missing_evidence_action": "fallback_persistence",
             "causal_claim_allowed": False,
             "clinical_promotion_allowed": False,
@@ -268,11 +346,6 @@ def main():
     parser.add_argument("--external", type=Path, required=True)
     parser.add_argument("--scoring", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument(
-        "--variant",
-        choices=("hierarchical", "sparse_experts", "sparse_distributional"),
-        default="hierarchical",
-    )
     parser.add_argument(
         "--input-contract-id",
         default="joint_asof_whole_body_state.v3",
@@ -315,7 +388,6 @@ def main():
         args.bounded,
         args.external,
         args.scoring,
-        variant=args.variant,
         input_contract_id=args.input_contract_id,
         input_contract=args.input_contract,
         variable_units=variable_units,

@@ -1,0 +1,55 @@
+{
+  "schema": "nwicu_external_validation_protocol.v1",
+  "frozen_at": "2026-10-14T18:33:05-07:00",
+  "frozen_before_any_nwicu_label_was_read": true,
+  "external_database": "NWICU v0.1.0 (Northwestern ICU), ~/Downloads/northwestern-icu-nwicu-database-0.1.0",
+  "prior_project_use_of_nwicu": "none found (repository-wide search for nwicu/northwestern/nw_hosp/nw_icu on 2026-10-14)",
+  "catalog": "49 cells in mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json, frozen source recipes",
+  "training_database": "MIMIC-IV v3.1 only",
+  "mimic_data": {
+    "template": "mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v2.parquet",
+    "builder": "mimiciv_observation_transition_extract.py --horizon-hours H --anchor-step-hours 6 --include-treatment-context"
+  },
+  "nwicu_data": {
+    "template": "nwicu_observation_transitions_{horizon}h.parquet",
+    "builder": "nwicu_observation_transition_extract.py --horizon-hours H --anchor-step-hours 6",
+    "cohort": "all NWICU ICU stays with outtime > intime + horizon (whole-ICU, no disease module filter)",
+    "lookback_hours": 6.0,
+    "label_tolerance_hours": "min(2, horizon/2), nearest measurement to anchor + horizon",
+    "episode_max_hours": 72.0
+  },
+  "row_cap_per_database_per_cell": 15000,
+  "not_evaluable_by_design": {
+    "urine_output@1h,3h,6h": "NWICU has no outputevents",
+    "observed_treatment_context_ridge cells (6)": "NWICU has no inputevents; unit-safe treatment schema not available"
+  },
+  "declared_semantic_deviations": [
+    "MAP derived as (SBP + 2*DBP)/3 from same-time arterial or non-invasive pairs; MIMIC MAP is device-measured mean",
+    "target_specific_change_hurdle recipes read pre-anchor treatment features; these are absent in NWICU and imputed with MIMIC training medians",
+    "variables absent in NWICU (ventilator settings, blood gases other than pH, biomarker expansion) are imputed with MIMIC training medians"
+  ],
+  "primary_interval_method": "value_conditional: Mondrian patient-cluster conformal, 5 current-value quintile bins with edges from MIMIC calibration rows only, nominal 0.90, bins with <30 calibration patients use the pooled width",
+  "secondary_interval_method": "fixed: one patient-cluster conformal half-width (reported for comparison, not used for decisions)",
+  "gates": {
+    "point": "patient-cluster paired bootstrap 95% CI upper < 0 versus persistence and versus the recipe's matched comparator (hospital axis not applicable: single hospital)",
+    "interval": "patient-equal and care-unit-equal coverage both in [0.87, 0.93] (care-unit replaces hospital: single hospital)",
+    "binary_event_cells": "point gate only (Brier versus persistence and MIMIC prevalence)",
+    "full_pass": "point gate and primary interval gate"
+  },
+  "primary_endpoint": "list and count of evaluable cells with full pass under the primary interval method",
+  "decision_rule": "A full pass makes a cell eligible for promotion review as an externally replicated candidate. No automatic runtime promotion. Failures stay on their existing validated expert or persistence.",
+  "one_shot_rule": "The NWICU scoring command is run once. If it crashes, only the crash may be fixed; any fix must leave methods, gates and cohorts unchanged, and is reported with the frozen hash mismatch it causes.",
+  "frozen_code_sha256": {
+    "external_value_conditional_interval_audit.py": "522db85b7c2a9c9f9cddbda6909105040236b0c073bd1e574a52e33a55121f08",
+    "mimic_to_eicu_49_cell_external_audit.py": "b050a903ed3e78057c70de48ee27614eb073975c4aab80059535949095dc809d",
+    "target_specific_domain_conformal_audit.py": "1cb5f5a02f2a12f5233c04a14ef9be92df1197bbaf1bbafdea18dabe03c3986a",
+    "teacher_anchored_joint_jepa_audit.py": "4429e056ae9b69188db034e78d75919aaacb54d9fe8db7680da9c4a58f1ffbc3",
+    "nwicu_observation_transition_extract.py": "5c9c20f570afb7b9bc694a588c81e32416798d499c987ae127d3e368b6092237",
+    "mimiciv_observation_transition_extract.py": "c2b7f874212111ab7dd044a37fe927a5d2632abb0c5ec8495c2b30668ebc8640",
+    "osler_jepa/treatment_units.py": "0f70576abf06701cef97eba8ab9da759f8a050765bf7db155c53beaaf939d397",
+    "osler_jepa/urine_output.py": "68dcc1e800ffe29e33baee99f55734c7cc6c685d1ff9994643ee4889c384c8b6",
+    "mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json": "da3cd1507dcf6cc171ab7e09c0119edbf228bfc49df8cea1282c925258e5a64d"
+  },
+  "causal_claim_allowed": false,
+  "clinical_promotion_allowed": false
+}

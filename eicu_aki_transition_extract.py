@@ -83,6 +83,7 @@ STATE_VARS = (
     "wbc",
     "lactate",
     "glucose",
+    "glucose_poc",
 )
 
 ACTION_KEYS = (
@@ -511,12 +512,13 @@ def assemble_states(
             times, values = lookup.get((int(anchor.stay_id), var), (np.asarray([]), np.asarray([])))
             if len(times):
                 current, age = backward_value(times, values, float(anchor.t_hour), LOOKBACK_H)
-                future = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
+                future, offset = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
             else:
-                current, age, future = np.nan, np.nan, np.nan
+                current, age, future, offset = np.nan, np.nan, np.nan, np.nan
             row[f"{var}_t"] = current
             row[f"{var}_age_hr"] = age
             row[future_column(var, horizon_hours)] = future
+            row[f"{future_column(var, horizon_hours)}_offset_hr"] = offset
         rows.append(row)
     return pd.DataFrame(rows, index=anchors.index)
 
@@ -597,11 +599,9 @@ def add_derived_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def filter_evaluable(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> pd.DataFrame:
-    has_pair = np.zeros(len(frame), dtype=bool)
-    for var in TARGET_VARS:
-        future = future_column(var, horizon_hours)
-        has_pair |= frame[f"{var}_t"].notna().values & frame[future].notna().values
-    return frame[has_pair].reset_index(drop=True)
+    """Keep every anchor: which anchors exist must not depend on future measurements."""
+
+    return frame.reset_index(drop=True)
 
 
 def target_pair_counts(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> dict[str, int]:
@@ -707,7 +707,7 @@ def build_transitions(
     meta = read_patient_meta(data_root)
     aki_stays = merge_aki_like_stays(data_root, meta, max_stays=max_stays)
     stay_ids = set(aki_stays)
-    measurements = read_measurements(data_root, stay_ids)
+    measurements = read_measurements(stay_ids)
     anchors = build_anchors(aki_stays, measurements, meta, horizon_hours=horizon_hours)
     evidence = read_action_evidence(data_root, stay_ids)
     if anchors.empty:

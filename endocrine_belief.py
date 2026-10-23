@@ -33,16 +33,25 @@ ENDOCRINE_STATE_STEMS = (
     "adrenal_hemodynamic_stress",
 )
 
-ENDOCRINE_BELIEF_COLUMNS = tuple(
-    column
-    for stem in ENDOCRINE_STATE_STEMS
-    for column in (
-        f"endo_belief_{stem}_mean",
-        f"endo_belief_{stem}_sd",
-        f"endo_belief_{stem}_innovation",
-        f"endo_belief_{stem}_confidence",
+HORMONE_AXIS_STATE_STEMS = (
+    "water_balance_adh_like",
+    "insulin_response",
+)
+
+def _state_columns(stems: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(
+        column
+        for stem in stems
+        for column in (
+            f"endo_belief_{stem}_mean",
+            f"endo_belief_{stem}_sd",
+            f"endo_belief_{stem}_innovation",
+            f"endo_belief_{stem}_confidence",
+        )
     )
-) + tuple(
+
+
+_CORE_BELIEF_COLUMNS = _state_columns(ENDOCRINE_STATE_STEMS) + tuple(
     column
     for var in CORE_TRACKED_LEVELS
     for column in (
@@ -68,6 +77,17 @@ ENDOCRINE_BELIEF_COLUMNS = tuple(
     "endo_belief_steroid_context",
     "endo_belief_vasopressor_context",
 )
+
+ENDOCRINE_BELIEF_COLUMNS = _CORE_BELIEF_COLUMNS
+
+HORMONE_AXIS_BELIEF_COLUMNS = _state_columns(HORMONE_AXIS_STATE_STEMS) + (
+    "endo_belief_water_retention_drive",
+    "endo_belief_renal_water_clearance",
+    "endo_belief_insulin_response_signal",
+    "endo_belief_insulin_observed",
+)
+
+ALL_ENDOCRINE_BELIEF_COLUMNS = ENDOCRINE_BELIEF_COLUMNS + HORMONE_AXIS_BELIEF_COLUMNS
 
 
 def _num(frame: pd.DataFrame, column: str, default=np.nan) -> np.ndarray:
@@ -241,8 +261,18 @@ def _tracked_kinetics(frame: pd.DataFrame) -> pd.DataFrame:
     return output
 
 
-def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return online-compatible endocrine-metabolic belief features."""
+def endocrine_belief_state_features(
+    frame: pd.DataFrame,
+    *,
+    include_hormone_axes: bool = False,
+) -> pd.DataFrame:
+    """Return online-compatible endocrine-metabolic belief features.
+
+    The two additional states are deliberately named as inferred drives, not
+    hormone concentrations.  They are candidate latent representations of
+    water regulation and insulin response, and require downstream held-out
+    validation before any hormone-related claim is allowed.
+    """
 
     glucose = _finite_clip(_num(frame, "glucose_t"), 20.0, 900.0, 140.0)
     osmolality = _finite_clip(_num(frame, "serum_osmolality_t"), 240.0, 420.0, 295.0)
@@ -253,6 +283,8 @@ def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
     potassium = _finite_clip(_num(frame, "potassium_t"), 1.5, 9.0, 4.2)
     map_value = _finite_clip(_num(frame, "map_t"), 20.0, 180.0, 75.0)
     temperature = _finite_clip(_num(frame, "temperature_t"), 30.0, 43.0, 37.0)
+    urine_output = _finite_clip(_num(frame, "urine_output_t"), 0.0, 5000.0, 300.0)
+    creatinine = _finite_clip(_num(frame, "creatinine_t"), 0.1, 25.0, 1.0)
 
     insulin = _action_any(frame, "insulin")
     dextrose = _action_any(frame, "dextrose")
@@ -272,6 +304,8 @@ def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
     low_map = _clip01((68.0 - map_value) / 28.0)
     fever = _clip01((temperature - 38.2) / 2.6)
     hypothermia = _clip01((35.5 - temperature) / 3.0)
+    low_urine_output = _clip01((300.0 - urine_output) / 300.0)
+    renal_clearance_burden = _clip01((creatinine - 1.5) / 8.0)
 
     glycemic_obs = _clip01(
         0.44 * hyperglycemia
@@ -298,9 +332,33 @@ def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
         + 0.08 * hypoglycemia
     )
 
+    water_balance_obs = _clip01(
+        0.36 * osmotic
+        + 0.24 * hypernatremia
+        + 0.18 * low_urine_output
+        + 0.12 * renal_clearance_burden
+        + 0.10 * low_map
+    )
+
+    tracked_kinetics = _tracked_kinetics(frame)
+    glucose_slope = _finite_clip(
+        _num(tracked_kinetics, "endo_belief_glucose_slope_per_hr", default=0.0),
+        -80.0,
+        80.0,
+        0.0,
+    )
+    insulin_observed = insulin
+    glucose_fall_response = _clip01((-glucose_slope - 0.01) / 0.20)
+    insulin_response_obs = _clip01(
+        insulin_observed * (0.35 + 0.65 * glucose_fall_response)
+        + (1.0 - insulin_observed) * 0.35
+    )
+
     glycemic_drift = -0.014 * insulin + 0.010 * dextrose + 0.006 * steroid - 0.004 * fluids
     osmotic_ketotic_drift = -0.010 * insulin - 0.006 * fluids + 0.004 * steroid
     adrenal_hemodynamic_drift = -0.006 * steroid - 0.004 * fluids + 0.004 * vasopressor
+    water_balance_drift = 0.003 * hypernatremia - 0.003 * fluids - 0.002 * dextrose
+    insulin_response_drift = -0.004 * insulin_observed + 0.002 * steroid
 
     frames = [
         _scalar_state(
@@ -324,7 +382,32 @@ def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
             confidence=_freshness(frame, ("map_age_hr", "temperature_age_hr", "glucose_age_hr")),
             drift_per_hour=adrenal_hemodynamic_drift,
         ),
-        _tracked_kinetics(frame),
+        _scalar_state(
+            frame,
+            prefix="water_balance_adh_like",
+            observation=water_balance_obs,
+            confidence=_freshness(
+                frame,
+                (
+                    "sodium_age_hr",
+                    "serum_osmolality_age_hr",
+                    "urine_output_age_hr",
+                    "creatinine_age_hr",
+                ),
+            ),
+            drift_per_hour=water_balance_drift,
+        ),
+        _scalar_state(
+            frame,
+            prefix="insulin_response",
+            observation=insulin_response_obs,
+            confidence=_clip01(
+                _freshness(frame, ("glucose_age_hr", "anion_gap_age_hr"))
+                * (0.20 + 0.80 * insulin_observed)
+            ),
+            drift_per_hour=insulin_response_drift,
+        ),
+        tracked_kinetics,
         pd.DataFrame({
             "endo_belief_hyperglycemia_burden": hyperglycemia,
             "endo_belief_hypoglycemia_burden": hypoglycemia,
@@ -343,9 +426,14 @@ def endocrine_belief_state_features(frame: pd.DataFrame) -> pd.DataFrame:
             "endo_belief_fluid_context": fluids,
             "endo_belief_steroid_context": steroid,
             "endo_belief_vasopressor_context": vasopressor,
+            "endo_belief_water_retention_drive": water_balance_obs,
+            "endo_belief_renal_water_clearance": 1.0 - renal_clearance_burden,
+            "endo_belief_insulin_response_signal": insulin_response_obs,
+            "endo_belief_insulin_observed": insulin_observed,
         }, index=frame.index),
     ]
-    output = pd.concat(frames, axis=1).reindex(columns=ENDOCRINE_BELIEF_COLUMNS)
+    columns = ALL_ENDOCRINE_BELIEF_COLUMNS if include_hormone_axes else ENDOCRINE_BELIEF_COLUMNS
+    output = pd.concat(frames, axis=1).reindex(columns=columns)
     return output.replace([np.inf, -np.inf], np.nan).astype(np.float64)
 
 

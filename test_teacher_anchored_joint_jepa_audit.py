@@ -1,31 +1,187 @@
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
 import torch
 
 from teacher_anchored_joint_jepa_audit import (
+    DEFAULT_VARIANTS,
     TeacherAnchoredResidualAdapter,
+    _adapter_batches,
     _adaptive_patient_cluster_conformal_quantile,
     _adaptive_conformal_quantile,
     _crossfit_adaptive_patient_cluster_conformal_quantile,
     _crossfit_normalized_conformal,
+    _compose_coupling_path_prediction,
     _distributional_adaptive_widths,
     _distributional_mondrian_widths,
     _distributional_asymmetric_widths,
+    _distributional_asymmetric_adaptive_widths,
     _distributional_shape_adaptive_widths,
     _future_label_support,
+    _fixed_expert_anchor_prediction,
+    _feature_batch,
     _latent_svd_stability,
     _patient_cluster_conformal_quantile,
     _patient_coverage_diagnostics,
     _pcgrad,
     _sparsemax,
     _select_targets,
+    _split_rows_for_mode,
+    _summarize_organ_coupling,
     _train_distributional_scale_heads,
 )
 
 
 class TeacherAnchoredJointJEPAAuditTests(unittest.TestCase):
+    def test_adapter_domain_balancing_equalizes_group_sampling(self):
+        rows = np.arange(1000, dtype=np.int64)
+        labels = np.asarray(["large"] * 950 + ["small"] * 50)
+        batches = list(
+            _adapter_batches(
+                rows,
+                batch_size=100,
+                rng=np.random.default_rng(17),
+                balance_labels=labels,
+            )
+        )
+        sampled = np.concatenate(batches)
+        small_fraction = float((labels[sampled] == "small").mean())
+        self.assertGreater(small_fraction, 0.42)
+        self.assertLess(small_fraction, 0.58)
+
+    def test_compressed_feature_batch_restores_float32(self):
+        features = {
+            "context": torch.tensor(
+                [[1.125, -2.25], [3.5, 4.75]], dtype=torch.float16
+            ),
+            "presence": torch.tensor([[1, 0], [0, 1]], dtype=torch.uint8),
+        }
+        context = _feature_batch(features, "context", np.asarray([1, 0]))
+        presence = _feature_batch(features, "presence", np.asarray([0, 1]))
+        self.assertEqual(context.dtype, torch.float32)
+        self.assertEqual(presence.dtype, torch.float32)
+        torch.testing.assert_close(
+            context,
+            torch.tensor([[3.5, 4.75], [1.125, -2.25]]),
+        )
+        torch.testing.assert_close(
+            presence,
+            torch.tensor([[1.0, 0.0], [0.0, 1.0]]),
+        )
+
+    def test_canonical_default_uses_only_adjacent_three_level(self):
+        self.assertEqual(DEFAULT_VARIANTS, ("adjacent_three_level",))
+
+    def test_external_split_modes_isolate_requested_provenance(self):
+        frame = pd.DataFrame(
+            {
+                "subject_id": np.repeat(np.arange(12), 4),
+                "hospitalid": np.repeat(np.arange(4), 12),
+                "careunit": np.tile(np.repeat(("micu", "sicu"), 2), 12),
+                "stay_id": np.repeat(np.arange(12), 4),
+                "_time_hours": np.tile((0.0, 1.0, 2.0, 3.0), 12),
+            }
+        )
+        for mode, column in (
+            ("subject", "subject_id"),
+            ("hospital", "hospitalid"),
+            ("careunit", "careunit"),
+        ):
+            train, test = _split_rows_for_mode(frame, mode, seed=7)
+            self.assertFalse(
+                set(frame.iloc[train][column])
+                & set(frame.iloc[test][column])
+            )
+
+        train, test = _split_rows_for_mode(frame, "time", seed=7)
+        for stay_id in frame["stay_id"].unique():
+            train_time = frame.iloc[train]
+            train_time = train_time[train_time["stay_id"] == stay_id]
+            test_time = frame.iloc[test]
+            test_time = test_time[test_time["stay_id"] == stay_id]
+            self.assertLess(
+                float(train_time["_time_hours"].max()),
+                float(test_time["_time_hours"].min()),
+            )
+
+        with self.assertRaises(ValueError):
+            _split_rows_for_mode(frame, "invalid", seed=7)
+
+    def test_database_split_isolates_databases_and_patients(self):
+        frame = pd.DataFrame(
+            {
+                "subject_id": ("M:1", "M:2", "E:1", "E:2"),
+                "database": ("MIMIC-IV", "MIMIC-IV", "eICU", "eICU"),
+            }
+        )
+        train, test = _split_rows_for_mode(
+            frame,
+            "database",
+            seed=7,
+            train_database="MIMIC-IV",
+            test_database="eICU",
+        )
+        self.assertEqual(set(train), {0, 1})
+        self.assertEqual(set(test), {2, 3})
+        self.assertFalse(
+            set(frame.iloc[train]["subject_id"])
+            & set(frame.iloc[test]["subject_id"])
+        )
+
+    def test_fixed_expert_anchor_is_exact_target_horizon_only(self):
+        frame = pd.DataFrame(
+            {
+                "expert__heart_rate__6h": (80.0, 90.0, 100.0),
+                "expert__hypoxemia_event__1h": (0.1, 0.2, 0.3),
+            }
+        )
+        arrays = [None] * 9
+        arrays[0] = SimpleNamespace(
+            medians=np.asarray([50.0, 4.0]),
+            scales=np.asarray([10.0, 1.0]),
+        )
+        arrays[8] = np.asarray([6.0, 12.0, 6.0], dtype=np.float32)
+        registry = {
+            "cells": [
+                {
+                    "cell": "heart_rate@6h",
+                    "target": "heart_rate",
+                    "horizon_hours": 6,
+                    "anchor_column": "expert__heart_rate__6h",
+                    "task_type": "continuous_value",
+                    "source_model": "measurement_pure_ridge",
+                },
+                {
+                    "cell": "heart_rate@12h",
+                    "target": "heart_rate",
+                    "horizon_hours": 12,
+                    "anchor_column": "expert__heart_rate__6h",
+                    "task_type": "continuous_value_with_change_hurdle",
+                    "source_model": "measurement_pure_ridge",
+                },
+                {
+                    "cell": "hypoxemia_event@1h",
+                    "target": "hypoxemia_event",
+                    "horizon_hours": 1,
+                    "anchor_column": "expert__hypoxemia_event__1h",
+                    "task_type": "binary_event_probability",
+                },
+            ]
+        }
+        output, metadata = _fixed_expert_anchor_prediction(
+            frame,
+            ("heart_rate", "potassium"),
+            tuple(arrays),
+            np.arange(3),
+            registry,
+        )
+        np.testing.assert_allclose(output[[0, 2], 0], (3.0, 5.0))
+        self.assertAlmostEqual(float(output[1, 0]), 4.0)
+        self.assertTrue(np.isnan(output[:, 1]).all())
+        self.assertEqual(set(metadata), {"heart_rate@6h", "heart_rate@12h"})
+
     def test_all_target_selection_preserves_canonical_variable_order(self):
         variables = ("glucose", "creatinine", "heart_rate")
         self.assertEqual(_select_targets("all", variables), variables)
@@ -49,6 +205,64 @@ class TeacherAnchoredJointJEPAAuditTests(unittest.TestCase):
         self.assertEqual(report["glucose"]["evaluable_horizons"], ["3h", "6h"])
         self.assertEqual(
             report["cortisol"]["support_limited_horizons"], ["3h", "6h"]
+        )
+
+    def test_organ_coupling_summary_reports_support_and_signal(self):
+        weights = np.zeros((2, 3, 3), dtype=np.float32)
+        weights[0, 0, 1] = 0.75
+        weights[0, 1, 0] = 1.0
+        presence = np.asarray(
+            [[1.0, 1.0, 0.0], [1.0, 0.0, 1.0]], dtype=np.float32
+        )
+        signal = np.zeros((2, 1, 4), dtype=np.float32)
+        signal[0, 0, 0] = 0.5
+        report = _summarize_organ_coupling(
+            weights,
+            presence,
+            signal,
+            np.asarray(
+                [[[0.0, 1.0, 0.0]], [[0.0, 0.0, 0.0]]],
+                dtype=np.float32,
+            ),
+            ("map",),
+            (
+                "heart",
+                "kidneys",
+                "brain",
+            ),
+            coupling_gates=np.asarray([0.4, 0.6, 0.5]),
+        )
+        self.assertTrue(report["available"])
+        self.assertEqual(len(report["edges"]), 1)
+        edge = report["edges"][0]
+        self.assertEqual(edge["coobserved_rows"], 1)
+        self.assertAlmostEqual(edge["coobserved_fraction"], 0.5)
+        self.assertAlmostEqual(edge["left_receives_from_right"], 0.75)
+        self.assertAlmostEqual(edge["right_receives_from_left"], 1.0)
+        self.assertAlmostEqual(
+            report["target_signal"]["map"]["nonzero_fraction"], 0.5
+        )
+
+    def test_coupling_path_composition_uses_cell_specific_selection(self):
+        arrays = (None,) * 8 + (np.asarray([3.0, 12.0, 3.0, 12.0]),)
+        paths = {
+            "system_only": np.zeros((4, 1), dtype=np.float32),
+            "direct_organ": np.ones((4, 1), dtype=np.float32),
+            "body_mediated": np.full((4, 1), 2.0, dtype=np.float32),
+            "full": np.full((4, 1), 3.0, dtype=np.float32),
+        }
+        output = _compose_coupling_path_prediction(
+            np.arange(4),
+            arrays,
+            ("creatinine",),
+            paths,
+            {
+                "creatinine@3h": {"selected_path": "direct_organ"},
+                "creatinine@12h": {"selected_path": "body_mediated"},
+            },
+        )
+        np.testing.assert_array_equal(
+            output[:, 0], np.asarray([1.0, 2.0, 1.0, 2.0])
         )
 
     def test_distributional_mondrian_uses_calibration_state_only(self):
@@ -112,6 +326,34 @@ class TeacherAnchoredJointJEPAAuditTests(unittest.TestCase):
         self.assertTrue(np.all(upper > lower))
         self.assertFalse(metadata["test_labels_used"])
         self.assertAlmostEqual(metadata["tail_coverage"], 0.95)
+
+    def test_distributional_asymmetric_adaptive_uses_patient_crossfit(self):
+        frame = pd.DataFrame({"subject_id": np.repeat(np.arange(80), 4)})
+        rows = np.arange(320)
+        rng = np.random.default_rng(29)
+        error = rng.standard_t(df=4, size=320) + 0.35
+        lower, upper, metadata = (
+            _distributional_asymmetric_adaptive_widths(
+                frame,
+                rows,
+                error,
+                np.ones(40),
+                seed=31,
+            )
+        )
+        self.assertEqual(lower.shape, (40,))
+        self.assertEqual(upper.shape, (40,))
+        self.assertTrue(np.all(lower > 0.0))
+        self.assertTrue(np.all(upper > 0.0))
+        self.assertTrue(metadata["all_calibration_rows_used_after_crossfit_selection"])
+        self.assertFalse(metadata["test_labels_used"])
+        self.assertGreaterEqual(metadata["selected_nominal_coverage"], 0.80)
+        self.assertLessEqual(metadata["selected_nominal_coverage"], 0.91)
+        self.assertAlmostEqual(
+            metadata["tail_coverage"],
+            1.0
+            - (1.0 - metadata["selected_nominal_coverage"]) / 2.0,
+        )
 
     def test_distributional_shape_selection_keeps_final_patients_disjoint(self):
         frame = pd.DataFrame({"subject_id": np.repeat(np.arange(80), 4)})
@@ -373,14 +615,20 @@ class TeacherAnchoredJointJEPAAuditTests(unittest.TestCase):
             "context": torch.from_numpy(values[:, :4]).float(),
             "target": torch.from_numpy(values[:, 4:].reshape(240, 2, 4)).float(),
         }
+        frame = pd.DataFrame({"subject_id": np.repeat(np.arange(60), 4)})
         report = _latent_svd_stability(
+            frame,
             features,
             np.arange(0, 120),
             np.arange(120, 240),
+            max_rows=80,
+            seed=11,
         )
         self.assertTrue(report["pass"])
         self.assertGreater(report["fit_effective_rank"], 2.0)
         self.assertGreater(report["mean_top_subspace_cosine"], 0.5)
+        self.assertLessEqual(report["fit_sample_rows"], 80)
+        self.assertTrue(report["patient_equalized_sampling"])
 
     def test_adaptive_conformal_uses_patient_disjoint_calibration(self):
         subject_ids = np.repeat(np.arange(30), 5)

@@ -1,0 +1,1341 @@
+{
+  "schema": "external_value_conditional_interval_audit.v2",
+  "value_conditional_method": "normalized_bin_scale.v2",
+  "external_database": "NWICU",
+  "protocol": "nwicu_external_recheck_protocol_v4data_20261015.json",
+  "mimic_template": "mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v4.parquet",
+  "mimic_data_sha256": {
+    "mimiciv_observation_transitions_3h_full_v31_treatment_unit_safe_v4.parquet": "d18c4e4fa697e49cf238cd62d6230cd452ae9ed668847caff4485fc2830c9ab7"
+  },
+  "gate_axes": {
+    "point": [
+      "patient"
+    ],
+    "interval": [
+      "subject_id",
+      "careunit"
+    ]
+  },
+  "coverage_bounds": [
+    0.87,
+    0.93
+  ],
+  "catalog_cells": 10,
+  "evaluable_cells": 8,
+  "not_evaluable_reasons": {
+    "treatment_context_not_available_in_nwicu": 1,
+    "target_not_recorded_in_nwicu": 1
+  },
+  "point_pass_cells": 8,
+  "fixed_interval_pass_cells": 7,
+  "value_conditional_interval_pass_cells": 7,
+  "fixed_full_pass_cells": 8,
+  "value_conditional_full_pass_cells": 8,
+  "cells": [
+    {
+      "cell": "glucose@3h",
+      "target": "glucose",
+      "horizon_hours": 3,
+      "source_model": "observed_treatment_context_ridge",
+      "evaluable": false,
+      "reason": "treatment_context_not_available_in_nwicu"
+    },
+    {
+      "cell": "heart_rate@3h",
+      "target": "heart_rate",
+      "horizon_hours": 3,
+      "source_model": "measurement_pure_ridge",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 664917,
+        "sampled_rows": 15029,
+        "subjects": 1428,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 125752,
+          "sampled_rows": 15006,
+          "subjects": 1980,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 15006,
+        "subjects": 1980,
+        "hospitals": 1,
+        "candidate_mae": 7.541718267941556,
+        "persistence_mae": 7.711048913767827,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 1980,
+              "patient_equal_delta": -0.16324862911582513,
+              "bootstrap_low": -0.24717370446519815,
+              "bootstrap_high": -0.07566820195581757,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.1632486291158251,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "persistence_matched_baseline": {
+            "patient": {
+              "n_subjects": 1980,
+              "patient_equal_delta": -0.16324862911582513,
+              "bootstrap_low": -0.24437727861783431,
+              "bootstrap_high": -0.07571500134988089,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.1632486291158251,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9030653048941556,
+          "value_conditional": 0.9015475561298953
+        },
+        "bin_edges": [
+          70.0,
+          79.0,
+          89.0,
+          101.0
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.909489528743722,
+          "hospital_equal_coverage": 0.9090363854458217,
+          "careunit_equal_coverage": 0.9064942261631612,
+          "median_half_width": 16.799058437347412,
+          "hospitalid_coverage_range": [
+            0.9090363854458217,
+            0.9090363854458217
+          ],
+          "careunit_coverage_range": [
+            0.8936170212765957,
+            0.9534090909090909
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9084887042008526,
+          "hospital_equal_coverage": 0.9087698254031721,
+          "careunit_equal_coverage": 0.9113518864692873,
+          "median_half_width": 16.584883682053217,
+          "hospitalid_coverage_range": [
+            0.9087698254031721,
+            0.9087698254031721
+          ],
+          "careunit_coverage_range": [
+            0.8980963045912654,
+            0.946590909090909
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 577,
+            "calibration_patients": 145,
+            "scale": 5.026299476623535,
+            "source": "bin",
+            "half_width": 14.633201167537239,
+            "external_rows": 3669,
+            "external_fixed_coverage": 0.9329517579721995,
+            "external_value_conditional_coverage": 0.9073316980103571
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 591,
+            "calibration_patients": 172,
+            "scale": 5.658156156539917,
+            "source": "bin",
+            "half_width": 16.472742553654516,
+            "external_rows": 3024,
+            "external_fixed_coverage": 0.9315476190476191,
+            "external_value_conditional_coverage": 0.9275793650793651
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 609,
+            "calibration_patients": 184,
+            "scale": 5.696675062179565,
+            "source": "bin",
+            "half_width": 16.584883682053217,
+            "external_rows": 3298,
+            "external_fixed_coverage": 0.9205579138872043,
+            "external_value_conditional_coverage": 0.9190418435415403
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 582,
+            "calibration_patients": 171,
+            "scale": 5.848798394203186,
+            "source": "bin",
+            "half_width": 17.027764439582825,
+            "external_rows": 2771,
+            "external_fixed_coverage": 0.9040057740887766,
+            "external_value_conditional_coverage": 0.9068928184770841
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 645,
+            "calibration_patients": 131,
+            "scale": 6.839935541152954,
+            "source": "bin",
+            "half_width": 19.913288735018906,
+            "external_rows": 2244,
+            "external_fixed_coverage": 0.8288770053475936,
+            "external_value_conditional_coverage": 0.8729946524064172
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "hematocrit@3h",
+      "target": "hematocrit",
+      "horizon_hours": 3,
+      "source_model": "measurement_pure_ridge",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 75175,
+        "sampled_rows": 15000,
+        "subjects": 5919,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 10458,
+          "sampled_rows": 10458,
+          "subjects": 4549,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 10458,
+        "subjects": 4549,
+        "hospitals": 1,
+        "candidate_mae": 1.9034868159079716,
+        "persistence_mae": 2.0130426467775866,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 4549,
+              "patient_equal_delta": -0.15772958324916875,
+              "bootstrap_low": -0.19292444635570433,
+              "bootstrap_high": -0.12306371968568316,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.15772958324916875,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "persistence_matched_baseline": {
+            "patient": {
+              "n_subjects": 4549,
+              "patient_equal_delta": -0.15772958324916875,
+              "bootstrap_low": -0.19049284216755932,
+              "bootstrap_high": -0.12166725342561718,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.15772958324916875,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9002088119275621,
+          "value_conditional": 0.9001421673296672
+        },
+        "bin_edges": [
+          24.6,
+          27.3,
+          30.1,
+          33.8
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.9157612024170321,
+          "hospital_equal_coverage": 0.9217823675655001,
+          "careunit_equal_coverage": 0.89055300396386,
+          "median_half_width": 4.301656579971315,
+          "hospitalid_coverage_range": [
+            0.9217823675655001,
+            0.9217823675655001
+          ],
+          "careunit_coverage_range": [
+            0.8440366972477065,
+            0.9436749769159741
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9166692501323594,
+          "hospital_equal_coverage": 0.9226429527634347,
+          "careunit_equal_coverage": 0.8939746519950774,
+          "median_half_width": 4.775690686805894,
+          "hospitalid_coverage_range": [
+            0.9226429527634347,
+            0.9226429527634347
+          ],
+          "careunit_coverage_range": [
+            0.8715596330275229,
+            0.9407894736842105
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 588,
+            "calibration_patients": 301,
+            "scale": 1.7231644749641433,
+            "source": "bin",
+            "half_width": 4.787980850680855,
+            "external_rows": 3607,
+            "external_fixed_coverage": 0.9135015248128638,
+            "external_value_conditional_coverage": 0.9337399500970336
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 583,
+            "calibration_patients": 359,
+            "scale": 1.3843005537986777,
+            "source": "bin",
+            "half_width": 3.8464143379655567,
+            "external_rows": 2289,
+            "external_fixed_coverage": 0.9484491044124072,
+            "external_value_conditional_coverage": 0.9252948885976409
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 607,
+            "calibration_patients": 384,
+            "scale": 1.2918989419937112,
+            "source": "bin",
+            "half_width": 3.589667431722941,
+            "external_rows": 1574,
+            "external_fixed_coverage": 0.9364675984752223,
+            "external_value_conditional_coverage": 0.9027954256670903
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 596,
+            "calibration_patients": 431,
+            "scale": 1.5807994604110718,
+            "source": "bin",
+            "half_width": 4.39240574836731,
+            "external_rows": 1257,
+            "external_fixed_coverage": 0.9204455051710422,
+            "external_value_conditional_coverage": 0.9236276849642004
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 601,
+            "calibration_patients": 428,
+            "scale": 1.7187413215637264,
+            "source": "bin",
+            "half_width": 4.775690686805894,
+            "external_rows": 1731,
+            "external_fixed_coverage": 0.8913922588099364,
+            "external_value_conditional_coverage": 0.9133448873483535
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "hemoglobin@3h",
+      "target": "hemoglobin",
+      "horizon_hours": 3,
+      "source_model": "target_specific_change_hurdle",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 53225,
+        "sampled_rows": 15003,
+        "subjects": 6219,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 10828,
+          "sampled_rows": 10828,
+          "subjects": 4727,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 10828,
+        "subjects": 4727,
+        "hospitals": 1,
+        "candidate_mae": 0.58198604601633,
+        "persistence_mae": 0.6766808274843,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 4727,
+              "patient_equal_delta": -0.10647791333413885,
+              "bootstrap_low": -0.11433533616054066,
+              "bootstrap_high": -0.09847189565253933,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.10647791333413884,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "plain_ridge": {
+            "patient": {
+              "n_subjects": 4727,
+              "patient_equal_delta": -0.06076018632206521,
+              "bootstrap_low": -0.06857802075675815,
+              "bootstrap_high": -0.05366192945799569,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.060760186322065195,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.8991846936085164,
+          "value_conditional": 0.9011670200819293
+        },
+        "bin_edges": [
+          7.8,
+          8.8,
+          9.9,
+          11.2
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.9119189088441461,
+          "hospital_equal_coverage": 0.9195603989656447,
+          "careunit_equal_coverage": 0.896854153405833,
+          "median_half_width": 1.4104995383102104,
+          "hospitalid_coverage_range": [
+            0.9195603989656447,
+            0.9195603989656447
+          ],
+          "careunit_coverage_range": [
+            0.8767967145790554,
+            0.9464450600184672
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9109971827002916,
+          "hospital_equal_coverage": 0.9194680458071666,
+          "careunit_equal_coverage": 0.9017237721549308,
+          "median_half_width": 1.3372614379182222,
+          "hospitalid_coverage_range": [
+            0.9194680458071666,
+            0.9194680458071666
+          ],
+          "careunit_coverage_range": [
+            0.8726899383983573,
+            0.9473684210526315
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 559,
+            "calibration_patients": 306,
+            "scale": 0.4735006049397317,
+            "source": "bin",
+            "half_width": 1.5289710485101446,
+            "external_rows": 3020,
+            "external_fixed_coverage": 0.902317880794702,
+            "external_value_conditional_coverage": 0.9211920529801324
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 562,
+            "calibration_patients": 353,
+            "scale": 0.41413086299694735,
+            "source": "bin",
+            "half_width": 1.3372614379182222,
+            "external_rows": 2691,
+            "external_fixed_coverage": 0.9524340393905611,
+            "external_value_conditional_coverage": 0.9472315124489038
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 611,
+            "calibration_patients": 382,
+            "scale": 0.4017976400117025,
+            "source": "bin",
+            "half_width": 1.2974364816614938,
+            "external_rows": 1932,
+            "external_fixed_coverage": 0.9384057971014492,
+            "external_value_conditional_coverage": 0.9218426501035196
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 575,
+            "calibration_patients": 394,
+            "scale": 0.3833852792539716,
+            "source": "bin",
+            "half_width": 1.2379815068639894,
+            "external_rows": 1412,
+            "external_fixed_coverage": 0.9157223796033994,
+            "external_value_conditional_coverage": 0.8831444759206799
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 605,
+            "calibration_patients": 446,
+            "scale": 0.48572086681161863,
+            "source": "bin",
+            "half_width": 1.568431244362916,
+            "external_rows": 1773,
+            "external_fixed_coverage": 0.8815566835871405,
+            "external_value_conditional_coverage": 0.9007332205301748
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "hypoxemia_event@3h",
+      "target": "hypoxemia_event",
+      "horizon_hours": 3,
+      "source_model": "mimiciv_hypoxemia_event_model",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 658309,
+        "sampled_rows": 15019,
+        "subjects": 1408,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 124126,
+          "sampled_rows": 15002,
+          "subjects": 2026,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 15002,
+        "subjects": 2026,
+        "hospitals": 1,
+        "event_prevalence": 0.10678576189841354,
+        "candidate_brier": 0.08581603393674889,
+        "persistence_brier": 0.1356485801893081,
+        "mimic_prevalence_brier": 0.09656496610520432,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 2026,
+              "patient_equal_delta": -0.04330697176058232,
+              "bootstrap_low": -0.04857497763326687,
+              "bootstrap_high": -0.038242924855325114,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.04330697176058231,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "mimic_prevalence": {
+            "patient": {
+              "n_subjects": 2026,
+              "patient_equal_delta": -0.00920314221653725,
+              "bootstrap_low": -0.011530627817947756,
+              "bootstrap_high": -0.007030707022089376,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.009203142216537251,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "mimic_calibrated_shrinkage": 0.9500000000000001,
+        "point_pass": true,
+        "interval_pass": null,
+        "full_external_pass": false,
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "map@3h",
+      "target": "map",
+      "horizon_hours": 3,
+      "source_model": "measurement_pure_ridge",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 641556,
+        "sampled_rows": 15001,
+        "subjects": 1442,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 124783,
+          "sampled_rows": 15004,
+          "subjects": 2001,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 15004,
+        "subjects": 2001,
+        "hospitals": 1,
+        "candidate_mae": 8.401795793966613,
+        "persistence_mae": 9.245901093041855,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 2001,
+              "patient_equal_delta": -0.7814151850217758,
+              "bootstrap_low": -0.9120844444181779,
+              "bootstrap_high": -0.6495581048519458,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.7814151850217758,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "persistence_matched_baseline": {
+            "patient": {
+              "n_subjects": 2001,
+              "patient_equal_delta": -0.7814151850217758,
+              "bootstrap_low": -0.9132019856673477,
+              "bootstrap_high": -0.6455574761974423,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.7814151850217758,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9004299756835399,
+          "value_conditional": 0.8993097697413328
+        },
+        "bin_edges": [
+          68.0,
+          75.0,
+          82.0,
+          92.0
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.9132191344089055,
+          "hospital_equal_coverage": 0.917088776326313,
+          "careunit_equal_coverage": 0.9054908560403826,
+          "median_half_width": 18.84813928604126,
+          "hospitalid_coverage_range": [
+            0.917088776326313,
+            0.917088776326313
+          ],
+          "careunit_coverage_range": [
+            0.896797153024911,
+            0.955617198335645
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9208037406406163,
+          "hospital_equal_coverage": 0.9230205278592375,
+          "careunit_equal_coverage": 0.899927750047074,
+          "median_half_width": 18.62856586430847,
+          "hospitalid_coverage_range": [
+            0.9230205278592375,
+            0.9230205278592375
+          ],
+          "careunit_coverage_range": [
+            0.8934426229508197,
+            0.9459084604715673
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 605,
+            "calibration_patients": 166,
+            "scale": 5.9711151123046875,
+            "source": "bin",
+            "half_width": 15.855528367328953,
+            "external_rows": 1556,
+            "external_fixed_coverage": 0.9344473007712082,
+            "external_value_conditional_coverage": 0.8991002570694088
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 599,
+            "calibration_patients": 201,
+            "scale": 5.792459487915039,
+            "source": "bin",
+            "half_width": 15.38113132972108,
+            "external_rows": 2385,
+            "external_fixed_coverage": 0.9450733752620545,
+            "external_value_conditional_coverage": 0.8955974842767296
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 594,
+            "calibration_patients": 209,
+            "scale": 7.113460302352905,
+            "source": "bin",
+            "half_width": 18.888879127686405,
+            "external_rows": 2855,
+            "external_fixed_coverage": 0.9376532399299474,
+            "external_value_conditional_coverage": 0.9376532399299474
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 646,
+            "calibration_patients": 202,
+            "scale": 7.015427589416504,
+            "source": "bin",
+            "half_width": 18.62856586430847,
+            "external_rows": 3750,
+            "external_fixed_coverage": 0.9208,
+            "external_value_conditional_coverage": 0.9184
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 650,
+            "calibration_patients": 162,
+            "scale": 8.841601371765137,
+            "source": "bin",
+            "half_width": 23.47773551940918,
+            "external_rows": 4458,
+            "external_fixed_coverage": 0.879766711529834,
+            "external_value_conditional_coverage": 0.9405563032750112
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "platelets@3h",
+      "target": "platelets",
+      "horizon_hours": 3,
+      "source_model": "target_specific_change_hurdle",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 45786,
+        "sampled_rows": 15007,
+        "subjects": 6767,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 9051,
+          "sampled_rows": 9051,
+          "subjects": 4100,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 9051,
+        "subjects": 4100,
+        "hospitals": 1,
+        "candidate_mae": 17.31869205076183,
+        "persistence_mae": 18.09103966412551,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 4100,
+              "patient_equal_delta": -0.9717048901659477,
+              "bootstrap_low": -1.1678815401964917,
+              "bootstrap_high": -0.7825560952789842,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.9717048901659477,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "plain_ridge": {
+            "patient": {
+              "n_subjects": 4100,
+              "patient_equal_delta": -0.8591320487005497,
+              "bootstrap_low": -0.9700504008439989,
+              "bootstrap_high": -0.7501354066402733,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.8591320487005497,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9002363941388332,
+          "value_conditional": 0.9017049674477611
+        },
+        "bin_edges": [
+          76.0,
+          122.0,
+          170.0,
+          247.0
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.9073381480029614,
+          "hospital_equal_coverage": 0.9166942879239863,
+          "careunit_equal_coverage": 0.9261701737631836,
+          "median_half_width": 42.675651630562356,
+          "hospitalid_coverage_range": [
+            0.9166942879239863,
+            0.9166942879239863
+          ],
+          "careunit_coverage_range": [
+            0.8705035971223022,
+            0.9340659340659341
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9031184744834314,
+          "hospital_equal_coverage": 0.9010054137664346,
+          "careunit_equal_coverage": 0.9207938204359148,
+          "median_half_width": 33.8962641351785,
+          "hospitalid_coverage_range": [
+            0.9010054137664346,
+            0.9010054137664346
+          ],
+          "careunit_coverage_range": [
+            0.8721973094170403,
+            0.945054945054945
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 587,
+            "calibration_patients": 236,
+            "scale": 6.951106097312362,
+            "source": "bin",
+            "half_width": 20.57742723179857,
+            "external_rows": 1754,
+            "external_fixed_coverage": 0.9680729760547321,
+            "external_value_conditional_coverage": 0.8700114025085519
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 599,
+            "calibration_patients": 337,
+            "scale": 9.172359675990876,
+            "source": "bin",
+            "half_width": 27.153025883112797,
+            "external_rows": 1756,
+            "external_fixed_coverage": 0.958997722095672,
+            "external_value_conditional_coverage": 0.9003416856492027
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 587,
+            "calibration_patients": 406,
+            "scale": 11.450242328742064,
+            "source": "bin",
+            "half_width": 33.8962641351785,
+            "external_rows": 1907,
+            "external_fixed_coverage": 0.9465128474043,
+            "external_value_conditional_coverage": 0.9113791295228107
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 603,
+            "calibration_patients": 436,
+            "scale": 14.451205492192457,
+            "source": "bin",
+            "half_width": 42.780044681282504,
+            "external_rows": 2024,
+            "external_fixed_coverage": 0.9125494071146245,
+            "external_value_conditional_coverage": 0.9125494071146245
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 598,
+            "calibration_patients": 375,
+            "scale": 22.847596399577043,
+            "source": "bin",
+            "half_width": 67.6359626442158,
+            "external_rows": 1610,
+            "external_fixed_coverage": 0.784472049689441,
+            "external_value_conditional_coverage": 0.908695652173913
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "potassium@3h",
+      "target": "potassium",
+      "horizon_hours": 3,
+      "source_model": "measurement_pure_ridge",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 84681,
+        "sampled_rows": 15001,
+        "subjects": 5768,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 17787,
+          "sampled_rows": 15014,
+          "subjects": 5690,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 15014,
+        "subjects": 5690,
+        "hospitals": 1,
+        "candidate_mae": 0.36628093388449173,
+        "persistence_mae": 0.373338217663514,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 5690,
+              "patient_equal_delta": -0.025824312561858742,
+              "bootstrap_low": -0.03289395697074054,
+              "bootstrap_high": -0.018920102107278493,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.025824312561858742,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "persistence_matched_baseline": {
+            "patient": {
+              "n_subjects": 5690,
+              "patient_equal_delta": -0.025824312561858742,
+              "bootstrap_low": -0.032897804150638456,
+              "bootstrap_high": -0.01938952499514405,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.025824312561858742,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9024439548494415,
+          "value_conditional": 0.9029098667538282
+        },
+        "bin_edges": [
+          3.6,
+          4.0,
+          4.3,
+          4.7
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.9093682237245324,
+          "hospital_equal_coverage": 0.9088184361262821,
+          "careunit_equal_coverage": 0.9069400157722811,
+          "median_half_width": 0.7754455029964449,
+          "hospitalid_coverage_range": [
+            0.9088184361262821,
+            0.9088184361262821
+          ],
+          "careunit_coverage_range": [
+            0.8857313790008974,
+            0.9446022727272727
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9053888492451696,
+          "hospital_equal_coverage": 0.9027574264020248,
+          "careunit_equal_coverage": 0.8969186460662174,
+          "median_half_width": 0.7444658029011624,
+          "hospitalid_coverage_range": [
+            0.9027574264020248,
+            0.9027574264020248
+          ],
+          "careunit_coverage_range": [
+            0.8794495961711039,
+            0.9424715909090909
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 486,
+            "calibration_patients": 310,
+            "scale": 0.32150717973709075,
+            "source": "bin",
+            "half_width": 0.8719319340323848,
+            "external_rows": 2751,
+            "external_fixed_coverage": 0.8880407124681934,
+            "external_value_conditional_coverage": 0.9240276263177026
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 735,
+            "calibration_patients": 471,
+            "scale": 0.2745066344738003,
+            "source": "bin",
+            "half_width": 0.7444658029011624,
+            "external_rows": 3803,
+            "external_fixed_coverage": 0.9316329213778596,
+            "external_value_conditional_coverage": 0.9205890086773599
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 602,
+            "calibration_patients": 428,
+            "scale": 0.23413001596927696,
+            "source": "bin",
+            "half_width": 0.6349638530811743,
+            "external_rows": 2953,
+            "external_fixed_coverage": 0.9366745682356925,
+            "external_value_conditional_coverage": 0.8801219099221131
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 575,
+            "calibration_patients": 402,
+            "scale": 0.2481445580720898,
+            "source": "bin",
+            "half_width": 0.6729714857887127,
+            "external_rows": 2635,
+            "external_fixed_coverage": 0.9415559772296015,
+            "external_value_conditional_coverage": 0.9111954459203037
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 692,
+            "calibration_patients": 364,
+            "scale": 0.3195831157267093,
+            "source": "bin",
+            "half_width": 0.8667138457298282,
+            "external_rows": 2872,
+            "external_fixed_coverage": 0.8398328690807799,
+            "external_value_conditional_coverage": 0.8743036211699164
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "respiratory_rate@3h",
+      "target": "respiratory_rate",
+      "horizon_hours": 3,
+      "source_model": "measurement_pure_ridge",
+      "evaluable": true,
+      "mimic_support": {
+        "original_rows": 659290,
+        "sampled_rows": 15009,
+        "subjects": 1422,
+        "hospitals": 1,
+        "quality_filter": "exact_or_near_when_available"
+      },
+      "external_cohort": {
+        "path": "nwicu_observation_transitions_3h_v4.parquet",
+        "support": {
+          "original_rows": 117585,
+          "sampled_rows": 15002,
+          "subjects": 2117,
+          "hospitals": 1,
+          "quality_filter": "exact_or_near_when_available"
+        }
+      },
+      "metrics": {
+        "rows": 15002,
+        "subjects": 2117,
+        "hospitals": 1,
+        "candidate_mae": 3.70365590508394,
+        "persistence_mae": 3.8754832688974803,
+        "comparisons": {
+          "persistence": {
+            "patient": {
+              "n_subjects": 2117,
+              "patient_equal_delta": -0.19176058187992925,
+              "bootstrap_low": -0.25297087404945295,
+              "bootstrap_high": -0.1310437421436419,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.19176058187992925,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          },
+          "persistence_matched_baseline": {
+            "patient": {
+              "n_subjects": 2117,
+              "patient_equal_delta": -0.19176058187992925,
+              "bootstrap_low": -0.2530811757278339,
+              "bootstrap_high": -0.13005597571895497,
+              "pass": true
+            },
+            "hospital": {
+              "n_hospitals": 1,
+              "hospital_equal_delta": -0.19176058187992925,
+              "bootstrap_low": null,
+              "bootstrap_high": null,
+              "pass": false
+            }
+          }
+        },
+        "point_pass": true,
+        "mimic_cross_validated_coverage": {
+          "fixed": 0.9042343316802963,
+          "value_conditional": 0.903802445314454
+        },
+        "bin_edges": [
+          15.0,
+          17.0,
+          20.0,
+          23.0
+        ],
+        "fixed": {
+          "patient_equal_coverage": 0.8967499570641254,
+          "hospital_equal_coverage": 0.8858818824156779,
+          "careunit_equal_coverage": 0.8765552309273625,
+          "median_half_width": 7.64012336730957,
+          "hospitalid_coverage_range": [
+            0.8858818824156779,
+            0.8858818824156779
+          ],
+          "careunit_coverage_range": [
+            0.8597122302158273,
+            0.9529737206085753
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "value_conditional": {
+          "patient_equal_coverage": 0.9094810334856217,
+          "hospital_equal_coverage": 0.9015464604719371,
+          "careunit_equal_coverage": 0.8908492612601774,
+          "median_half_width": 7.206111927443481,
+          "hospitalid_coverage_range": [
+            0.9015464604719371,
+            0.9015464604719371
+          ],
+          "careunit_coverage_range": [
+            0.8705035971223022,
+            0.9557399723374828
+          ],
+          "gate_axes": [
+            "patient_equal_coverage",
+            "careunit_equal_coverage"
+          ],
+          "pass": true
+        },
+        "bins": [
+          {
+            "bin": 0,
+            "calibration_rows": 670,
+            "calibration_patients": 179,
+            "scale": 2.7923505902290344,
+            "source": "bin",
+            "half_width": 7.8478345065154045,
+            "external_rows": 1896,
+            "external_fixed_coverage": 0.9177215189873418,
+            "external_value_conditional_coverage": 0.9214135021097046
+          },
+          {
+            "bin": 1,
+            "calibration_rows": 522,
+            "calibration_patients": 189,
+            "scale": 2.461862325668335,
+            "source": "bin",
+            "half_width": 6.919005148306084,
+            "external_rows": 1988,
+            "external_fixed_coverage": 0.9366197183098591,
+            "external_value_conditional_coverage": 0.9215291750503019
+          },
+          {
+            "bin": 2,
+            "calibration_rows": 773,
+            "calibration_patients": 211,
+            "scale": 2.427021324634552,
+            "source": "bin",
+            "half_width": 6.821085348725318,
+            "external_rows": 3231,
+            "external_fixed_coverage": 0.9272670999690499,
+            "external_value_conditional_coverage": 0.9096255029402661
+          },
+          {
+            "bin": 3,
+            "calibration_rows": 687,
+            "calibration_patients": 203,
+            "scale": 2.5640182495117188,
+            "source": "bin",
+            "half_width": 7.206111927443481,
+            "external_rows": 3132,
+            "external_fixed_coverage": 0.9061302681992337,
+            "external_value_conditional_coverage": 0.8914431673052363
+          },
+          {
+            "bin": 4,
+            "calibration_rows": 811,
+            "calibration_patients": 180,
+            "scale": 3.388554096221924,
+            "source": "bin",
+            "half_width": 9.523450191597659,
+            "external_rows": 4755,
+            "external_fixed_coverage": 0.810515247108307,
+            "external_value_conditional_coverage": 0.886435331230284
+          }
+        ],
+        "fixed_full_pass": true,
+        "value_conditional_full_pass": true
+      }
+    },
+    {
+      "cell": "urine_output@3h",
+      "target": "urine_output",
+      "horizon_hours": 3,
+      "source_model": "target_specific_change_hurdle",
+      "evaluable": false,
+      "reason": "target_not_recorded_in_nwicu"
+    }
+  ],
+  "external_labels_used_for_fitting_or_selection": false,
+  "promotion_allowed": false,
+  "factual_only": true,
+  "causal_claim_allowed": false,
+  "clinical_promotion_allowed": false
+}

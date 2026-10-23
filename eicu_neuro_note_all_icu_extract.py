@@ -204,7 +204,7 @@ def main() -> None:
     events = read_gcs_delirium_events(args.data_root)
     stay_ids = {int(value) for value in events["stay_id"].dropna().unique()}
     print(f"Neuro events: {len(events):,}; stays: {len(stay_ids):,}", flush=True)
-    measurements = read_measurements(args.data_root, stay_ids)
+    measurements = read_measurements(stay_ids)
     print(f"Measurements: {len(measurements):,}; stays: {measurements['stay_id'].nunique() if len(measurements) else 0:,}", flush=True)
     anchors = build_event_anchors(events, meta, args.horizon_hours, args.max_anchors_per_stay)
     if measurements.empty or anchors.empty:

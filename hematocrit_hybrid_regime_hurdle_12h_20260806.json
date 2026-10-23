@@ -1,0 +1,1280 @@
+{
+  "schema": "target_specific_event_hurdle_regime_conformal_audit.v1",
+  "factual_only": true,
+  "causal_claim_allowed": false,
+  "clinical_promotion_allowed": false,
+  "event_examples": "/Users/chunyouchang/Documents/symbolic engine/artifacts/eicu_event_examples_aligned_interval_urine.parquet",
+  "hypoxemia_definition": "future_o2sat <= 92",
+  "creatinine_change_definition": "abs(future-current) >= 0.1 mg/dL",
+  "input_policy": "anchor-time measurements, causal lag/slope history, and strictly pre-anchor treatment context; hospital/care-unit/database provenance excluded from model inputs",
+  "reports": {
+    "hematocrit@12h": {
+      "target": "hematocrit",
+      "horizon_hours": 12,
+      "rows": 51543,
+      "subjects": 1802,
+      "splits": {
+        "patient_seed_0": {
+          "rows": 3110,
+          "subjects": 349,
+          "candidate_mae": 2.1036892073940527,
+          "persistence_mae": 2.48536970377735,
+          "plain_ridge_mae": 2.5315668814914405,
+          "versus_persistence": {
+            "n_subjects": 349,
+            "patient_equal_delta": -0.6049060576687293,
+            "bootstrap_low": -0.7420136509459182,
+            "bootstrap_high": -0.47788879161122766,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 349,
+            "patient_equal_delta": -0.28805370489413284,
+            "bootstrap_low": -0.408195918474683,
+            "bootstrap_high": -0.1773635704195487,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.582215711667442,
+            "coverage": 0.9237942122186495,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.199131854093492,
+              "global_q90_rank": 1800,
+              "calibration_rows": 2035,
+              "calibration_subjects": 209,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1663,
+                  "check_rows": 372
+                },
+                {
+                  "fit_rows": 1559,
+                  "check_rows": 476
+                },
+                {
+                  "fit_rows": 1593,
+                  "check_rows": 442
+                },
+                {
+                  "fit_rows": 1672,
+                  "check_rows": 363
+                },
+                {
+                  "fit_rows": 1653,
+                  "check_rows": 382
+                }
+              ],
+              "median_calibration_scale": 1.3326741475547903,
+              "median_test_scale": 1.3246786415493403,
+              "median_interval_half_width": 4.582215711667442,
+              "age_cutpoint_hours": 10.583333333333334,
+              "movement_cutpoint": 0.8569639225079477,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 152,
+                  "calibration_subjects": 53,
+                  "test_rows": 171,
+                  "normalized_q90": 3.2792350993066566,
+                  "q90_rank": 143,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 307,
+                  "calibration_subjects": 87,
+                  "test_rows": 493,
+                  "normalized_q90": 3.5359949602201604,
+                  "q90_rank": 275,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 183,
+                  "calibration_subjects": 75,
+                  "test_rows": 318,
+                  "normalized_q90": 3.083516426983274,
+                  "q90_rank": 170,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 376,
+                  "calibration_subjects": 122,
+                  "test_rows": 593,
+                  "normalized_q90": 3.3386606024101284,
+                  "q90_rank": 337,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 159,
+                  "calibration_subjects": 50,
+                  "test_rows": 276,
+                  "normalized_q90": 3.23718714906346,
+                  "q90_rank": 147,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 401,
+                  "calibration_subjects": 101,
+                  "test_rows": 579,
+                  "normalized_q90": 3.5634585426372296,
+                  "q90_rank": 364,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 150,
+                  "calibration_subjects": 52,
+                  "test_rows": 212,
+                  "normalized_q90": 3.2003221560255852,
+                  "q90_rank": 138,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 307,
+                  "calibration_subjects": 104,
+                  "test_rows": 468,
+                  "normalized_q90": 4.590962129326024,
+                  "q90_rank": 278,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_1": {
+          "rows": 3149,
+          "subjects": 351,
+          "candidate_mae": 2.2335710527381347,
+          "persistence_mae": 2.674912673172477,
+          "plain_ridge_mae": 7.230956040855134,
+          "versus_persistence": {
+            "n_subjects": 351,
+            "patient_equal_delta": -0.5326347111507755,
+            "bootstrap_low": -0.6641045497573019,
+            "bootstrap_high": -0.40578218982743347,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 351,
+            "patient_equal_delta": -1.364108336588619,
+            "bootstrap_low": -3.396581209477207,
+            "bootstrap_high": -0.2999626116825733,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.347908405164049,
+            "coverage": 0.8859955541441727,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.372865828185244,
+              "global_q90_rank": 1642,
+              "calibration_rows": 1836,
+              "calibration_subjects": 209,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1440,
+                  "check_rows": 396
+                },
+                {
+                  "fit_rows": 1504,
+                  "check_rows": 332
+                },
+                {
+                  "fit_rows": 1419,
+                  "check_rows": 417
+                },
+                {
+                  "fit_rows": 1451,
+                  "check_rows": 385
+                },
+                {
+                  "fit_rows": 1530,
+                  "check_rows": 306
+                }
+              ],
+              "median_calibration_scale": 1.2630614182122248,
+              "median_test_scale": 1.2475236801972185,
+              "median_interval_half_width": 4.347908405164049,
+              "age_cutpoint_hours": 10.516666666666667,
+              "movement_cutpoint": 0.8496705285827062,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 110,
+                  "calibration_subjects": 48,
+                  "test_rows": 165,
+                  "normalized_q90": 4.907887342265583,
+                  "q90_rank": 107,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 279,
+                  "calibration_subjects": 90,
+                  "test_rows": 518,
+                  "normalized_q90": 4.004410166784647,
+                  "q90_rank": 253,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 170,
+                  "calibration_subjects": 73,
+                  "test_rows": 218,
+                  "normalized_q90": 3.874322804883185,
+                  "q90_rank": 158,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 361,
+                  "calibration_subjects": 108,
+                  "test_rows": 632,
+                  "normalized_q90": 2.876744612453498,
+                  "q90_rank": 319,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 173,
+                  "calibration_subjects": 59,
+                  "test_rows": 239,
+                  "normalized_q90": 3.869256863495976,
+                  "q90_rank": 160,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 357,
+                  "calibration_subjects": 100,
+                  "test_rows": 706,
+                  "normalized_q90": 3.397141306697069,
+                  "q90_rank": 321,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 141,
+                  "calibration_subjects": 57,
+                  "test_rows": 173,
+                  "normalized_q90": 5.910928727869898,
+                  "q90_rank": 131,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 245,
+                  "calibration_subjects": 93,
+                  "test_rows": 498,
+                  "normalized_q90": 2.732287802730343,
+                  "q90_rank": 223,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_2": {
+          "rows": 3231,
+          "subjects": 352,
+          "candidate_mae": 2.2271196298345877,
+          "persistence_mae": 2.638873366813695,
+          "plain_ridge_mae": 13.757584867389605,
+          "versus_persistence": {
+            "n_subjects": 352,
+            "patient_equal_delta": -0.48804300067521067,
+            "bootstrap_low": -0.6100826783868181,
+            "bootstrap_high": -0.3662643296666478,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 352,
+            "patient_equal_delta": -2.847292701072981,
+            "bootstrap_low": -7.737982177724989,
+            "bootstrap_high": -0.3472680199264021,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.431148061773691,
+            "coverage": 0.8969359331476323,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.423450709388891,
+              "global_q90_rank": 1719,
+              "calibration_rows": 1937,
+              "calibration_subjects": 211,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1585,
+                  "check_rows": 352
+                },
+                {
+                  "fit_rows": 1502,
+                  "check_rows": 435
+                },
+                {
+                  "fit_rows": 1551,
+                  "check_rows": 386
+                },
+                {
+                  "fit_rows": 1580,
+                  "check_rows": 357
+                },
+                {
+                  "fit_rows": 1530,
+                  "check_rows": 407
+                }
+              ],
+              "median_calibration_scale": 1.2672079769031648,
+              "median_test_scale": 1.2812072347215993,
+              "median_interval_half_width": 4.431148061773691,
+              "age_cutpoint_hours": 10.566666666666666,
+              "movement_cutpoint": 0.9107015633673115,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 109,
+                  "calibration_subjects": 42,
+                  "test_rows": 183,
+                  "normalized_q90": 3.670204128279532,
+                  "q90_rank": 101,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 327,
+                  "calibration_subjects": 96,
+                  "test_rows": 591,
+                  "normalized_q90": 3.447247757617544,
+                  "q90_rank": 281,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 158,
+                  "calibration_subjects": 67,
+                  "test_rows": 284,
+                  "normalized_q90": 3.5139346780515144,
+                  "q90_rank": 148,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 376,
+                  "calibration_subjects": 126,
+                  "test_rows": 669,
+                  "normalized_q90": 3.223827384921651,
+                  "q90_rank": 329,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 161,
+                  "calibration_subjects": 47,
+                  "test_rows": 225,
+                  "normalized_q90": 3.454729035594232,
+                  "q90_rank": 148,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 372,
+                  "calibration_subjects": 101,
+                  "test_rows": 604,
+                  "normalized_q90": 3.542707014119643,
+                  "q90_rank": 338,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 132,
+                  "calibration_subjects": 47,
+                  "test_rows": 202,
+                  "normalized_q90": 3.826776692534021,
+                  "q90_rank": 122,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 302,
+                  "calibration_subjects": 106,
+                  "test_rows": 473,
+                  "normalized_q90": 3.494321896304808,
+                  "q90_rank": 266,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_3": {
+          "rows": 3478,
+          "subjects": 353,
+          "candidate_mae": 2.3114182310076714,
+          "persistence_mae": 2.7212190545791177,
+          "plain_ridge_mae": 11.148341785685778,
+          "versus_persistence": {
+            "n_subjects": 353,
+            "patient_equal_delta": -0.5145602809045686,
+            "bootstrap_low": -0.6536013657818167,
+            "bootstrap_high": -0.3833558347509445,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 353,
+            "patient_equal_delta": -2.3200812714139647,
+            "bootstrap_low": -6.314764699192581,
+            "bootstrap_high": -0.27792420008075047,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.644829190182625,
+            "coverage": 0.9031052328924669,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.4794687918472156,
+              "global_q90_rank": 1867,
+              "calibration_rows": 2050,
+              "calibration_subjects": 210,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1617,
+                  "check_rows": 433
+                },
+                {
+                  "fit_rows": 1668,
+                  "check_rows": 382
+                },
+                {
+                  "fit_rows": 1602,
+                  "check_rows": 448
+                },
+                {
+                  "fit_rows": 1658,
+                  "check_rows": 392
+                },
+                {
+                  "fit_rows": 1655,
+                  "check_rows": 395
+                }
+              ],
+              "median_calibration_scale": 1.2594452095788817,
+              "median_test_scale": 1.2696498068409037,
+              "median_interval_half_width": 4.644829190182625,
+              "age_cutpoint_hours": 10.475,
+              "movement_cutpoint": 0.8059933116684785,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 112,
+                  "calibration_subjects": 43,
+                  "test_rows": 165,
+                  "normalized_q90": 3.251385899061839,
+                  "q90_rank": 104,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 337,
+                  "calibration_subjects": 103,
+                  "test_rows": 607,
+                  "normalized_q90": 3.9044260256893835,
+                  "q90_rank": 305,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 162,
+                  "calibration_subjects": 66,
+                  "test_rows": 309,
+                  "normalized_q90": 3.4894867127822637,
+                  "q90_rank": 151,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 414,
+                  "calibration_subjects": 115,
+                  "test_rows": 749,
+                  "normalized_q90": 2.9750377978214435,
+                  "q90_rank": 375,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 191,
+                  "calibration_subjects": 50,
+                  "test_rows": 267,
+                  "normalized_q90": 3.305693462108527,
+                  "q90_rank": 176,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 385,
+                  "calibration_subjects": 104,
+                  "test_rows": 635,
+                  "normalized_q90": 4.024608888942764,
+                  "q90_rank": 355,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 135,
+                  "calibration_subjects": 51,
+                  "test_rows": 225,
+                  "normalized_q90": 5.525215733428222,
+                  "q90_rank": 126,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 314,
+                  "calibration_subjects": 108,
+                  "test_rows": 521,
+                  "normalized_q90": 3.496018330614332,
+                  "q90_rank": 283,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_4": {
+          "rows": 3400,
+          "subjects": 354,
+          "candidate_mae": 2.316439326784848,
+          "persistence_mae": 2.6804117634717155,
+          "plain_ridge_mae": 2.99877572919516,
+          "versus_persistence": {
+            "n_subjects": 354,
+            "patient_equal_delta": -0.4157268800820801,
+            "bootstrap_low": -0.5508796902165195,
+            "bootstrap_high": -0.28567846774994204,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 354,
+            "patient_equal_delta": -0.5416248977505295,
+            "bootstrap_low": -0.9173607042720695,
+            "bootstrap_high": -0.2979352439882291,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.516247646717147,
+            "coverage": 0.9014705882352941,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.3962546649770204,
+              "global_q90_rank": 1901,
+              "calibration_rows": 2121,
+              "calibration_subjects": 208,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1729,
+                  "check_rows": 392
+                },
+                {
+                  "fit_rows": 1756,
+                  "check_rows": 365
+                },
+                {
+                  "fit_rows": 1639,
+                  "check_rows": 482
+                },
+                {
+                  "fit_rows": 1737,
+                  "check_rows": 384
+                },
+                {
+                  "fit_rows": 1623,
+                  "check_rows": 498
+                }
+              ],
+              "median_calibration_scale": 1.278576463902739,
+              "median_test_scale": 1.2903872191188088,
+              "median_interval_half_width": 4.516247646717147,
+              "age_cutpoint_hours": 10.483333333333333,
+              "movement_cutpoint": 0.6980727793756643,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 103,
+                  "calibration_subjects": 48,
+                  "test_rows": 194,
+                  "normalized_q90": 3.1038959778020017,
+                  "q90_rank": 97,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 348,
+                  "calibration_subjects": 96,
+                  "test_rows": 540,
+                  "normalized_q90": 3.591515952763524,
+                  "q90_rank": 319,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 177,
+                  "calibration_subjects": 76,
+                  "test_rows": 344,
+                  "normalized_q90": 3.4294440355742215,
+                  "q90_rank": 162,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 433,
+                  "calibration_subjects": 124,
+                  "test_rows": 676,
+                  "normalized_q90": 3.2023523987762488,
+                  "q90_rank": 381,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 170,
+                  "calibration_subjects": 44,
+                  "test_rows": 228,
+                  "normalized_q90": 2.8185372692768986,
+                  "q90_rank": 157,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 440,
+                  "calibration_subjects": 113,
+                  "test_rows": 612,
+                  "normalized_q90": 3.716882788515253,
+                  "q90_rank": 402,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 142,
+                  "calibration_subjects": 55,
+                  "test_rows": 246,
+                  "normalized_q90": 3.7351237173281513,
+                  "q90_rank": 126,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 308,
+                  "calibration_subjects": 112,
+                  "test_rows": 560,
+                  "normalized_q90": 3.409400809519221,
+                  "q90_rank": 281,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_5": {
+          "rows": 3417,
+          "subjects": 360,
+          "candidate_mae": 2.3828050329193537,
+          "persistence_mae": 2.794029872180915,
+          "plain_ridge_mae": 60.11648740269023,
+          "versus_persistence": {
+            "n_subjects": 360,
+            "patient_equal_delta": -0.5043450573793948,
+            "bootstrap_low": -0.6450181784026137,
+            "bootstrap_high": -0.36342847918690235,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 360,
+            "patient_equal_delta": -7.516418723835855,
+            "bootstrap_low": -22.319316085333064,
+            "bootstrap_high": -0.06813458584352727,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.368491703271202,
+            "coverage": 0.8791337430494586,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.0982795784893096,
+              "global_q90_rank": 1596,
+              "calibration_rows": 1813,
+              "calibration_subjects": 214,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1344,
+                  "check_rows": 469
+                },
+                {
+                  "fit_rows": 1497,
+                  "check_rows": 316
+                },
+                {
+                  "fit_rows": 1431,
+                  "check_rows": 382
+                },
+                {
+                  "fit_rows": 1454,
+                  "check_rows": 359
+                },
+                {
+                  "fit_rows": 1526,
+                  "check_rows": 287
+                }
+              ],
+              "median_calibration_scale": 1.3066050649000638,
+              "median_test_scale": 1.309478657702166,
+              "median_interval_half_width": 4.368491703271202,
+              "age_cutpoint_hours": 10.416666666666666,
+              "movement_cutpoint": 0.8412441636565475,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 111,
+                  "calibration_subjects": 47,
+                  "test_rows": 166,
+                  "normalized_q90": 3.180528360928661,
+                  "q90_rank": 104,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 301,
+                  "calibration_subjects": 96,
+                  "test_rows": 618,
+                  "normalized_q90": 3.2933188129215236,
+                  "q90_rank": 266,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 180,
+                  "calibration_subjects": 71,
+                  "test_rows": 336,
+                  "normalized_q90": 3.103269903463934,
+                  "q90_rank": 157,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 316,
+                  "calibration_subjects": 107,
+                  "test_rows": 636,
+                  "normalized_q90": 3.1445822415262192,
+                  "q90_rank": 274,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 151,
+                  "calibration_subjects": 47,
+                  "test_rows": 247,
+                  "normalized_q90": 2.8710198014630444,
+                  "q90_rank": 140,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 344,
+                  "calibration_subjects": 101,
+                  "test_rows": 700,
+                  "normalized_q90": 3.374211199197083,
+                  "q90_rank": 310,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 141,
+                  "calibration_subjects": 51,
+                  "test_rows": 191,
+                  "normalized_q90": 3.5074121751921625,
+                  "q90_rank": 129,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 269,
+                  "calibration_subjects": 93,
+                  "test_rows": 523,
+                  "normalized_q90": 3.6766486306879638,
+                  "q90_rank": 251,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "patient_seed_6": {
+          "rows": 3216,
+          "subjects": 341,
+          "candidate_mae": 2.2857656986094157,
+          "persistence_mae": 2.739458922426499,
+          "plain_ridge_mae": 12.481402492067263,
+          "versus_persistence": {
+            "n_subjects": 341,
+            "patient_equal_delta": -0.5590954125028501,
+            "bootstrap_low": -0.6638177687451405,
+            "bootstrap_high": -0.4570380346677455,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 341,
+            "patient_equal_delta": -1.5084973178244911,
+            "bootstrap_low": -4.092261060018071,
+            "bootstrap_high": -0.1680155351492876,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.68795433579084,
+            "coverage": 0.8933457711442786,
+            "method": {
+              "method": "observable_regime_mondrian_patient_cluster_conformal",
+              "global_normalized_q90": 3.157940943702672,
+              "global_q90_rank": 1719,
+              "calibration_rows": 1945,
+              "calibration_subjects": 209,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1583,
+                  "check_rows": 362
+                },
+                {
+                  "fit_rows": 1562,
+                  "check_rows": 383
+                },
+                {
+                  "fit_rows": 1549,
+                  "check_rows": 396
+                },
+                {
+                  "fit_rows": 1545,
+                  "check_rows": 400
+                },
+                {
+                  "fit_rows": 1541,
+                  "check_rows": 404
+                }
+              ],
+              "median_calibration_scale": 1.3059427954321348,
+              "median_test_scale": 1.3177959950968932,
+              "median_interval_half_width": 4.68795433579084,
+              "age_cutpoint_hours": 10.683333333333334,
+              "movement_cutpoint": 0.7858280648515255,
+              "treatment_context": [
+                "fluids",
+                "transfusion",
+                "diuretics"
+              ],
+              "regime_definition": "stale x predicted_change x observed_treatment",
+              "strata": {
+                "0": {
+                  "calibration_rows": 119,
+                  "calibration_subjects": 40,
+                  "test_rows": 192,
+                  "normalized_q90": 2.86720306711827,
+                  "q90_rank": 109,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "1": {
+                  "calibration_rows": 315,
+                  "calibration_subjects": 97,
+                  "test_rows": 535,
+                  "normalized_q90": 3.3708147089560088,
+                  "q90_rank": 286,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "2": {
+                  "calibration_rows": 174,
+                  "calibration_subjects": 71,
+                  "test_rows": 349,
+                  "normalized_q90": 3.1123800637253884,
+                  "q90_rank": 150,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "3": {
+                  "calibration_rows": 365,
+                  "calibration_subjects": 119,
+                  "test_rows": 664,
+                  "normalized_q90": 3.33271509430411,
+                  "q90_rank": 329,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "4": {
+                  "calibration_rows": 142,
+                  "calibration_subjects": 39,
+                  "test_rows": 229,
+                  "normalized_q90": 2.638423398429682,
+                  "q90_rank": 128,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "5": {
+                  "calibration_rows": 397,
+                  "calibration_subjects": 103,
+                  "test_rows": 624,
+                  "normalized_q90": 3.927521492993693,
+                  "q90_rank": 365,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "6": {
+                  "calibration_rows": 135,
+                  "calibration_subjects": 58,
+                  "test_rows": 226,
+                  "normalized_q90": 3.829692761594482,
+                  "q90_rank": 124,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                },
+                "7": {
+                  "calibration_rows": 298,
+                  "calibration_subjects": 108,
+                  "test_rows": 397,
+                  "normalized_q90": 3.6547098044828146,
+                  "q90_rank": 274,
+                  "global_fallback": false,
+                  "equal_total_weight_per_patient": true
+                }
+              },
+              "patient_grouped_scale_crossfit": true,
+              "equal_total_quantile_weight_per_patient": true,
+              "selection_test_labels_used": false,
+              "test_labels_used": false
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "hospital": {
+          "rows": 3178,
+          "subjects": 348,
+          "candidate_mae": 2.2874294845307084,
+          "persistence_mae": 2.681183097496057,
+          "plain_ridge_mae": 2.918297418019845,
+          "versus_persistence": {
+            "n_subjects": 348,
+            "patient_equal_delta": -0.510616577324599,
+            "bootstrap_low": -0.6278013507984999,
+            "bootstrap_high": -0.40005286678625473,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 348,
+            "patient_equal_delta": -0.3316867818285852,
+            "bootstrap_low": -0.5198384503254245,
+            "bootstrap_high": -0.17480234336593609,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.839628906536254,
+            "coverage": 0.9046570169918188,
+            "method": {
+              "method": "patient_grouped_crossfit_normalized_conformal",
+              "normalized_q90": 3.5374492088017546,
+              "q90_rank": 1702,
+              "calibration_rows": 1890,
+              "calibration_subjects": 210,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1496,
+                  "check_rows": 394
+                },
+                {
+                  "fit_rows": 1509,
+                  "check_rows": 381
+                },
+                {
+                  "fit_rows": 1493,
+                  "check_rows": 397
+                },
+                {
+                  "fit_rows": 1535,
+                  "check_rows": 355
+                },
+                {
+                  "fit_rows": 1527,
+                  "check_rows": 363
+                }
+              ],
+              "median_calibration_scale": 1.3561585274748396,
+              "median_test_scale": 1.3681126203860292,
+              "median_interval_half_width": 4.839628906536254,
+              "test_labels_used": false,
+              "patient_grouped_scale_crossfit": true,
+              "selected_nominal_coverage": 0.9,
+              "calibration_outer_crossfit_coverage": 0.9042328042328043,
+              "selection_test_labels_used": false,
+              "split_policy": "global_normalized_conformal_for_external_domain"
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "careunit": {
+          "rows": 10042,
+          "subjects": 1127,
+          "candidate_mae": 2.3005319598379383,
+          "persistence_mae": 2.6507468526521496,
+          "plain_ridge_mae": 7.95882668790293,
+          "versus_persistence": {
+            "n_subjects": 1127,
+            "patient_equal_delta": -0.4669173955497829,
+            "bootstrap_low": -0.5313640525867896,
+            "bootstrap_high": -0.4041391804621167,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 1127,
+            "patient_equal_delta": -2.6028142028463352,
+            "bootstrap_low": -3.5214678724674036,
+            "bootstrap_high": -1.865516284548232,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.242453355704234,
+            "coverage": 0.8834893447520414,
+            "method": {
+              "method": "patient_grouped_crossfit_normalized_conformal",
+              "normalized_q90": 3.2985631239167468,
+              "q90_rank": 615,
+              "calibration_rows": 689,
+              "calibration_subjects": 64,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 571,
+                  "check_rows": 118
+                },
+                {
+                  "fit_rows": 511,
+                  "check_rows": 178
+                },
+                {
+                  "fit_rows": 533,
+                  "check_rows": 156
+                },
+                {
+                  "fit_rows": 574,
+                  "check_rows": 115
+                },
+                {
+                  "fit_rows": 567,
+                  "check_rows": 122
+                }
+              ],
+              "median_calibration_scale": 1.319894700441382,
+              "median_test_scale": 1.286151938383008,
+              "median_interval_half_width": 4.242453355704234,
+              "test_labels_used": false,
+              "patient_grouped_scale_crossfit": true,
+              "selected_nominal_coverage": 0.89,
+              "calibration_outer_crossfit_coverage": 0.8998548621190131,
+              "selection_test_labels_used": false,
+              "split_policy": "global_normalized_conformal_for_external_domain"
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        },
+        "forward_time": {
+          "rows": 2561,
+          "subjects": 817,
+          "candidate_mae": 1.8873380157745452,
+          "persistence_mae": 1.97465831439321,
+          "plain_ridge_mae": 2.4864676190698023,
+          "versus_persistence": {
+            "n_subjects": 817,
+            "patient_equal_delta": -0.05197383461695625,
+            "bootstrap_low": -0.10536634835815883,
+            "bootstrap_high": -0.0010712784036944819,
+            "pass": true
+          },
+          "versus_plain_ridge": {
+            "n_subjects": 817,
+            "patient_equal_delta": -0.4077612179521629,
+            "bootstrap_low": -0.5507456132162724,
+            "bootstrap_high": -0.29230615250538894,
+            "pass": true
+          },
+          "conformal": {
+            "nominal": 0.9,
+            "width": 4.01920970698669,
+            "coverage": 0.9242483404919953,
+            "method": {
+              "method": "patient_grouped_crossfit_normalized_conformal",
+              "normalized_q90": 3.3678891655923895,
+              "q90_rank": 1696,
+              "calibration_rows": 1883,
+              "calibration_subjects": 268,
+              "folds": 5,
+              "fold_counts": [
+                {
+                  "fit_rows": 1530,
+                  "check_rows": 353
+                },
+                {
+                  "fit_rows": 1546,
+                  "check_rows": 337
+                },
+                {
+                  "fit_rows": 1490,
+                  "check_rows": 393
+                },
+                {
+                  "fit_rows": 1437,
+                  "check_rows": 446
+                },
+                {
+                  "fit_rows": 1529,
+                  "check_rows": 354
+                }
+              ],
+              "median_calibration_scale": 1.3488025322485673,
+              "median_test_scale": 1.193391322983082,
+              "median_interval_half_width": 4.01920970698669,
+              "test_labels_used": false,
+              "patient_grouped_scale_crossfit": true,
+              "selected_nominal_coverage": 0.9,
+              "calibration_outer_crossfit_coverage": 0.8975039830058418,
+              "selection_test_labels_used": false,
+              "split_policy": "global_normalized_conformal_for_external_domain"
+            },
+            "pass": true
+          },
+          "pass": true,
+          "selected_hurdle_policy": "robust_median_delta_1",
+          "change_threshold": 1.5
+        }
+      },
+      "summary": {
+        "patient_passes": 7,
+        "patient_required": 7,
+        "external_passes": 3,
+        "external_required": 3,
+        "validated": true
+      }
+    }
+  },
+  "validated_cells": [
+    "hematocrit@12h"
+  ]
+}

@@ -16,6 +16,8 @@ import argparse
 import json
 from pathlib import Path
 
+from osler_jepa.event_adapters import CANONICAL_UNITS
+
 
 def _load(path: Path) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -31,6 +33,23 @@ def _shared_entry(report: dict) -> dict:
         for cell, value in registry.items()
         if isinstance(value, dict) and value.get("validated_for_runtime", False)
     )
+    runtime_registry = {
+        cell: {
+            **registry[cell],
+            "validated_for_joint_runtime": True,
+            "can_move": True,
+            "source_model": "shared_module_nested_stack",
+            "task_type": "continuous_value",
+        }
+        for cell in validated
+    }
+    targets = {cell.split("@", 1)[0] for cell in validated}
+    units = {
+        target: CANONICAL_UNITS[target]
+        for target in targets
+        if target in CANONICAL_UNITS
+    }
+    contract_complete = len(units) == len(targets)
     return {
         "candidate_id": "shared_module_nested_stack",
         "input_contract_id": "shared_module_row.v1",
@@ -39,10 +58,18 @@ def _shared_entry(report: dict) -> dict:
             "module-local historical rows with true-patient evaluation identity",
         ),
         "prediction_source": "nested convex stack selected on disjoint patient calibration rows",
-        "validated_cells": validated,
-        "validated_cell_count": len(validated),
+        "variable_units": units,
+        "output_contract": {
+            target: {"task_type": "continuous_value"}
+            for target in sorted(targets)
+        },
+        "target_horizon_registry": runtime_registry if contract_complete else {},
+        "validated_cells": validated if contract_complete else [],
+        "validated_cell_count": len(validated) if contract_complete else 0,
         "runtime_status": (
-            "target_gated_factual_research_only" if validated else "candidate_only"
+            "target_gated_factual_research_only"
+            if validated and contract_complete
+            else "candidate_only"
         ),
         "fallback": "persistence for every cell absent from validated_cells",
     }
@@ -68,6 +95,11 @@ def _joint_entry(report: dict) -> dict:
         ),
         "source_gate_schema": schema,
         "schema_current": schema_current,
+        "target_horizon_registry": {
+            cell: value
+            for cell, value in registry.items()
+            if cell in validated
+        },
         "validated_cells": validated,
         "validated_cell_count": len(validated),
         "runtime_status": (
@@ -81,9 +113,9 @@ def _joint_entry(report: dict) -> dict:
 
 def _promotion_registry_entry(report: dict) -> dict:
     schema = str(report.get("schema", ""))
-    schema_current = schema == "whole_body_promotion_registry.v2"
+    schema_current = schema == "whole_body_promotion_registry.v3"
     registry = report.get("target_horizon_registry", {})
-    validated = sorted(
+    raw_validated = sorted(
         cell
         for cell, value in registry.items()
         if schema_current
@@ -93,16 +125,27 @@ def _promotion_registry_entry(report: dict) -> dict:
             value.get("can_move", value.get("validated", False)),
         )
     )
+    input_contract_id = report.get("input_contract_id")
+    units = report.get("variable_units", {})
+    units_complete = all(
+        cell.split("@", 1)[0] in units for cell in raw_validated
+    )
+    contract_complete = bool(input_contract_id) and units_complete
+    validated = raw_validated if contract_complete else []
+    runtime_registry = {
+        cell: value
+        for cell, value in registry.items()
+        if cell in validated and isinstance(value, dict)
+    }
     return {
         "candidate_id": report.get("candidate_id", "joint_jepa_registry"),
-        "input_contract_id": report.get(
-            "input_contract_id", "unspecified_fail_closed"
-        ),
+        "input_contract_id": input_contract_id,
         "input_contract": report.get(
             "input_contract", "materialized target-gated joint-JEPA registry"
         ),
-        "variable_units": report.get("variable_units", {}),
+        "variable_units": units,
         "output_contract": report.get("output_contract", {}),
+        "target_horizon_registry": runtime_registry,
         "source_gate_schema": schema,
         "schema_current": schema_current,
         "validated_cells": validated,
@@ -113,6 +156,7 @@ def _promotion_registry_entry(report: dict) -> dict:
             == "validated_target_gated_joint_research_only"
             else "candidate_only"
         ),
+        "contract_complete": contract_complete,
         "fallback": (
             "persistence unless registry, input contract, target horizon, and units all match"
         ),
@@ -122,6 +166,29 @@ def _promotion_registry_entry(report: dict) -> dict:
 def build_catalog(shared: dict, joint: dict, promotion_registries=()) -> dict:
     entries = [_shared_entry(shared), _joint_entry(joint)]
     entries.extend(_promotion_registry_entry(item) for item in promotion_registries)
+    # Later, target-specific promotion registries supersede broader candidates
+    # for the same live feature contract and target-horizon cell.  Keeping both
+    # would make runtime source selection ambiguous.
+    owner_by_contract_cell = {}
+    for entry_index, entry in enumerate(entries):
+        contract_id = entry.get("input_contract_id")
+        for cell in entry.get("validated_cells", []):
+            owner_by_contract_cell[(contract_id, cell)] = entry_index
+    for entry_index, entry in enumerate(entries):
+        retained = [
+            cell
+            for cell in entry.get("validated_cells", [])
+            if owner_by_contract_cell.get((entry.get("input_contract_id"), cell))
+            == entry_index
+        ]
+        registry = entry.get("target_horizon_registry", {})
+        entry["validated_cells"] = retained
+        entry["validated_cell_count"] = len(retained)
+        entry["target_horizon_registry"] = {
+            cell: registry[cell] for cell in retained if cell in registry
+        }
+        if not retained:
+            entry["runtime_status"] = "candidate_only"
     return {
         "schema": "whole_body_runtime_candidate_catalog.v1",
         "factual_only": True,
@@ -148,7 +215,7 @@ def main() -> None:
         type=Path,
         action="append",
         default=[],
-        help="Additional materialized v2 promotion registry; may be repeated.",
+        help="Additional materialized v3 promotion registry; may be repeated.",
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

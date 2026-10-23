@@ -18,11 +18,22 @@ def main():
     parser.add_argument("--mimic", default="dka_transitions_6h.parquet")
     parser.add_argument("--output", default="dka_mimic_evaluation.json")
     parser.add_argument("--device", default="auto")
+    parser.add_argument(
+        "--input-mode",
+        choices=("legacy", "measurement_pure"),
+        default="measurement_pure",
+        help=(
+            "Choose training-aligned observed-state provenance; use legacy only "
+            "to reproduce historical reports."
+        ),
+    )
     args = parser.parse_args()
 
     device = choose_device(args.device)
     model, payload = load_checkpoint(args.checkpoint, device)
-    report = evaluate_mimic_proxy(model, args.mimic, torch.device(device))
+    report = evaluate_mimic_proxy(
+        model, args.mimic, torch.device(device), input_mode=args.input_mode
+    )
     report["checkpoint"] = str(Path(args.checkpoint).resolve())
     report["checkpoint_model"] = payload.get("metadata", {}).get("model")
     report["cohort"] = str(Path(args.mimic).resolve())

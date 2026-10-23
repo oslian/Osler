@@ -84,7 +84,7 @@ LAB_TO_STATE = {
     "magnesium": "magnesium",
     "phosphate": "phosphate",
     "BUN": "bun",
-    "bedside glucose": "glucose",
+    "bedside glucose": "glucose_poc",
     "glucose": "glucose",
     "albumin": "albumin",
     "prealbumin": "prealbumin",
@@ -115,14 +115,20 @@ LAB_TO_STATE = {
     "uric acid": "uric_acid",
 }
 
-VITAL_TO_STATE = {
-    "heartrate": "heart_rate",
-    "respiration": "respiratory_rate",
-    "sao2": "o2sat",
-    "temperature": "temperature",
-    "systemicmean": "map",
-    "noninvasivemean": "map",
+# Nurse-validated charting (nurseCharting) is the vital-sign source, matching
+# MIMIC-IV chartevents; automatic vitalPeriodic values are not used.
+NURSE_CHART_TO_STATE = {
+    ("Heart Rate", "Heart Rate"): "heart_rate",
+    ("Respiratory Rate", "Respiratory Rate"): "respiratory_rate",
+    ("O2 Saturation", "O2 Saturation"): "o2sat",
+    ("Temperature", "Temperature (C)"): "temperature",
+    ("Non-Invasive BP", "Non-Invasive BP Mean"): "map",
+    ("Invasive BP", "Invasive BP Mean"): "map",
+    ("MAP (mmHg)", "Value"): "map",
+    ("Arterial Line MAP (mmHg)", "Value"): "map",
+    ("Bedside Glucose", "Bedside Glucose"): "glucose_poc",
 }
+MEASUREMENT_CACHE = Path("eicu_canonical_measurements.parquet")
 
 PLAUSIBLE = {
     "map": (20.0, 250.0),
@@ -154,6 +160,8 @@ PLAUSIBLE = {
     "phosphate": (0.1, 20.0),
     "bun": (1.0, 300.0),
     "glucose": (10.0, 2000.0),
+    "glucose_poc": (10.0, 2000.0),
+    "glucose_bg": (10.0, 2000.0),
     "albumin": (0.1, 8.0),
     "prealbumin": (0.1, 100.0),
     "total_protein": (0.1, 15.0),
@@ -181,6 +189,8 @@ PLAUSIBLE = {
     "esr": (0.0, 200.0),
     "ferritin": (0.0, 100000.0),
     "uric_acid": (0.0, 50.0),
+    "glucose_poc": (10.0, 2000.0),
+    "glucose_bg": (10.0, 2000.0),
 }
 
 FEATURE_FOR_CLEANING = {
@@ -216,6 +226,7 @@ STATE_VARS = [
     "potassium",
     "bun",
     "glucose",
+    "glucose_poc",
 ]
 
 TARGET_VARS = [
@@ -437,11 +448,11 @@ def read_diagnosis_sepsis_stays(data_root: Path, meta: pd.DataFrame) -> dict[int
     return hits
 
 
-def read_labs(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
+def read_labs(data_root: Path) -> pd.DataFrame:
     columns = [ID, "labresultoffset", "labname", "labresult"]
     rows = []
     for chunk in _read_csv_chunks(data_root / "lab.csv.gz", columns, chunksize=750_000):
-        chunk = chunk[chunk[ID].isin(stay_ids) & chunk["labname"].isin(LAB_TO_STATE)].copy()
+        chunk = chunk[chunk["labname"].isin(LAB_TO_STATE)].copy()
         if chunk.empty:
             continue
         chunk["var"] = chunk["labname"].map(LAB_TO_STATE)
@@ -459,37 +470,27 @@ def read_labs(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
     return pd.concat(rows, ignore_index=True) if rows else empty_measurements()
 
 
-def read_vitals(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
+def read_nurse_vitals(data_root: Path) -> pd.DataFrame:
+    columns = [
+        ID,
+        "nursingchartoffset",
+        "nursingchartcelltypevallabel",
+        "nursingchartcelltypevalname",
+        "nursingchartvalue",
+    ]
+    labels = {label for label, _ in NURSE_CHART_TO_STATE}
     rows = []
-    periodic_cols = [ID, "observationoffset", *VITAL_PERIODIC_MAP.keys()]
-    for chunk in _read_csv_chunks(data_root / "vitalPeriodic.csv.gz", periodic_cols, chunksize=750_000):
-        chunk = chunk[chunk[ID].isin(stay_ids)].copy()
-        if chunk.empty:
-            continue
-        for source, state_var in VITAL_TO_STATE.items():
-            if source not in chunk:
-                continue
-            values = clean_state_values(state_var, chunk[source])
+    for chunk in _read_csv_chunks(data_root / "nurseCharting.csv.gz", columns, chunksize=2_000_000):
+        chunk = chunk[chunk["nursingchartcelltypevallabel"].isin(labels)]
+        keys = list(zip(chunk["nursingchartcelltypevallabel"], chunk["nursingchartcelltypevalname"]))
+        variables = pd.Series([NURSE_CHART_TO_STATE.get(key) for key in keys], index=chunk.index)
+        chunk = chunk.assign(var=variables).dropna(subset=["var"])
+        for var, group in chunk.groupby("var"):
+            values = clean_state_values(str(var), group["nursingchartvalue"])
             rows.append(pd.DataFrame({
-                "stay_id": chunk[ID].astype("int64"),
-                "offset": chunk["observationoffset"],
-                "var": state_var,
-                "valuenum": values,
-            }))
-
-    aperiodic_cols = [ID, "observationoffset", *VITAL_APERIODIC_MAP.keys()]
-    for chunk in _read_csv_chunks(data_root / "vitalAperiodic.csv.gz", aperiodic_cols, chunksize=750_000):
-        chunk = chunk[chunk[ID].isin(stay_ids)].copy()
-        if chunk.empty:
-            continue
-        for source, state_var in VITAL_TO_STATE.items():
-            if source not in chunk:
-                continue
-            values = clean_state_values(state_var, chunk[source])
-            rows.append(pd.DataFrame({
-                "stay_id": chunk[ID].astype("int64"),
-                "offset": chunk["observationoffset"],
-                "var": state_var,
+                "stay_id": group[ID].astype("int64"),
+                "offset": group["nursingchartoffset"],
+                "var": var,
                 "valuenum": values,
             }))
     if not rows:
@@ -497,7 +498,7 @@ def read_vitals(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
     return pd.concat(rows, ignore_index=True).dropna(subset=["valuenum"])
 
 
-def read_urine_output(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
+def read_urine_output(data_root: Path) -> pd.DataFrame:
     path = data_root / "intakeOutput.csv.gz"
     if not path.exists():
         return empty_measurements()
@@ -508,31 +509,32 @@ def read_urine_output(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
         "celllabel",
         "cellvaluenumeric",
     ]
-    rows = []
-    for chunk in _read_csv_chunks(path, columns, chunksize=750_000):
-        chunk = chunk[chunk[ID].isin(stay_ids)].copy()
-        if chunk.empty:
-            continue
-        rows.append(chunk)
-    if not rows:
-        return empty_measurements()
-    return derive_interval_urine_rate(
-        pd.concat(rows, ignore_index=True), id_column=ID
-    )
+    frame = pd.concat(list(_read_csv_chunks(path, columns, chunksize=2_000_000)), ignore_index=True)
+    return derive_interval_urine_rate(frame, id_column=ID)
 
 
-def read_measurements(data_root: Path, stay_ids: set[int]) -> pd.DataFrame:
+def build_measurement_cache(data_root: Path, output: Path = MEASUREMENT_CACHE) -> dict:
+    """Read canonical eICU measurements once for every stay and cache them."""
+
     measurements = pd.concat(
-        [
-            read_labs(data_root, stay_ids),
-            read_vitals(data_root, stay_ids),
-            read_urine_output(data_root, stay_ids),
-        ],
+        [read_labs(data_root), read_nurse_vitals(data_root), read_urine_output(data_root)],
         ignore_index=True,
-    )
+    )[["stay_id", "offset", "var", "valuenum"]]
+    measurements = measurements.astype({"stay_id": "int64", "valuenum": "float32"})
+    measurements["offset"] = pd.to_numeric(measurements["offset"], errors="coerce")
+    measurements = measurements.dropna(subset=["offset", "valuenum"])
+    measurements.to_parquet(output, index=False)
+    return {str(var): int(count) for var, count in measurements["var"].value_counts().items()}
+
+
+def read_measurements(stay_ids: set[int], cache: Path = MEASUREMENT_CACHE) -> pd.DataFrame:
+    if not cache.exists():
+        raise FileNotFoundError(
+            f"{cache} is missing; build it with build_eicu_measurement_cache.py before extracting cohorts"
+        )
+    measurements = pd.read_parquet(cache, filters=[("stay_id", "in", sorted(int(stay) for stay in stay_ids))])
     if measurements.empty:
         return measurements
-    measurements["stay_id"] = measurements["stay_id"].astype("int64")
     measurements["time_hr"] = pd.to_numeric(measurements["offset"], errors="coerce") / 60.0
     measurements = measurements[np.isfinite(measurements["time_hr"])]
     return measurements.sort_values(["stay_id", "time_hr", "var"]).reset_index(drop=True)
@@ -793,7 +795,9 @@ def backward_value(times: np.ndarray, values: np.ndarray, t: float, lookback: fl
     return float(values[index]), float(age)
 
 
-def nearest_value(times: np.ndarray, values: np.ndarray, t: float, tolerance: float) -> float:
+def nearest_value(times: np.ndarray, values: np.ndarray, t: float, tolerance: float) -> tuple[float, float]:
+    """(value, measurement time - t) of the measurement nearest t within tolerance."""
+
     index = np.searchsorted(times, t)
     candidates = []
     if index < len(times):
@@ -801,11 +805,11 @@ def nearest_value(times: np.ndarray, values: np.ndarray, t: float, tolerance: fl
     if index > 0:
         candidates.append(index - 1)
     if not candidates:
-        return np.nan
+        return np.nan, np.nan
     best = min(candidates, key=lambda item: abs(float(times[item]) - t))
     if abs(float(times[best]) - t) > tolerance:
-        return np.nan
-    return float(values[best])
+        return np.nan, np.nan
+    return float(values[best]), float(times[best]) - t
 
 
 def build_anchors(
@@ -864,12 +868,13 @@ def assemble_states(
             times, values = lookup.get((int(anchor.stay_id), var), (np.asarray([]), np.asarray([])))
             if len(times):
                 current, age = backward_value(times, values, float(anchor.t_hour), LOOKBACK_H)
-                future = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
+                future, offset = nearest_value(times, values, float(anchor.t_plus_hour), target_tolerance)
             else:
-                current, age, future = np.nan, np.nan, np.nan
+                current, age, future, offset = np.nan, np.nan, np.nan, np.nan
             row[f"{var}_t"] = current
             row[f"{var}_age_hr"] = age
             row[future_column(var, horizon_hours)] = future
+            row[f"{future_column(var, horizon_hours)}_offset_hr"] = offset
         rows.append(row)
     return pd.DataFrame(rows, index=anchors.index)
 
@@ -980,10 +985,9 @@ def add_derived_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def filter_evaluable(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> pd.DataFrame:
-    has_pair = np.zeros(len(frame), dtype=bool)
-    for var in TARGET_VARS:
-        has_pair |= frame[f"{var}_t"].notna().values & frame[future_column(var, horizon_hours)].notna().values
-    return frame[has_pair].reset_index(drop=True)
+    """Keep every anchor: which anchors exist must not depend on future measurements."""
+
+    return frame.reset_index(drop=True)
 
 
 def target_pair_counts(frame: pd.DataFrame, horizon_hours: float = DELTA_H) -> dict[str, int]:
@@ -1083,7 +1087,7 @@ def build_transitions(
     meta = read_patient_meta(data_root)
     sepsis_stays = read_diagnosis_sepsis_stays(data_root, meta)
     stay_ids = set(sepsis_stays)
-    measurements = read_measurements(data_root, stay_ids)
+    measurements = read_measurements(stay_ids)
     anchors = build_anchors(sepsis_stays, measurements, meta, horizon_hours=horizon_hours)
     evidence = read_action_evidence(data_root, stay_ids)
     if anchors.empty:
