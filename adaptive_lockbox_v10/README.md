@@ -40,14 +40,48 @@ Detail is in:
 - `{sicdb,hirid}_observation_transitions_{h}h_v1.json`.
 - These hold support counts only; no patient identifiers.
 
+**Weight exporter**
+- `adaptive_cell_weights.py` and its test.
+
 **Registry builder**
 - `build_external_expert_promotion_registry.py` and its test.
 - It accepts a lockbox result only if its SHA-256 matches the ledger scoring receipt.
 
+## Model weights
+
+`adaptive_cell_weights_20261028/` holds the fitted weights of the 35 replicated cells, one bundle per cell and MIMIC training sample: 175 joblib files, plus `MANIFEST.json` with SHA-256, versions and training-data hashes.
+
+**How the bundles were made**
+- The scorer does not keep fitted models, so `adaptive_cell_weights.py` refits each cell's frozen recipe on the same MIMIC samples with the same seeds.
+- A bundle is written only if it reproduces the frozen fit's calibration predictions. The bound is float32 precision relative to the largest prediction; the largest difference was 2^-12 on urine output in mL.
+- A hurdle bundle keeps only the components of the policy the frozen fit selected.
+
+**What a bundle contains**
+
+| Part | Contents |
+|---|---|
+| Feature transform | Medians, scales, clip bounds |
+| Estimators | Ridge, or the hurdle components |
+| Delta clip | Clip bound on the forecast change |
+| Online interval start | Point-correction scale, quintile interval scale, conformal calibration scores |
+
+- The conformal calibration scores are residual/scale ratios of held-out MIMIC patients, with no identifiers.
+- Recipes across the 175 bundles: 155 measurement-pure ridge, 15 change hurdle, 5 persistence.
+
+**Loading**
+- `joblib.load(path)` returns a dict; `adaptive_cell_weights.predict(bundle, frame)` gives the forecast.
+- The frame must be prepared like the scorer's (`normalize_cohort`).
+- Use scikit-learn 1.7.2.
+
+**Not in the bundles**
+- The day-one covariate-shift calibration covariates. They are row-level MIMIC features, so the frozen day-one weighting cannot be fully reproduced from the bundles.
+- Any site's online state, which starts at deployment.
+
+The weights are trained on MIMIC-IV (PhysioNet credentialed data). Keep them inside this private repository.
+
 ## Not included
 
 - **Patient-level data.** MIMIC-IV, SICdb and HiRID are PhysioNet credentialed data; extraction parquets are not included either.
-- **Model weights.** Recipes are refit on MIMIC-IV inside the scorer for each of the 5 training samples; no fitted weights are stored.
 
 ## Limitations
 
