@@ -1,0 +1,270 @@
+{
+  "schema": "causal_tte_analysis.v3",
+  "spec": {
+    "question": "Effect of initiating ICU crystalloid with lactated Ringer's versus 0.9% saline (first ICU fluid-therapy crystalloid: any bolus, or an infusion whose start rate is >= 50 mL/h; intention-to-treat analogue) on chloride change from time zero to ~24 h, MIMIC-IV, active-comparator new-user target-trial emulation",
+    "estimand": "ICH E9(R1) hypothetical strategy: ATE in eligible stays with the outcome's baseline value, on the outcome at time zero + 24 h had neither death nor hospital discharge occurred before time zero + 24 h and everyone been tested; observed only without an intercurrent event and with a sample in 18-30 h (that sample stands for the 24 h value); assumes intercurrent events and missed testing are independent of the outcome given the baseline adjustment set and arm, and observation positivity",
+    "intercurrent_events": [
+      "fu_died_before_24h",
+      "fu_discharged_alive_before_24h"
+    ],
+    "death_event": "fu_died_before_24h",
+    "design_table": "mimic_crystalloid_tte_design.parquet",
+    "outcome_table": "mimic_crystalloid_tte_outcomes.parquet",
+    "estimate_output": "mimic_crystalloid_tte_estimate.json",
+    "key": "stay_key",
+    "subject": "subject_id",
+    "treatment": "treated_balanced",
+    "numeric_covariates": [
+      "age",
+      "t0_weight",
+      "hours_icu_to_t0",
+      "prior_low_rate_balanced_infusion",
+      "prior_low_rate_saline_infusion",
+      "vasopressor_at_t0",
+      "invasive_ventilation_at_t0",
+      "baseline_chloride",
+      "baseline_sodium",
+      "baseline_bicarbonate",
+      "baseline_creatinine",
+      "baseline_bun",
+      "baseline_glucose",
+      "baseline_potassium",
+      "baseline_platelets",
+      "baseline_hemoglobin",
+      "baseline_lactate",
+      "baseline_heart_rate",
+      "baseline_map",
+      "baseline_spo2",
+      "baseline_resp_rate",
+      "baseline_temperature_f"
+    ],
+    "categorical_covariates": [
+      "gender",
+      "careunit",
+      "admission_type",
+      "admission_location",
+      "estimated_year"
+    ],
+    "outcomes": [
+      "chloride",
+      "bicarbonate"
+    ],
+    "primary_outcome": "chloride",
+    "inferential_hierarchy": "one primary test (chloride change); bicarbonate change descriptive; negative control and benchmark are readiness gates; sensitivity analyses (untruncated weights, no measurement weighting, observed-survivors subset association) reported, not gated",
+    "negative_control": {
+      "column": "nc_prior_chloride",
+      "margin": 0.5,
+      "definition": "last chemistry chloride sampled 24-48 h before time zero; disjoint from the baseline window (24 h before time zero), so never the same specimen as baseline_chloride; cannot be caused by the assignment; analysed complete-case in stays that have it (having the earlier sample is pre-treatment), weighted by a propensity model refitted in that subset",
+      "rationale": "falsification test for confounding that also acts on earlier chloride (e.g. clinicians choosing lactated Ringer's for a rising chloride or acidosis that the last baseline value does not capture); a pass does not bound confounding of the primary outcome; margin 0.5 mmol/L is investigator-chosen"
+    },
+    "benchmark_direction": "negative",
+    "benchmark_note": "investigator-chosen directional compatibility check: primary 95% CI entirely below -0.5 mmol/L (balanced fluids lower chloride in SMART, BaSICS and PLUS under sustained fluid policies; those trials do not supply a numerical range for this initiation contrast); not RCT effect reproduction and not validation of identification",
+    "bootstrap_replicates": 1000,
+    "frozen_files": [
+      "mimic_crystalloid_tte_extract.py",
+      "causal_tte_analysis.py",
+      "osler_jepa/frozen_protocol.py",
+      "osler_jepa/instrumental_variable.py",
+      "mimic_crystalloid_tte_spec.json",
+      "mimic_crystalloid_tte_design.parquet"
+    ]
+  },
+  "protocol": "crystalloid_tte_protocol_20261027.json",
+  "protocol_sha256": "c2163ceffcb638638b802e8ad6d82e978c773d80c47b6b7ce06e276297d41727",
+  "results": {
+    "chloride_change": {
+      "stays": 28757,
+      "measured_share": {
+        "treated": 0.6445,
+        "control": 0.6369
+      },
+      "min_measurement_probability": 0.0081,
+      "max_abs_smd_between_arms": 0.0597,
+      "max_abs_smd_against_population": {
+        "treated": 0.0691,
+        "control": 0.0259
+      },
+      "weight_ess": {
+        "treated": 3157.4656,
+        "control": 10504.0502
+      },
+      "max_weight": 6.5545,
+      "observation_support": {
+        "share": 0.2571,
+        "stratum": "admission_type_EU OBSERVATION=1.0 arm=0"
+      },
+      "estimate": -0.8355,
+      "ci95": [
+        -1.0378,
+        -0.6402
+      ],
+      "valid_bootstrap_share": 1.0
+    },
+    "bicarbonate_change": {
+      "stays": 28645,
+      "measured_share": {
+        "treated": 0.6421,
+        "control": 0.6271
+      },
+      "min_measurement_probability": 0.0082,
+      "max_abs_smd_between_arms": 0.058,
+      "max_abs_smd_against_population": {
+        "treated": 0.0677,
+        "control": 0.0262
+      },
+      "weight_ess": {
+        "treated": 3112.423,
+        "control": 10332.9163
+      },
+      "max_weight": 6.6174,
+      "observation_support": {
+        "share": 0.2571,
+        "stratum": "admission_type_EU OBSERVATION=1.0 arm=0"
+      },
+      "estimate": 0.7492,
+      "ci95": [
+        0.5972,
+        0.9031
+      ],
+      "valid_bootstrap_share": 1.0
+    },
+    "negative_control_nc_prior_chloride": {
+      "stays": 5692,
+      "measured_share": {
+        "treated": 1.0,
+        "control": 1.0
+      },
+      "min_measurement_probability": 1.0,
+      "max_abs_smd_between_arms": 0.0606,
+      "max_abs_smd_against_population": {
+        "treated": 0.0696,
+        "control": 0.0187
+      },
+      "weight_ess": {
+        "treated": 1096.1968,
+        "control": 3358.6522
+      },
+      "max_weight": 3.6663,
+      "observation_support": {
+        "share": 1.0,
+        "stratum": null
+      },
+      "estimate": 0.3761,
+      "ci95": [
+        0.1001,
+        0.726
+      ],
+      "valid_bootstrap_share": 1.0
+    }
+  },
+  "sensitivity": {
+    "untruncated_weights": {
+      "stays": 28757,
+      "measured_share": {
+        "treated": 0.6445,
+        "control": 0.6369
+      },
+      "min_measurement_probability": 0.0081,
+      "max_abs_smd_between_arms": 0.061,
+      "max_abs_smd_against_population": {
+        "treated": 0.0581,
+        "control": 0.0563
+      },
+      "weight_ess": {
+        "treated": 2781.2083,
+        "control": 9425.1872
+      },
+      "max_weight": 20.2611,
+      "observation_support": {
+        "share": 0.2571,
+        "stratum": "admission_type_EU OBSERVATION=1.0 arm=0"
+      },
+      "estimate": -0.781,
+      "ci95": [
+        -1.0077,
+        -0.5531
+      ],
+      "valid_bootstrap_share": 1.0
+    },
+    "no_measurement_weighting": {
+      "stays": 28757,
+      "measured_share": {
+        "treated": 0.6445,
+        "control": 0.6369
+      },
+      "min_measurement_probability": 1.0,
+      "max_abs_smd_between_arms": 0.0586,
+      "max_abs_smd_against_population": {
+        "treated": 0.1178,
+        "control": 0.0677
+      },
+      "weight_ess": {
+        "treated": 3266.2854,
+        "control": 10585.5784
+      },
+      "max_weight": 4.0458,
+      "observation_support": {
+        "share": 0.2571,
+        "stratum": "admission_type_EU OBSERVATION=1.0 arm=0"
+      },
+      "estimate": -0.8279,
+      "ci95": [
+        -1.0386,
+        -0.6326
+      ],
+      "valid_bootstrap_share": 1.0
+    },
+    "observed_survivors_subset_association": {
+      "stays": 28080,
+      "measured_share": {
+        "treated": 0.6585,
+        "control": 0.6529
+      },
+      "min_measurement_probability": 0.0071,
+      "max_abs_smd_between_arms": 0.0574,
+      "max_abs_smd_against_population": {
+        "treated": 0.0675,
+        "control": 0.0263
+      },
+      "weight_ess": {
+        "treated": 3108.2964,
+        "control": 10464.9215
+      },
+      "max_weight": 6.4552,
+      "observation_support": {
+        "share": 0.2687,
+        "stratum": "admission_type_EU OBSERVATION=1.0 arm=0"
+      },
+      "estimate": -0.8421,
+      "ci95": [
+        -1.0429,
+        -0.6376
+      ],
+      "valid_bootstrap_share": 1.0
+    }
+  },
+  "follow_up_events_by_arm": {
+    "fu_died_before_24h": {
+      "treated": 0.0212,
+      "control": 0.0245
+    },
+    "fu_discharged_alive_before_24h": {
+      "treated": 0.011,
+      "control": 0.0218
+    }
+  },
+  "readiness_checks": {
+    "covariate_balance": true,
+    "overlap": true,
+    "effective_sample_size": true,
+    "gated_analyses_computed": true,
+    "final_weight_diagnostics": true,
+    "bootstrap_valid": true,
+    "negative_control_equivalent": false,
+    "directional_benchmark": true
+  },
+  "readiness_status": "failed",
+  "causal_claim_allowed": false,
+  "clinical_claim_allowed": false,
+  "runtime_decision_authority": false
+}

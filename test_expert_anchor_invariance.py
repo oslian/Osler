@@ -29,7 +29,7 @@ def events(future):
 
 class ExpertAnchorInvarianceTests(unittest.TestCase):
     def anchors(self, future, exclude=frozenset()):
-        return anchor_predictions(events(future), mimic_raw(), "potassium", 6, "measurement_pure_ridge", set(exclude))
+        return anchor_predictions(events(future), mimic_raw(), "potassium", 6, "measurement_pure_ridge", set(exclude), 0)
 
     def test_anchors_ignore_future_labels(self):
         full = self.anchors([3.5, 4.0, 4.8, 5.0])

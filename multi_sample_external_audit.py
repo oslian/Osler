@@ -67,14 +67,15 @@ def summarize(results: list[dict]) -> dict:
     }
 
 
-LOCKBOX_DATABASES = frozenset({"SICdb", "HiRID", "Emory"})  # Zigong lockbox was scored on 2026-10-18; now development data
+LOCKBOX_DATABASES = frozenset({"SICdb", "HiRID"})  # Zigong (2026-10-18) and Emory (2026-10-20) were scored; now development data
 
 
 def run(args: argparse.Namespace) -> dict:
     if args.database in LOCKBOX_DATABASES:
         if args.protocol is None:
             raise ValueError(f"{args.database} is an untouched lockbox: --protocol is required")
-        verify_protocol(args.protocol)
+        if "binary_event_probability" not in verify_protocol(args.protocol).get("scored_task_types", []):
+            raise RuntimeError("binary event cells are outside this protocol's lockbox scope")
     development = json.loads(args.development_report.read_text(encoding="utf-8"))
     contracts = sorted(development["cells"], key=lambda row: (int(row["horizon_hours"]), str(row["target"])))
     if args.cells:
@@ -144,7 +145,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-rows-per-database", type=int, default=15000)
     parser.add_argument("--samples", type=int, default=5)
     parser.add_argument("--cells", default="")
-    parser.add_argument("--protocol", type=Path, default=None, help="frozen lockbox protocol; required for lockbox databases (SICdb, HiRID, Emory)")
+    parser.add_argument("--protocol", type=Path, default=None, help="frozen lockbox protocol; required for lockbox databases (SICdb, HiRID)")
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 

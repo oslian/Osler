@@ -1066,7 +1066,14 @@ def _predict_adapter(
     disable_body_feedback=False,
     disable_sparse_experts=False,
     disable_target_specific_projections=False,
+    diagnostics=False,
 ):
+    """Adapter predictions on ``rows``.
+
+    Only ``value`` and ``scale`` are kept unless ``diagnostics``: the per-row
+    route/coupling tensors are ~2 KB per row and are read only for the full
+    model's test-row diagnostics.
+    """
     _, _, current, mask, ages, _, _, _, horizon = arrays[:9]
     target_indices = np.asarray(target_indices, dtype=np.int64)
     values, scales, route_weights, timescales, expert_weights = [], [], [], [], []
@@ -1105,6 +1112,8 @@ def _predict_adapter(
             )
             values.append(output["value"].cpu().numpy())
             scales.append(output["scale"].cpu().numpy())
+            if not diagnostics:
+                continue
             route_weights.append(output["route_weights"].cpu().numpy())
             timescales.append(
                 output["timescale_fast_weight"].cpu().numpy()
@@ -1121,6 +1130,8 @@ def _predict_adapter(
                 target_organ_coupling_weights.append(
                     output["target_organ_coupling_weights"].cpu().numpy()
                 )
+    if not diagnostics:
+        return {"value": np.concatenate(values), "scale": np.concatenate(scales)}
     return {
         "value": np.concatenate(values),
         "scale": np.concatenate(scales),
@@ -1391,7 +1402,8 @@ def _export_predictions(frame, arrays, rows, target_names, target_indices, teach
 
     scaler, _, current, _, _, future, future_mask, _, horizon = arrays[:9]
     rows = np.asarray(rows, dtype=np.int64)
-    meta = frame.iloc[rows].reset_index(drop=True)
+    meta_columns = [c for c in ("subject_id", "stay_id", "hospitalid", "careunit", "database", "t") if c in frame]
+    meta = frame[meta_columns].iloc[rows].reset_index(drop=True)
     onset = frame["hours_since_onset"].to_numpy(dtype=float)
     pieces = []
     for local_index, (target, target_index) in enumerate(zip(target_names, target_indices)):
@@ -3844,6 +3856,7 @@ def run(args):
                 test_rows,
                 target_indices,
                 batch_size=args.batch_size,
+                diagnostics=True,
             )
             calibration_prediction = _predict_adapter(
                 adapter,

@@ -1,7 +1,7 @@
 """MIMIC-only selection between the frozen fixed-step interval tracker and DtACI.
 
-Deployment form under test: frozen MIMIC recipe + online point recalibration
-(``affine_0.005``) + day-one weighting + an online interval tracker.  Interval
+Deployment form under test: frozen MIMIC recipe + the selected online point
+recalibration (``--point-dev``) + day-one weighting + an online interval tracker.  Interval
 candidates: the frozen fixed-step tracker (site 0.02, care unit 0.01) and DtACI
 over step-size experts {0.005, 0.01, 0.02, 0.05, 0.1, 0.2} with meta learning
 rate in {1, 5, 20} and fixed share 0.005.
@@ -34,17 +34,16 @@ import pandas as pd
 from mimic_to_eicu_49_cell_external_audit import group_equal_coverage, normalize_cohort, paired_comparison, stable_seed
 from osler_jepa.site_adaptive_conformal import DtaciConfig, adaptive_stream_widths, dtaci_stream_widths
 from osler_jepa.site_adaptive_point import online_point_correction
-from site_adaptive_external_audit import FROZEN_CONFIG
+from site_adaptive_external_audit import FROZEN_CONFIG, frozen_point_config
 from site_adaptive_interval_dev import BOUNDS, pseudo_sites, replay
-from site_adaptive_point_dev import SCENARIOS, candidates as point_candidates, deployment_view, scenario_streams
+from site_adaptive_point_dev import SCENARIOS, deployment_view, scenario_streams
 
 
-POINT_CONFIG = point_candidates()["affine_0.005"]
 SHORT_ROWS = 300
 CANDIDATES = {"frozen_fixed_step": None, **{f"dtaci_{rate}": DtaciConfig(meta_rate=rate) for rate in (1.0, 5.0, 20.0)}}
 
 
-def run_variant(stream: dict, rows_per_site: int | None) -> dict:
+def run_variant(stream: dict, rows_per_site: int | None, point_config) -> dict:
     frame, target = stream["frame"], stream["target"]
     if rows_per_site is None:
         sites = [stream]
@@ -56,9 +55,9 @@ def run_variant(stream: dict, rows_per_site: int | None) -> dict:
     for site in sites:
         scored, observed, now = site["scored"], site["observed"], site["now"]
         corrected = online_point_correction(current=now, prediction=site["candidate"], observed=observed,
-                                            scale=site["point_scale"], config=POINT_CONFIG, **site["common"])
+                                            scale=site["point_scale"], config=point_config, **site["common"])
         comparator = now if site["persistence_comparator"] else online_point_correction(
-            current=now, prediction=site["comparator"], observed=observed, scale=site["point_scale"], config=POINT_CONFIG,
+            current=now, prediction=site["comparator"], observed=observed, scale=site["point_scale"], config=point_config,
             **site["common"])
         inputs = dict(calibration_scores=site["cal_scores"], calibration_weights=site["weights"], scales=site["scales"],
                       predictions=corrected, observed=observed, **site["common"])
@@ -92,6 +91,7 @@ def run_variant(stream: dict, rows_per_site: int | None) -> dict:
 
 
 def run(args: argparse.Namespace) -> dict:
+    point_name, point_config = frozen_point_config(args.point_dev)
     development = json.loads(args.development_report.read_text(encoding="utf-8"))
     contracts = [row for row in development["cells"] if row["task_type"] != "binary_event_probability"]
     patients = pd.read_csv(args.patients, usecols=["subject_id", "anchor_year_group"])
@@ -110,7 +110,7 @@ def run(args: argparse.Namespace) -> dict:
             entry = {"cell": cell}
             for name, stream in scenario_streams(full, years, cell=cell, target=target, horizon=horizon,
                                                  source=contract["source_model"]):
-                entry[name] = {variant: run_variant(stream, size) for variant, size in (("long", None), ("short", SHORT_ROWS))}
+                entry[name] = {variant: run_variant(stream, size, point_config) for variant, size in (("long", None), ("short", SHORT_ROWS))}
             cells.append(entry)
         del raw
     summary = {}
@@ -128,6 +128,7 @@ def run(args: argparse.Namespace) -> dict:
     output = {
         "schema": "site_adaptive_dtaci_dev.v2",
         "database": "MIMIC-IV only",
+        "point_method": point_name,
         "selection_rule": "most passing streams; ties -> narrower width; DtACI adopted only with strictly more passes than the frozen tracker",
         "summary": summary,
         "ranking": ranked,
@@ -145,6 +146,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--development-report", type=Path, default=Path("mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json"))
     parser.add_argument("--mimic-template", default="mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v5.parquet")
     parser.add_argument("--patients", type=Path, default=Path.home() / "Downloads/mimic-iv-3.1/hosp/patients.csv.gz")
+    parser.add_argument("--point-dev", type=Path, default=Path("site_adaptive_point_dev_20261023.json"))
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 

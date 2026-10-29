@@ -29,9 +29,48 @@ class LockboxGuardTests(unittest.TestCase):
         import multi_sample_external_audit
 
         for module in (site_adaptive_external_audit, multi_sample_external_audit):
-            for database in ("SICdb", "HiRID", "Emory"):
+            self.assertEqual(module.LOCKBOX_DATABASES, {"SICdb", "HiRID"})       # Zigong and Emory were scored: development data
+            for database in ("SICdb", "HiRID"):
                 with self.assertRaises(ValueError):
                     module.run(argparse.Namespace(database=database, protocol=None))
+
+    def test_lockbox_scoring_needs_the_frozen_invocation_and_an_addendum(self):
+        import json
+        import tempfile
+        from osler_jepa import frozen_protocol
+        import site_adaptive_external_audit as audit
+
+        with tempfile.TemporaryDirectory() as folder:
+            previous, frozen_protocol.LEDGER = frozen_protocol.LEDGER, Path(folder) / "ledger"
+            try:
+                import sys
+                argv, sys.argv = sys.argv, ["audit", "--database", "SICdb", "--external-template", str(Path(folder) / "x_{horizon}h.parquet"),
+                                            "--output", str(Path(folder) / "out.json"), "--protocol", str(Path(folder) / "p.json")]
+                try:
+                    args = audit.parse_args()
+                finally:
+                    sys.argv = argv
+                protocol = Path(folder) / "p.json"
+                protocol.write_text(json.dumps({"frozen_code_sha256": {}, "deployment_form_arguments": {**audit.form_arguments(args), "samples": 3}}))
+                with self.assertRaises(RuntimeError):                               # invocation differs from the frozen form
+                    audit.lockbox_step(args)
+                protocol.write_text(json.dumps({"frozen_code_sha256": {}, "deployment_form_arguments": audit.form_arguments(args)}))
+                with self.assertRaises(RuntimeError):                               # no addendum receipt yet
+                    audit.lockbox_step(args)
+                files = [str(Path(folder) / f"x_{h}h.parquet") for h in (1, 3, 6, 12, 24, 48)]
+                for name in files:
+                    Path(name).write_bytes(name.encode())
+                frozen_protocol.claim_step(protocol, "addendum_SICdb")
+                frozen_protocol.record_step(protocol, "addendum_SICdb", files[:1], [])
+                with self.assertRaises(RuntimeError):                               # every horizon file must be recorded
+                    audit.lockbox_step(args)
+                (frozen_protocol.LEDGER / frozen_protocol.sha256(protocol) / "addendum_SICdb.json").unlink()
+                frozen_protocol.record_step(protocol, "addendum_SICdb", files, [])
+                self.assertEqual(audit.lockbox_step(args), "continuous_SICdb")
+                with self.assertRaises(FileExistsError):                            # scored once
+                    audit.lockbox_step(args)
+            finally:
+                frozen_protocol.LEDGER = previous
 
 
     def test_protocol_verification_covers_code_and_training_data(self):

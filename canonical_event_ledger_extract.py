@@ -23,7 +23,10 @@ def main() -> None:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--max-stays", type=int, default=1000)
     parser.add_argument("--exclude-treatments", action="store_true")
+    parser.add_argument("--sample", type=int, default=0, help="MIMIC-IV patient sample (0 = first stays by stay_id)")
     args = parser.parse_args()
+    if args.sample and args.database != "mimiciv":
+        parser.error("--sample applies to mimiciv only")
 
     extractor = {
         "mimiciv": extract_mimiciv_events,
@@ -35,11 +38,13 @@ def main() -> None:
         args.data_root,
         max_stays=args.max_stays,
         include_treatments=not args.exclude_treatments,
+        **({"sample": args.sample} if args.database == "mimiciv" else {}),
     )
     paths = write_event_dataset(events, args.output_dir)
     report = {
         "schema": "canonical_event_ledger_extract.v1",
         "database": args.database,
+        "sample": args.sample,
         "encounters": int(encounters["stay_id"].nunique()),
         "patients": int(encounters["subject_id"].nunique()),
         "events": int(len(events)),

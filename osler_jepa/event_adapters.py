@@ -322,8 +322,9 @@ def extract_mimiciv_events(
     *,
     max_stays: int | None = 1000,
     include_treatments: bool = True,
+    sample: int = 0,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Extract a bounded MIMIC-IV event ledger and encounter provenance."""
+    """Extract a bounded MIMIC-IV event ledger and encounter provenance (``sample``: see ``pull_stay_meta``)."""
 
     from mimiciv_observation_transition_extract import (
         LAB_ITEMIDS,
@@ -336,7 +337,7 @@ def extract_mimiciv_events(
     )
 
     connection = con()
-    meta = pull_stay_meta(connection, Path(data_root), max_stays)
+    meta = pull_stay_meta(connection, Path(data_root), max_stays, sample)
     meta = meta.rename(
         columns={
             "first_careunit": "careunit",

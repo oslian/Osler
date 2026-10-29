@@ -79,7 +79,7 @@ class DeploymentReplayIntegrationTests(unittest.TestCase):
         for stream in streams.values():
             self.assertTrue(stream["scored"].any() and (~stream["scored"]).any())
             for variant in (None, 60):
-                result = run_variant(stream, variant)
+                result = run_variant(stream, variant, PointCorrectionConfig())
                 self.assertTrue(all(np.isfinite(r["patient_equal_coverage"]) for r in result.values()))
         from site_adaptive_interval_dev import run_cell
         intervals = run_cell(full, years, cell="potassium@6h", target="potassium", horizon=6, source="measurement_pure_ridge")

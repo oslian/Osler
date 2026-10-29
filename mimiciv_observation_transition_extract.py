@@ -248,13 +248,15 @@ def clean_measurements(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.dropna(subset=["valuenum"]).sort_values(["stay_id", "charttime"]).reset_index(drop=True)
 
 
-def pull_stay_meta(c, mimic_dir: Path, max_stays: int | None) -> pd.DataFrame:
+def pull_stay_meta(c, mimic_dir: Path, max_stays: int | None, sample: int = 0) -> pd.DataFrame:
+    """Eligible ICU stays; sample 0 is the first stays by stay_id, sample k > 0 a stable md5-ordered draw."""
     limit = "" if max_stays is None else f"LIMIT {int(max_stays)}"
+    order = "stay_id" if sample == 0 else f"md5('multi_sample:{int(sample)}:' || CAST(stay_id AS VARCHAR)), stay_id"
     frame = c.execute(f"""
         SELECT subject_id, hadm_id, stay_id, first_careunit, last_careunit, intime, outtime
         FROM {csv_expr(icu_path(mimic_dir, 'icustays'))}
         WHERE outtime > intime + INTERVAL '{int(DELTA_H)} hours'
-        ORDER BY stay_id
+        ORDER BY {order}
         {limit}
     """).df()
     for column in ("intime", "outtime"):

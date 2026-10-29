@@ -1,0 +1,17 @@
+{
+  "schema": "jepa_mimic_samples_protocol.v1",
+  "written": "2026-10-25, after the sample-0 gate result (jepa_gate_sample0_20261025.json) and before any sample 1-4 data was built",
+  "disclosure": "sample 0 results were seen before this protocol was written; the gate rule (jepa_gate_rule_20261022.json, revised 2026-10-24) is unchanged",
+  "gate_rule": "jepa_gate_rule_20261022.json",
+  "definition": "MIMIC sample k refits the whole system on a different MIMIC-IV patient sample: the JEPA training cohort and the frozen expert-anchor recipes",
+  "jepa_cohort": {
+    "source": "canonical_event_ledger_extract.py --database mimiciv --max-stays 5000 --sample k (MIMIC-IV 3.1 icustays with stay > 6 h)",
+    "sample_0": "first 5000 eligible stays by stay_id (the original cohort; reproduced exactly by the --sample 0 code path)",
+    "sample_k": "first 5000 eligible stays ordered by md5('multi_sample:k:' || stay_id); independent draws (about 5% stay overlap with sample 0)"
+  },
+  "anchors": "build_expert_anchor_columns.py --sample k: deployment_recipes_20261024.json fitted on multi_sample_external_audit.mimic_sample(sample=k), 15,000 rows, JEPA-cohort subjects of sample k excluded",
+  "external_rows": "unchanged: eicu_canonical_event_examples_full_5000, nwicu_canonical_event_examples, zigong_canonical_event_examples (unit harmonization by prepare_jepa_event_examples.py, inputs in order mimiciv, eicu, nwicu, zigong)",
+  "training": "teacher_anchored_joint_jepa_audit.py with the sample-0 arguments (seeds 7,19,31,43,57,71,97; --max-stays 20000 keeps every stay)",
+  "gate": "jepa_gate.py over samples 0-4; a database:cell is robust if all 7 seeds pass in >= 4 of 5 samples",
+  "causal_claim_allowed": false
+}

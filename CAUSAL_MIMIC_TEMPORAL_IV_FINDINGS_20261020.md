@@ -22,3 +22,5 @@ MIMIC-IV 28,021 個 ICU 住院、14 個估計年份（2009–2022）。平衡液
 ## 結論
 
 時間工具變數的排除假設在 MIMIC 不成立：除了輸液習慣，病人基線也隨年份系統性改變。依規則不進入結果階段；MIMIC 的 24h 結果仍未被讀取，保留給之後更好的設計。觀察性的兩個工具變數設計（eICU 醫院偏好：精確度不足；MIMIC 時間偏好：基線漂移）都無法開啟因果宣稱，主線轉為路線 A（BioLINCC FACTT 隨機試驗資料）。
+
+> 2026-10-27：這個設計已被 MIMIC 目標試驗模擬（`CAUSAL_TIME_ZERO_REDESIGN_20261027.md`）取代。依使用者決定，已刪除 `mimic_crystalloid_iv_extract.py`、`mimic_crystalloid_iv_spec.json` 及其 design 檔與診斷報告；本文保留為歷史紀錄。

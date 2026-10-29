@@ -5,10 +5,10 @@ layer as forecast anchors and the hierarchy learns a zero-initialized residual.
 For every event-example row and every JEPA target, ``expert__anchor_<target>`` (the loader keeps ``expert__`` columns; they are anchors, never input features)
 holds the frozen deployment recipe's prediction for that row's horizon:
 
-- recipe per cell from ``deployment_recipes_20261020.json`` (catalog cells);
+- recipe per cell from ``deployment_recipes_20261024.json`` (catalog cells);
   cells outside the catalog use persistence (the current value);
-- fitted exactly as deployed: MIMIC-IV v5 transitions (all anchors kept), training sample 0
-  (15,000 rows, ``multi_sample_external_audit.mimic_sample``), seed
+- fitted exactly as deployed: MIMIC-IV v5 transitions (all anchors kept), training sample ``--sample``
+  (default 0; 15,000 rows, ``multi_sample_external_audit.mimic_sample``), seed
   ``stable_seed(cell, "mimic_to_eicu")``;
 - applied to event rows of every database (MIMIC and external rows alike get
   the static MIMIC-fitted prediction; site online correction is applied later,
@@ -40,7 +40,7 @@ SOURCE_ROWS = 15000
 
 
 def anchor_predictions(events: pd.DataFrame, mimic_raw: pd.DataFrame, target: str, horizon: int, recipe: str,
-                       exclude_subjects: set[str]) -> pd.Series:
+                       exclude_subjects: set[str], sample: int) -> pd.Series:
     """Frozen recipe predictions for every event row of one horizon that has a current value.
 
     Forecast-time invariant: histories come from the complete event stream and no
@@ -56,7 +56,7 @@ def anchor_predictions(events: pd.DataFrame, mimic_raw: pd.DataFrame, target: st
         return current
     full = normalize_cohort(mimic_raw, database="MIMIC-IV", target=target, horizon=horizon, max_rows=0)[0]
     full = full[~full["subject_id"].str.removeprefix("MIMIC:").isin(exclude_subjects)].reset_index(drop=True)
-    train = mimic_sample(full, target=target, horizon=horizon, sample=0, rows=SOURCE_ROWS)
+    train = mimic_sample(full, target=target, horizon=horizon, sample=sample, rows=SOURCE_ROWS)
     rows = events.copy()
     rows["_event_index"] = rows.index
     rows["subject_id"] = "EVENT:" + rows["subject_id"].astype(str)
@@ -80,10 +80,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--examples", type=Path, required=True)
     parser.add_argument("--targets", required=True)
-    parser.add_argument("--recipes", type=Path, default=Path("deployment_recipes_20261020.json"))
+    parser.add_argument("--recipes", type=Path, default=Path("deployment_recipes_20261024.json"))
     parser.add_argument("--mimic-template", default="mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v5.parquet")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--registry", type=Path, required=True)
+    parser.add_argument("--sample", type=int, default=0, help="MIMIC recipe training sample (multi_sample_external_audit.mimic_sample)")
     args = parser.parse_args()
     recipes = json.loads(args.recipes.read_text(encoding="utf-8"))["recipes"]
     examples = pd.read_parquet(args.examples)
@@ -99,14 +100,15 @@ def main() -> None:
             cell = f"{target}@{horizon}h"
             recipe = recipes.get(cell, "persistence")
             examples.loc[events.index, f"expert__anchor_{target}"] = anchor_predictions(events, mimic_raw, target, horizon, recipe,
-                                                                                         jepa_mimic_subjects)
+                                                                                         jepa_mimic_subjects, args.sample)
             cells.append({"cell": cell, "target": target, "horizon_hours": horizon, "task_type": "continuous_value",
                           "anchor_column": f"expert__anchor_{target}", "source_model": recipe})
             print(json.dumps({"cell": cell, "recipe": recipe}), flush=True)
     examples.to_parquet(args.output, index=False)
     args.registry.write_text(json.dumps({
         "schema": "expert_anchor_registry.v1",
-        "source": "frozen deployment recipes fitted on MIMIC-IV v5 sample 0 (JEPA-cohort subjects excluded); static (no site online correction)",
+        "source": f"frozen deployment recipes fitted on MIMIC-IV v5 sample {args.sample} (JEPA-cohort subjects excluded); static (no site online correction)",
+        "sample": args.sample,
         "recipes": str(args.recipes), "cells": cells, "causal_claim_allowed": False,
     }, indent=2), encoding="utf-8")
 

@@ -55,6 +55,7 @@ import pandas as pd
 
 from osler_jepa.recipe_availability import deployable_recipe
 
+from osler_jepa.frozen_protocol import claim_step, record_step, sha256, step_record
 from external_value_conditional_interval_audit import (
     verify_protocol,
     EXTERNAL_PREFIX,
@@ -211,13 +212,42 @@ def scored_only(rows: np.ndarray, values: dict[str, np.ndarray]) -> tuple[np.nda
 
 
 LOCKBOX_DATABASES = frozenset({"SICdb", "HiRID"})  # Zigong (2026-10-18) and Emory (2026-10-20) lockboxes were scored once; now development data
+FORM_ARGUMENTS = ("mimic_template", "point_dev", "dtaci_dev", "dtaci_prior", "network_dev", "recipes", "development_report",
+                  "samples", "max_rows_per_database", "cells")
+
+
+def form_arguments(args: argparse.Namespace) -> dict:
+    """The invocation that defines the scored deployment form, as the protocol records it."""
+
+    return {name: ([str(v) for v in value] if isinstance(value, list) else str(value) if isinstance(value, Path) else value)
+            for name, value in ((name, getattr(args, name)) for name in FORM_ARGUMENTS)}
+
+
+def lockbox_step(args: argparse.Namespace) -> str | None:
+    """For a lockbox: verify the frozen protocol, require the frozen invocation, and claim the one-shot scoring step."""
+
+    if args.database not in LOCKBOX_DATABASES:
+        return None
+    if args.protocol is None:
+        raise ValueError(f"{args.database} is an untouched lockbox: --protocol is required")
+    protocol = verify_protocol(args.protocol)
+    if form_arguments(args) != protocol["deployment_form_arguments"]:
+        raise RuntimeError("lockbox invocation differs from the protocol's frozen deployment form")
+    addendum = step_record(args.protocol, f"addendum_{args.database}")      # raises if no addendum was recorded
+    changed = sorted(name for name, digest in addendum["inputs_sha256"].items() if sha256(Path(name)) != digest)
+    if changed:
+        raise RuntimeError(f"extraction files changed after the addendum: {changed}")
+    templates = {args.external_template.format(horizon=h) for h in (1, 3, 6, 12, 24, 48)}
+    unrecorded = sorted(templates - set(addendum["inputs_sha256"]))
+    if unrecorded:
+        raise RuntimeError(f"external transitions not recorded in the addendum: {unrecorded}")
+    step = f"continuous_{args.database}"
+    claim_step(args.protocol, step)
+    return step
 
 
 def run(args: argparse.Namespace) -> dict:
-    if args.database in LOCKBOX_DATABASES:
-        if args.protocol is None:
-            raise ValueError(f"{args.database} is an untouched lockbox: --protocol is required")
-        verify_protocol(args.protocol)
+    step = lockbox_step(args)
     catalog = [row for path in args.development_report for row in json.loads(path.read_text(encoding="utf-8"))["cells"]]
     contracts = sorted(
         (row for row in catalog if row["task_type"] != "binary_event_probability"),
@@ -327,6 +357,10 @@ def run(args: argparse.Namespace) -> dict:
         "causal_claim_allowed": False,
     }
     args.output.write_text(json.dumps(output, indent=2), encoding="utf-8")
+    if step:
+        horizons = sorted({int(row["horizon_hours"]) for row in contracts})
+        inputs = [args.external_template.format(horizon=h) for h in horizons if Path(args.external_template.format(horizon=h)).exists()]
+        record_step(args.protocol, step, inputs, [str(args.output)])
     return output
 
 
@@ -342,14 +376,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--external-template", default=None, help="parquet path template with {horizon} for single-site databases")
     parser.add_argument("--max-rows-per-database", type=int, default=60000)
     parser.add_argument("--samples", type=int, default=5)
-    parser.add_argument("--point-dev", type=Path, default=Path("site_adaptive_point_dev_20261016.json"))
-    parser.add_argument("--dtaci-dev", type=Path, default=Path("site_adaptive_dtaci_dev_20261017.json"))
-    parser.add_argument("--dtaci-prior", type=Path, default=Path("site_adaptive_dtaci_prior_dev_20261019.json"))
-    parser.add_argument("--network-dev", type=Path, default=Path("site_adaptive_network_dev_20261020.json"))
-    parser.add_argument("--recipes", type=Path, default=Path("deployment_recipes_20261020.json"),
+    # defaults: the deployment form re-selected under the leak-free replay (online_config_reselection_protocol_20261023.json
+    # with its 2026-10-24 point amendment), frozen in v9
+    parser.add_argument("--point-dev", type=Path, default=Path("site_adaptive_point_amendment_20261024.json"))
+    parser.add_argument("--dtaci-dev", type=Path, default=Path("site_adaptive_dtaci_dev_20261024.json"))
+    parser.add_argument("--dtaci-prior", type=Path, default=Path("site_adaptive_dtaci_prior_dev_20261024.json"))
+    parser.add_argument("--network-dev", type=Path, default=Path("site_adaptive_network_dev_20261024.json"))
+    parser.add_argument("--recipes", type=Path, default=Path("deployment_recipes_20261024.json"),
                         help="JSON with a 'recipes' map cell -> recipe (default: the frozen external-development selections)")
     parser.add_argument("--cells", default="")
-    parser.add_argument("--protocol", type=Path, default=None, help="frozen lockbox protocol; required for lockbox databases (SICdb, HiRID, Emory)")
+    parser.add_argument("--protocol", type=Path, default=None, help="frozen lockbox protocol; required for lockbox databases (SICdb, HiRID)")
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
