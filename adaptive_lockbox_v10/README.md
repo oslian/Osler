@@ -1,0 +1,58 @@
+# Self-adaptive deployment form: SICdb and HiRID lockbox (protocol v10)
+
+This folder holds the frozen self-adaptive deployment form, its one-shot lockbox evaluation on SICdb and HiRID, and the resulting replication registry. Files keep their original flat paths, so module imports and the protocol hashes resolve when commands run from this folder.
+
+## Results
+
+| | SICdb | HiRID |
+|---|---|---|
+| Evaluable continuous cells | 47 | 38 |
+| Robust under `point_and_dtaci_adaptive` | **44** | **36** |
+| Static v2 (no online updates) | 4 | 9 |
+
+- **35 cells are robust on both databases.** Under the v10 decision rule they are independently replicated adaptive cells; see `adaptive_replication_registry_20261028.json`.
+- Robust means the full gate passes in at least 4 of 5 MIMIC training samples.
+- Median MAE gain over persistence across the 35 cells is 8.2% on SICdb and 9.2% on HiRID.
+- Patient-level interval coverage is 0.88–0.91, against a 0.90 target.
+
+Detail is in:
+- `SICDB_LOCKBOX_RESULT_V10_20261027.md`
+- `HIRID_LOCKBOX_RESULT_V10_20261028.md`
+- `site_adaptive_lockbox_{SICdb,HiRID}_v10.json`
+
+## Contents
+
+**Protocol**
+- `adaptive_model_lockbox_protocol_v10_20261027.json` and its markdown.
+- The protocol pins:
+  - 62 code and configuration files, all included here; hashes are verified;
+  - 6 MIMIC-IV training parquets, which are not included.
+
+**Lockbox records**
+- One-shot ledger receipts are in `causal_executions/4b43aa2c…/`.
+- Each database has an addendum receipt, written before any label was read, and a scoring receipt.
+
+**Extractors and tests**
+- `sicdb_observation_transition_extract.py`, `hirid_observation_transition_extract.py`, and their tests.
+- Codex pre-addendum reviews: `CODEX_REVIEW_*`.
+
+**Extraction reports**
+- `{sicdb,hirid}_observation_transitions_{h}h_v1.json`.
+- These hold support counts only; no patient identifiers.
+
+**Registry builder**
+- `build_external_expert_promotion_registry.py` and its test.
+- It accepts a lockbox result only if its SHA-256 matches the ledger scoring receipt.
+
+## Not included
+
+- **Patient-level data.** MIMIC-IV, SICdb and HiRID are PhysioNet credentialed data; extraction parquets are not included either.
+- **Model weights.** Recipes are refit on MIMIC-IV inside the scorer for each of the 5 training samples; no fitted weights are stored.
+
+## Limitations
+
+- **Data provenance (HiRID).** HiRID was scored on a third-party copy that cannot be verified against PhysioNet checksums; see `HIRID_LOCKBOX_PROVENANCE_20261028.md`.
+- **Data provenance (SICdb).** The SICdb archive also appears repackaged; its source is unconfirmed.
+- **Single department.** HiRID covers one department, so care-unit robustness rests on SICdb alone.
+- **Glucose.** No glucose cell is replicated.
+- **Use.** `causal_claim_allowed: false`; `clinical_promotion_allowed: false`. Research use only.
