@@ -43,6 +43,20 @@ Detail is in:
 **Weight exporter**
 - `adaptive_cell_weights.py` and its test.
 
+**Import support (added 2026-10-29)**
+- `rules/active/` holds the DKA rule file that `osler_jepa` loads on import. The lockbox scorer does not use its contents.
+- The extractors import 7 modules:
+  - `eicu_body_system_configs.py`;
+  - `eicu_{aki,sepsis,respiratory}_transition_extract.py`;
+  - `eicu_demo_pretrain.py`;
+  - `physionet2019_pretrain.py`;
+  - `osler_jepa/biomarker_prediction.py`.
+- About these files:
+  - none is pinned by the protocol hashes or the addendum receipts;
+  - all were last modified on or before 2026-10-22, before the v10 addendum;
+  - without them the code in this folder does not import.
+- All 39 tests in this folder pass.
+
 **Registry builder**
 - `build_external_expert_promotion_registry.py` and its test.
 - It accepts a lockbox result only if its SHA-256 matches the ledger scoring receipt.
