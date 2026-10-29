@@ -1,0 +1,131 @@
+{
+  "schema": "adaptive_event_lockbox_protocol.v11",
+  "frozen_at": "2026-10-29T16:48:11.504478+00:00",
+  "question": "Do the two hypoxemia event cells, deployed as the frozen static MIMIC model with online Platt scaling, pass the event gate on SICdb and HiRID in a retrospective observation-time replay?",
+  "databases": [
+    "SICdb",
+    "HiRID"
+  ],
+  "previous_protocol": "adaptive_model_lockbox_protocol_v10_20261027.json",
+  "prior_project_use": {
+    "SICdb": "scored once under v10 for continuous cells (44/47 robust, including o2sat@12h); current SpO2 and its history were model features there; the 1h/3h future SpO2 columns were never used as labels or viewed",
+    "HiRID": "as SICdb (36/38 robust under v10); third-party copy not verifiable against official checksums",
+    "claim": "a newly frozen binary-task evaluation on previously used external sites, not untouched databases"
+  },
+  "scored_task_types": [
+    "binary_event_probability"
+  ],
+  "scored_cells": [
+    "hypoxemia_event@1h",
+    "hypoxemia_event@3h"
+  ],
+  "deployment_form": "frozen static hypoxemia model (_fit_hypoxemia, 5 MIMIC samples) + online Platt scaling (Gupta & Ramdas 2023; gamma 0.1, rho 100, radius 100, start (1, 0)); each hospital its own deployment on the shared deployment clock; warm-up stays not scored",
+  "deployment_form_arguments": {
+    "mimic_template": "mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v5.parquet",
+    "development_report": "mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json",
+    "event_config": "site_adaptive_event_amendment_20261028.json",
+    "samples": 5,
+    "max_rows_per_database": 60000
+  },
+  "gate": {
+    "point": "Brier beats persistence (current SpO2 <= 92) and the OPS-recalibrated MIMIC-prevalence comparator: patient-level paired bootstrap upper bound < 0",
+    "calibration": "pooled point estimates CITL in [-0.2, 0.2] and slope in [0.8, 1.25] (research tolerances, not statistical equivalence); not identifiable or any invalid prediction = fail",
+    "robust": "full pass in >= 4 of 5 MIMIC samples",
+    "diagnostics_not_gated": "patient-cluster bootstrap intervals; calibration by hospital, care unit and stream phase"
+  },
+  "primary_endpoint": "robust cells per database",
+  "decision_rule": "a cell robust on both SICdb and HiRID is an independently replicated event cell within the claim scope; robust on one = candidate.  Any registry change requires the user's approval.",
+  "claim_scope": "retrospective observation-time replay (final values, label availability = anchor + h + |offset|; SICdb SpO2 is an hourly aggregate; HiRID patient = admission); pooled site-level calibration",
+  "post_hoc_decisions": [
+    "calibration tolerances fixed after the static calibration check on eICU, NWICU and Emory",
+    "online Platt scaling adopted by amendment after the MIMIC-only rule selected static (4 vs 4 streams)",
+    "data-free Codex pre-freeze review: all 7 findings fixed (CODEX_REVIEW_EVENT_PREFREEZE_20261029.md)"
+  ],
+  "development_reference_not_a_prediction": {
+    "online_platt_robust": {
+      "eICU": 2,
+      "NWICU": 2,
+      "Emory": 2
+    },
+    "static_robust": {
+      "eICU": 0,
+      "NWICU": 0,
+      "Emory": 0
+    },
+    "results": [
+      "site_adaptive_event_eICU_20261029.json",
+      "site_adaptive_event_NWICU_20261029.json",
+      "site_adaptive_event_Emory_20261029.json"
+    ],
+    "diagnostics": "eICU first-third slope 0.75-0.86; about a third of estimable eICU hospitals outside the tolerances; single-site databases stable from the first third; care-unit CITL up to +/-0.66 (NWICU)"
+  },
+  "preconditions_before_any_label_is_read": [
+    "lockbox_addendum.py --protocol <this file> --database <db> --files <extractor, its test, mapping file, the 1h and 3h extraction parquets and reports>: the parquets must be byte-identical to the previous protocol's addendum"
+  ],
+  "evaluation": {
+    "command": "python site_adaptive_event_audit.py --database <SICdb|HiRID> --external-template <db>_observation_transitions_{horizon}h_v1.parquet --protocol <this file> --output site_adaptive_event_lockbox_<db>_v11.json (run from the project folder; every other option at its default)"
+  },
+  "one_shot_rule": "each database is scored once (ledger step binary_<db>); the claim cannot be repeated, so a crash after the claim ends that database's evaluation unless the user decides otherwise, and is reported",
+  "refreeze_rule": "if any hashed file changes before scoring, a new protocol version must be frozen before any label is read",
+  "frozen_code_sha256": {
+    "adaptive_model_lockbox_protocol_v10_20261027.json": "4b43aa2c27afeec563e56f2f63452f0d55e4d7c08d507176c8ed8031786f68d6",
+    "build_event_lockbox_protocol_v11.py": "fc75dedd9baa783f34b70c40ec64b5fcb0021fd8734ff008b43763ed4af217d1",
+    "dka_action_contract.py": "32159d253ebd740e89094c9775dd41fa8e122a026b94e8417d56fb358a5791f7",
+    "dka_body.py": "7cb6020c1482a3c308cc0831ddbc7123bbbc1c417d5a955f70b048f5712ec48a",
+    "dka_world_model_contract.py": "6f7a21ee7d5cd9ab403e498c82d307ebecbc7c300fd4d349874a84208eb86c0f",
+    "external_value_conditional_interval_audit.py": "552df5b57ab35c2897c6fb19936060e1667e4e1f3a9af89fd48d4614f70b7633",
+    "lockbox_addendum.py": "5ccc6272ed893aae2ea587caf747ec537aaf6a4aaa60cf6947eb68c5140dda01",
+    "mimic_to_eicu_49_cell_external_audit.py": "dc98f7469b11173548064f84befa99164e35c2f46102138b22bb8790b57efca3",
+    "mimiciv_all_49_runtime_cells_development_rescue_audit_20260816.json": "da3cd1507dcf6cc171ab7e09c0119edbf228bfc49df8cea1282c925258e5a64d",
+    "multi_sample_external_audit.py": "3a4fe68e7802d59e86a8f08b6bfa70bfb6f0d406ad010164d0e1325c4cb406a6",
+    "nonlinear_latent_rollout.py": "b5d66d14e4d4e1c9ef5009625eb68e014a2fc9a9091b758f119b0e07c01d730c",
+    "osler_jepa/__init__.py": "e4c5f54e1429f3189cf9004ed650f42c12bee8736280563c7af70836f3dd1d20",
+    "osler_jepa/actions.py": "7bd1ff8cc39b5d38d0713685ed6c1ea0871431f8b11dd09f2c9d0dad354c6b77",
+    "osler_jepa/adjacent_hierarchy.py": "e0ad06e5cc322ef6d3eed4e83fdd9e7386994f2a73fce41d8008ab5744f4b3d6",
+    "osler_jepa/anchored_residual.py": "782e4cac3a150800dab987185a1a2ed4786f1f1bd28c84513d0e8ddab1f12476",
+    "osler_jepa/belief.py": "5b1ed19e7975b1e7998fcfba067e4f237feaf4873b5fba7c20a0032ba5f59397",
+    "osler_jepa/body_coupling.py": "621542416e70e9cccc069a7409cc908596177b867e4bc9715245f6cf58acc892",
+    "osler_jepa/causal_evaluation.py": "ab537c144733a8ccfae71a944a397ca170f04a87a4445c60acfbfe07eb913100",
+    "osler_jepa/causal_readiness.py": "e701c68a0d5f61da545eb67e8702d8263695c31033872e76c4d119f5ac206f1e",
+    "osler_jepa/cohort_signature.py": "8cf4bb832c38bc4f5dc5ec15a3026dfef53cbb53a2c03fb11e27eb7de100a881",
+    "osler_jepa/deployment_clock.py": "4f28e36a27bcc0267b2ce03760c2954b0a9a39adc93cc23cb3db3ef9f012782b",
+    "osler_jepa/disease_router.py": "db6f176534527543548e85991883698b88b16de774c673782245d19e94f487da",
+    "osler_jepa/embodied_logic.py": "03872410d8afffe317bf7eb5b6532042ae3d4e238674c589f12feef1d56dc318",
+    "osler_jepa/event_calibration.py": "83480eb9bc4d7dd7a6f4388c370f3c4ce14378174fe0b20f666919c3fa187d7f",
+    "osler_jepa/frozen_protocol.py": "197929866d517630e5299c08a35be9a3483c1d92a285b7c62354fce3bb81c993",
+    "osler_jepa/interval_personalization.py": "1ad2c7dbd3307cb219186918c6e656e3158c1037e2c3e53a0e76156a940c6a3b",
+    "osler_jepa/interval_scale.py": "18e29f6b3e728ee9abd514cc62f5850db8dbc4c1941795ddce4e2a7cca54452a",
+    "osler_jepa/online_platt.py": "bc9f9ce7a0506a7a4bf729f9a802330771311ad8749842666fa37bf9186f78b4",
+    "osler_jepa/ontology.py": "16e374b11de0581115579ddecec9643e6e069eb98023efa134199248dd0092f3",
+    "osler_jepa/organ_schema.py": "7a0e021c9e4111d8e7988c7c6bd89da0c1b5916668175bdab452dff8b610d807",
+    "osler_jepa/patient_split.py": "aaeddc47359aaf7eded9da6a9312207ec3c410af55ac937489314276d6026858",
+    "osler_jepa/patient_state.py": "1c17557310f86fe8adc990cae58fd69be919fd7ae5d201e9e781e8780042e1f5",
+    "osler_jepa/recipe_availability.py": "49b6c6ebea67614a1ac93faa79d529c18080d1d6912256e3ec30ab30a7ea29ae",
+    "osler_jepa/shadow.py": "f2a268508fbf4421a68ce379750aaec85d7084fab57c749703de063788a2f2c0",
+    "osler_jepa/shadow_cohort.py": "42cc47a645c837fd419889cc9f60ae193e988e6055b218fa8ba0df066768e2d1",
+    "osler_jepa/shadow_outcomes.py": "4c5d1eb51711332a845e55feaa6ae1b610c5ed41ac3436c2947911f001856042",
+    "osler_jepa/site_adaptive_conformal.py": "aa98c41b2cdf2cd1e267bbf2acf14e80a2feaafce801535c3a3844206d42efda",
+    "osler_jepa/state_compiler.py": "a709cca28e7d4605abc575f8ee2dec4b7d272b2c96872f8db32158cf5b0c48a6",
+    "osler_jepa/symbolic.py": "10c355ed36b7256f98dde8674d9a2cae4bd833d31797c8e91d019043bcaf1108",
+    "osler_jepa/treatment_units.py": "c308220b14c8d249cc63e0f648bba543d62be799d73c7b52c3972e7ca1287719",
+    "osler_jepa/validator.py": "ee7e60e4c8cdd80191518f523009410a65138d7c1059801fa1943b2b727eb3aa",
+    "site_adaptive_event_amendment_20261028.json": "4243a3f4396790955ab1b0f0a72c387736a09e130ce7d783b209b9caca31f081",
+    "site_adaptive_event_audit.py": "26d74b895bb0d769e0a0f1d409eb5d8d3c0911b666cdd8aeb01e042b7280fab7",
+    "site_adaptive_event_dev.py": "ad96328549ed3e07aa3ff7935907a5bfa0ca3b0dbb3bbecc2860eda1f17904d8",
+    "site_adaptive_interval_dev.py": "38afb40512435acee5529c718c1c63d04bcc45cb0340493d3871cfa6845e7758",
+    "target_specific_domain_conformal_audit.py": "7802721ddcbaccaa4c2fcb12e4ff2ac3aeb69b8c8aec43e92ca98d712ddfceac",
+    "target_specific_event_hurdle_audit.py": "8d1b4818c16ffe8c25d41d961773bd62be1d05b59957b10476b6f5296022f84c",
+    "target_specific_event_hurdle_cluster_audit.py": "0182674d787c84ba45be5197bd579542eed448f77b6d58a780900fc4596898c8",
+    "teacher_anchored_joint_jepa_audit.py": "1edfe579a7f924209d0697a2659661b64cd3522efd6e2bb12e0161e475325caf",
+    "whole_body_joint_gate.py": "14aab508ba06b617381a829479f2d1c1009553bc5a182105722e7f2d6598d3e4",
+    "whole_body_joint_jepa.py": "7696a421480702e730f8f7fad01a249062aa1af569b5c378387d331a3a5e9c1a",
+    "whole_body_joint_source_registry.py": "9cccbb0eecb87d133095aba7cede885861c73e77794693afe34609e38fd52a30"
+  },
+  "frozen_training_data_sha256": {
+    "mimiciv_observation_transitions_1h_full_v31_treatment_unit_safe_v5.parquet": "82e15b4d138058ff2b3eaeb65afc084777443f58f9bb35e49c9528b49af9b7ad",
+    "mimiciv_observation_transitions_3h_full_v31_treatment_unit_safe_v5.parquet": "0c1167c0b1de4cbfd63badccd46498da2ef84d5742797dc6c4b5a74f6ed69c05"
+  },
+  "independent_validation": false,
+  "causal_claim_allowed": false,
+  "clinical_promotion_allowed": false
+}
