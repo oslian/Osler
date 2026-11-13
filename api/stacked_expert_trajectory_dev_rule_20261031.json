@@ -1,0 +1,36 @@
+{
+  "schema": "stacked_expert_dev_rule.v2",
+  "written_before_results": true,
+  "written": "2026-10-31, after stacked_expert_dev_rule_20261031.json was scored (STACKED_EXPERT_DEV_RESULT_20261031.md: exchange of snapshot forecasts added ~0.04%; own-only residual ~1.6% over the expert) and before any trajectory result. Same cohort, labels, split, residual model, deployment form and gate axes as that rule; only the inputs differ.",
+  "question": "When every cell also sees each target's recent trajectory, does exchanging information across cells beat the own-target residual with its own trajectory?",
+  "inherits": "stacked_expert_dev_rule_20261031.json",
+  "inherited_sections": ["data", "patients", "model", "deployment_form", "minimum_support", "robust"],
+  "trajectory": {
+    "lags_hours": [1, 3, 6, 12, 24],
+    "definition": "per target and lag L: current value at anchor time t minus the target's current value at the stay's latest anchor at or before t - L (missing if none); uses only anchors strictly before t, and the anchor set does not depend on labels",
+    "reference": "lookback-window change features as in the MIMIC-III / HiRID ICU benchmarks (Harutyunyan et al. 2019; Yeche et al. 2021)"
+  },
+  "systems": {
+    "stacked_trajectory": {"exchange": true, "trajectory": true},
+    "own_trajectory": {"exchange": false, "trajectory": true},
+    "stacked": {"exchange": true, "trajectory": false},
+    "own_only": {"exchange": false, "trajectory": false}
+  },
+  "candidate": "stacked_trajectory",
+  "cell_pass_per_sample": [
+    "stacked_trajectory beats the frozen expert anchor on the database's point axes",
+    "stacked_trajectory beats persistence on the same axes",
+    "stacked_trajectory beats own_trajectory on the same axes (exchange claim)",
+    "stacked_trajectory interval gate passes"
+  ],
+  "required_comparators": ["anchor", "persistence", "own_trajectory"],
+  "primary_readout": "number of robust database:cells (>= 80% of 5 MIMIC samples) among cells with a real expert recipe; persistence-anchor cells reported separately",
+  "secondary_comparisons": [
+    ["own_trajectory", "own_only", "value of the own trajectory"],
+    ["stacked_trajectory", "stacked", "value of trajectories under exchange"],
+    ["own_trajectory", "anchor", "own trajectory residual vs the frozen expert"]
+  ],
+  "importance": "group permutation importance of stacked_trajectory on MIMIC calibration patients: each target's inputs (snapshot and trajectory) permuted jointly; predictive association only",
+  "development_evidence_only": true,
+  "causal_claim_allowed": false
+}

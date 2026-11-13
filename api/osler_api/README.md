@@ -1,7 +1,5 @@
 # Osler forecast API
 
-> **Not runnable from this repository yet.** The API imports research modules, the model files (`adaptive_cell_weights_20261102/`, `m_weights_20261108/`) and the registry (`adaptive_replication_registry_20261102.json`), which are not published here. This directory documents the interface and its implementation.
-
 Research-only (`causal_claim_allowed: false`, `clinical_promotion_allowed: false`). Two products:
 
 | | Expert cells | Online marginal M |
