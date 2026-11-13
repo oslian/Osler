@@ -10,7 +10,7 @@ The former generic CTM/MIMIC JEPA path was removed. It used large trajectory
 datasets and a 118-state vocabulary, but its latent representation collapsed and
 its future predictor did not beat persistence reliably.
 
-The repository was reorganized (see structure below). The recommendation logic is
+The repository layout is described below. The recommendation logic is
 100% symbolic and deterministic; an LLM is used only to parse free-text cases and to
 explain results in chat — it never makes a medical decision.
 
@@ -32,45 +32,38 @@ rule-based parsing + the full reasoning graph.
 
 ## Repository structure
 
+> The current whole-body model source, runtime weights and release live in the private
+> **oslian/Model** repository. The Oslian Demo lives on the `oslian-demo` branch of
+> WholeBody-JEPA and pins oslian/Model. This repository keeps the symbolic engine, the
+> DKA world model, and the research scripts and frozen lockbox code that produced the
+> October 2026 adaptive results.
+
 ```
 Osler/
-├── demo/        The product: web UI + agent orchestrator.
-│               demo_app.py (Flask), agent.py, case_parser.py, case_targets.py,
-│               disease_world.py, llm_client.py, case_demo.html, sample_cases.json,
-│               demo_clinical_data.json, README.md
-│
-├── engine/      The live symbolic pharmacology engine the demo depends on (7 modules):
-│               reasoning_engine.py, patient_profile.py, drug_safety_gate.py,
-│               drug_identity.py, clinical_role.py, drug_profile.py, clinical_data.py
-│
-├── data/        Live knowledge files only: drugs_pkpd.json and retained organ models.
-│
-├── dka_body.py              Numerical DKA physiology simulator.
-├── dka_world_model.py       Action-conditioned JEPA world model + MPC.
-├── train_intervention_jepa.py  Branched counterfactual multi-horizon trainer.
-├── predict_dka_intervention.py Compare a proposed intervention with no treatment.
-├── dka_osler.py             Symbolic shield, mechanism checks, reasoning trace.
-├── dka_causal_evaluation.py Matched-control and AIPW confounding audit.
-├── osler_jepa/              Shared ontology, action schema, curriculum, validator.
-├── physionet2019_pretrain.py  General ICU self-supervised JEPA pretraining.
-├── eicu_demo_pretrain.py      eICU demo ICU state pretraining adapter.
-├── eicu_demo_action_audit.py  eICU treatment-table to DKA action coverage audit.
-├── eicu_dka_transition_extract.py  eICU observed-treatment DKA transition cohort.
-├── eicu_dka_per_target_ensemble.py  eICU patient-held-out target selector.
-├── mimiciii_demo_dka_transition_extract.py  MIMIC-III demo DKA-like transition cohort.
-├── rules/active/dka_embodied.pl  Human-owned Prolog action/effect rules.
-├── dka_*.py                 Calibration and real-data validation utilities.
-├── SYSTEM_FLOW.md           Current symbolic and numerical JEPA flows.
-├── OSLER_JEPA_ROADMAP.md    Target architecture, promotion gates, next build order.
-├── SYMBOLIC_JEPA_VIABILITY_AUDIT.md  Same-scale compiler/viability ablation.
-├── PHYSIONET2019_PRETRAINING_FINDINGS.md  Real ICU pretraining result and boundary.
-├── PHYSIONET_DKABODY_CALIBRATION_FINDINGS.md  PhysioNet simulator-prior calibration.
-├── EICU_DKA_TRANSITION_FINDINGS.md  Open observed-treatment eICU DKA proxy result.
-├── MIMICIII_DKA_TRANSITION_FINDINGS.md  MIMIC-III demo schema/power smoke result.
-├── RESEARCH_INTEGRATION_ROADMAP.md  ILP/LNN/LTC/DreamCoder/active-inference integration plan.
+├── demo/, engine/, data/, rules/   Symbolic drug-recommendation demo and its knowledge files
+│                                   (superseded by the Oslian Demo; kept for the engine history).
+├── osler_jepa/                     Shared ontology, action schema, curriculum, validator.
+├── *.py (root)                     Research scripts and modules. They stay at the root on purpose:
+│                                   they import each other as top-level modules, and the v10 lockbox
+│                                   freezes 62 of them by root path (frozen_code_sha256).
+├── test_*.py (root)                Regression tests for those modules.
+├── *.json (root)                   Reports and registries that code or frozen evidence reads by root
+│                                   path (defaults, f-string templates, protocol hashes). Not movable.
+├── reports/<family>/               Reports nothing reads by path, grouped by family
+│                                   (adjacent_three_level, whole_body, mimic, eicu, renal, ...).
+├── docs/INDEX.md                   Every research document, grouped by topic (generated).
+├── docs/research/<kind>/           Findings, protocols, results, reviews and notes nothing binds by path.
+├── scripts/runs/                   Recorded zsh run scripts (they cd to the author's machine).
+├── artifacts/                      Smoke runs, the 2026-08-22 release contract copy, and checkpoints
+│                                   nothing references.
+├── adaptive_cell_weights_20261028/, external_runs_*/, eicu_*/, patient_state_*/, ...
+│                                   Run outputs that scripts and findings reference by these names.
 ├── requirements.txt
 └── README.md
 ```
+
+A root file moved only when no code, configuration, machine-readable protocol or frozen
+evidence refers to its path. Anything still at the root is there because something binds it.
 
 ### How it fits together (live path)
 
@@ -295,8 +288,8 @@ active-DKA windows have insulin evidence without dose-resolved administration.
 This is still an observational factual proxy, not a causal treatment-effect test
 or a checkpoint promotion. The patient-held-out per-target ensemble retains a
 narrow glucose signal but does not pass the active-DKA bootstrap gate as a whole.
-See `EICU_DKA_TRANSITION_FINDINGS.md` and
-`EICU_DEMO_PRETRAINING_FINDINGS.md`.
+See `docs/research/findings/EICU_DKA_TRANSITION_FINDINGS.md` and
+`docs/research/findings/EICU_DEMO_PRETRAINING_FINDINGS.md`.
 
 If you want to test whether this real-ICU representation helps DKA training, use
 the controlled feature-aligned transfer path. It seeds only overlapping state
@@ -414,9 +407,9 @@ presentation-only for glucose, real-fit grey-box residual for anion gap, and
 persistence for all other targets. Active-DKA median stay-level delta improves
 to `-0.029998`, and the router beats the no-realfit base router in 7/7 splits.
 This is still observational factual forecasting, not causal validation. See
-`MIMICIV_FULL_V31_DKA_FINDINGS.md`.
+`docs/research/findings/MIMICIV_FULL_V31_DKA_FINDINGS.md`.
 
-The post-DKA A/B handoff is versioned in `NEXT_CHAPTER_AB.md` and
+The post-DKA A/B handoff is versioned in `docs/research/notes/NEXT_CHAPTER_AB.md` and
 `next_chapter_ab_contract.json`. Chapter A is a fail-closed causal-readiness
 contract for randomized, instrumental-variable, or front-door evidence. Chapter B
 is a disease-agnostic per-target router template for sepsis, acute kidney injury,
@@ -459,7 +452,7 @@ present, but action-target support remains below the prior reference gates for
 persistence for all-window MAP and active-DKA bicarbonate as point estimates;
 the PhysioNet presentation-only candidate has only small active-DKA point wins
 for pH, potassium, and sodium. This does not support checkpoint promotion,
-causal claims, or clinical claims. See `MIMICIII_DKA_TRANSITION_FINDINGS.md` and
+causal claims, or clinical claims. See `docs/research/findings/MIMICIII_DKA_TRANSITION_FINDINGS.md` and
 `mimiciii_dka_real_proxy_comparison.json`.
 
 ### PhysioNet 2019 DKABody calibration
@@ -498,7 +491,7 @@ The calibration artifact covers DKA-like presentation distribution, observable
 patient-variability proxies, action-unobserved drift targets, and measurement
 mask/age realism. The drift target is explicitly not a clean no-treatment causal
 estimate because Challenge 2019 has no medication channels. See
-`PHYSIONET_DKABODY_CALIBRATION_FINDINGS.md`.
+`docs/research/findings/PHYSIONET_DKABODY_CALIBRATION_FINDINGS.md`.
 
 The full-budget calibrated candidate was tested and rejected for runtime
 promotion. Its active-DKA glucose point estimate beat persistence, but the
@@ -652,7 +645,7 @@ research boundary. Captured-insulin windows have the correct glucose and
 acid-base direction; 14/17 simulated deaths occur without captured insulin.
 The audit therefore blocks parameter fitting and runtime changes, localizing the
 remaining problem to treatment coverage rather than missing generic mean
-reversion. See `DKA_TREATMENT_RECOVERY_AUDIT.md`.
+reversion. See `docs/research/audits/DKA_TREATMENT_RECOVERY_AUDIT.md`.
 
 `dka_symbolic_jepa_v6_candidate.pt` is a candidate-only integration checkpoint
 trained from the repaired simulator plus the candidate grey-box residual. It
@@ -682,7 +675,7 @@ not fitted clinical constants.
 The architectural boundary is intentional: JEPA predicts intervention-conditioned
 future physiology; Osler validates each final treatment effect as `verified`,
 `contradicted`, or `unexplained`, explains the mechanism, and retains safety veto authority.
-See `OSLER_JEPA_ROADMAP.md` for the self-learning loop and clinical promotion gates.
+See `docs/research/notes/OSLER_JEPA_ROADMAP.md` for the self-learning loop and clinical promotion gates.
 
 The v5 symbolic interface adds four supervised heads: future direction,
 Osler transition status, proof-path selection, and intervention rule proposal.
@@ -769,7 +762,7 @@ The v2 artifact exposes a per-state selection contract. A learned state requires
 at least three of four outer folds to select the same method and lower out-of-fold
 MAE than persistence. Unsupported horizons, low ensemble agreement, unstable
 state selection, and unvalidated states explicitly abstain to persistence.
-See `REAL_WORLD_IMPROVEMENT_FINDINGS.md` for the ablation results.
+See `docs/research/findings/REAL_WORLD_IMPROVEMENT_FINDINGS.md` for the ablation results.
 
 The June 2026 v4 checkpoint was trained on 1,000 patient scenarios. At six hours
 its held-out simulator MAE is 36.56 mg/dL for glucose, 1.53 mmol/L for bicarbonate,
@@ -785,4 +778,4 @@ improved from v3 `204.55` to v4 `138.46 mg/dL`, but persistence remains better a
 `96.65`. V4 beats persistence for active-DKA anion gap and MAP, not for the other
 targets. Route-aware DKABody replay improves glucose MAE from `235.32` to `195.45`
 but still produces 12/12 simulated deaths. The checkpoint remains research-only.
-See `MIMIC_DEMO_FINDINGS.md` and `dka_mimic_demo_v4_evaluation.json`.
+See `docs/research/findings/MIMIC_DEMO_FINDINGS.md` and `dka_mimic_demo_v4_evaluation.json`.

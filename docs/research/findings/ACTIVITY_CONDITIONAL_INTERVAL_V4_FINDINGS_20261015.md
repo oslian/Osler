@@ -1,8 +1,8 @@
 # As-of Activity-Conditional Intervals (v4): Findings (2026-10-15)
 
 Script: `activity_conditional_interval_audit.py`. Detail tables:
-`ACTIVITY_CONDITIONAL_INTERVAL_eICU_FINDINGS_20261015.md`,
-`ACTIVITY_CONDITIONAL_INTERVAL_NWICU_FINDINGS_20261015.md`. Every v2 number reproduced the v2
+`docs/research/findings/ACTIVITY_CONDITIONAL_INTERVAL_eICU_FINDINGS_20261015.md`,
+`docs/research/findings/ACTIVITY_CONDITIONAL_INTERVAL_NWICU_FINDINGS_20261015.md`. Every v2 number reproduced the v2
 audit exactly.
 
 ## Method

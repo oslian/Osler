@@ -181,5 +181,5 @@ authorize causal intervention claims.
 8. Treat unexplained JEPA effects as reviewable rule candidates; never let model
    training silently rewrite Osler's hard safety rules.
 
-See `OSLER_JEPA_ROADMAP.md` for the architecture contract, promotion gates, and
+See `docs/research/notes/OSLER_JEPA_ROADMAP.md` for the architecture contract, promotion gates, and
 ordered plan for DKA, multi-disease, and real-EHR development.

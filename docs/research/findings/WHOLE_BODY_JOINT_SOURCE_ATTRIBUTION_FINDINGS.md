@@ -200,4 +200,4 @@ Artifacts:
 
 - `mimiciv_observation_transition_report_full_v31_treatment_asof_strict.json`
 - `mimiciv_treatment_context_accuracy_audit_hist_only_asof_strict_full_v31.json`
-- `MIMICIV_TREATMENT_CONTEXT_ACCURACY_FINDINGS_HIST_ONLY_ASOF_STRICT_FULL_V31.md`
+- `docs/research/findings/MIMICIV_TREATMENT_CONTEXT_ACCURACY_FINDINGS_HIST_ONLY_ASOF_STRICT_FULL_V31.md`

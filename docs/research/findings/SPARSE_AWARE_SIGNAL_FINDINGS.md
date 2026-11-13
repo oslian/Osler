@@ -530,7 +530,7 @@ observational, non-causal, and research-only.
 
 The seven whole-body joint-model problems were addressed in the dedicated
 contract and gate update documented in
-``WHOLE_BODY_JOINT_PROBLEM_RESOLUTION_20260714.md``. The important result is
+``docs/research/notes/WHOLE_BODY_JOINT_PROBLEM_RESOLUTION_20260714.md``. The important result is
 that the stricter contract did not magically promote a universal latent. The
 final corrected horizon-scaled re-audit has zero fully validated joint cells.
 The model therefore now uses target-horizon promotion with fallback, rather

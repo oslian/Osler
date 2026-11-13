@@ -278,6 +278,6 @@ the previous DtACI run, fallback cells identical to the re-selection run):
 
 The evaluation scripts were generalized: `--external-template` replaces the NWICU-only option,
 SICdb and HiRID gate axes were added, and NWICU-specific exclusions were replaced by support
-checks plus the recipe rule. **Lockbox protocol:** `ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_20261018.md`
+checks plus the recipe rule. **Lockbox protocol:** `docs/research/protocols/ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_20261018.md`
 (17 code and result files plus 6 MIMIC v4 training files hashed). The scoring scripts refuse to
 run on SICdb or HiRID without it or after any hashed change.

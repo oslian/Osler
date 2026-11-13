@@ -2,7 +2,7 @@
 
 機器可驗證版本：`adaptive_model_lockbox_protocol_v9_20261027.json`（sha256 `ee9fe49e…`）。
 
-**已被 v10 取代**（`ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_V10_20261027.md`；v9 下從未認領任何步驟）。
+**已被 v10 取代**（`docs/research/protocols/ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_V10_20261027.md`；v9 下從未認領任何步驟）。
 
 - 雜湊值涵蓋 62 個程式／設定檔，以及 6 個 MIMIC-IV v5 訓練資料檔。
 - 取代 v8：v8 從未在 SICdb／HiRID 上評分，而且 v8 的部署形式與結果都是在 2026-10-22 發現有洩漏的 replay 下產生的。

@@ -165,6 +165,6 @@ hospital, care-unit, forward-time, no-expert, module-balanced, conformal,
 direction/delta, and SVD gates.
 
 The superseding result is documented in
-`INTERVAL_NORMALIZED_URINE_OUTPUT_FINDINGS_20260802.md`. The old
+`docs/research/findings/INTERVAL_NORMALIZED_URINE_OUTPUT_FINDINGS_20260802.md`. The old
 `urine_output@12h` candidate must not be reinterpreted as evidence for the new
 `mL/hour` target because the two input contracts are not interchangeable.

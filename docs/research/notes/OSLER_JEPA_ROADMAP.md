@@ -205,5 +205,5 @@ for hidden-state inference, and Active Inference as the planning frame. ILP/FOIL
 Logical Neural Networks, NDRE, and DreamCoder-style library growth remain
 important rule-discovery infrastructure, but they run in parallel with
 credentialed data access and do not replace the need for dose/time-resolved real
-cohorts. See `RESEARCH_INTEGRATION_ROADMAP.md` for the exact module mapping,
+cohorts. See `docs/research/notes/RESEARCH_INTEGRATION_ROADMAP.md` for the exact module mapping,
 build order, and safety boundaries.

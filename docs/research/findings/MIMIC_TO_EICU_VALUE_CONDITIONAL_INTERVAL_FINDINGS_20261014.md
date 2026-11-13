@@ -63,7 +63,7 @@ been used, for example NWICU, HiRID or AmsterdamUMCdb.
 
 ## Boundary
 
-eICU was already used diagnostically (`MEASUREMENT_PROCESS_SHIFT_DIAGNOSTIC_FINDINGS_20261014.md`)
+eICU was already used diagnostically (`docs/research/findings/MEASUREMENT_PROCESS_SHIFT_DIAGNOSTIC_FINDINGS_20261014.md`)
 to choose this interval family, so any pass here is candidate evidence only and does not
 change the frozen runtime registry. Promotion still requires an untouched database scored
 once with this method frozen.

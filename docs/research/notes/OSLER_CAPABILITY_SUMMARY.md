@@ -224,7 +224,7 @@ other unvalidated cell still use the existing router or persistence fallback.
 This is not a whole-checkpoint or cross-organ-attribution promotion.
 
 Canonical findings:
-`TEACHER_ANCHORED_JOINT_JEPA_FINDINGS_20260730.md`.
+`docs/research/findings/TEACHER_ANCHORED_JOINT_JEPA_FINDINGS_20260730.md`.
 
 Verification on 2026-07-30: the complete `medical_jepa` unit suite passed
 311/311 tests.
@@ -293,7 +293,7 @@ conformal, direction/delta, no-expert, and SVD gates. It is validated as a
 target-gated factual research source; all other cells retain their previous
 source or persistence fallback. MIMIC-IV patient-cluster irregular-event
 intervals remain validated for INR at 6--24h and 24--72h. See
-`SPARSE_EXPERT_AND_IRREGULAR_INTERVAL_FINDINGS_20260801.md`.
+`docs/research/findings/SPARSE_EXPERT_AND_IRREGULAR_INTERVAL_FINDINGS_20260801.md`.
 
 ## Two-Level All-Target JEPA Update (2026-08-01)
 
@@ -319,7 +319,7 @@ This supports the two-level design and shows that joint all-target training
 can add a validated horizon without erasing the earlier one. It does not show
 universal improvement: sparse supervision and target-specific uncertainty
 remain the limiting factors for most cells. See
-`TWO_LEVEL_ALL_TARGET_JEPA_FINDINGS_20260801.md`.
+`docs/research/findings/TWO_LEVEL_ALL_TARGET_JEPA_FINDINGS_20260801.md`.
 
 ## Interval-Normalized Urine Output Update (2026-08-02)
 
@@ -340,7 +340,7 @@ measurement semantics can be the limiting factor even when model architecture
 and raw data volume are adequate. It remains non-causal, non-clinical, and
 requires fresh external confirmation because the conformal allocation method
 was refined during this research cycle. See
-`INTERVAL_NORMALIZED_URINE_OUTPUT_FINDINGS_20260802.md`.
+`docs/research/findings/INTERVAL_NORMALIZED_URINE_OUTPUT_FINDINGS_20260802.md`.
 
 ## eICU Treatment-Time Alignment Update (2026-08-02)
 
@@ -360,7 +360,7 @@ remains separate and valid only under its original contract.
 This fixes a real extraction defect and adds one treatment-aware factual
 research cell; it does not establish causal treatment effects or a universal
 whole-body improvement. See
-`EICU_EVENT_TIME_ALIGNMENT_FINDINGS_20260802.md`.
+`docs/research/findings/EICU_EVENT_TIME_ALIGNMENT_FINDINGS_20260802.md`.
 
 ## Three Additional Joint-JEPA Runtime Cells (2026-08-03)
 
@@ -386,7 +386,7 @@ JEPA sources for `glucose@3h` and `glucose@12h` remain useful alternatives,
 but those cells already existed in the shared router and are not counted as
 new system coverage. All cells remain factual research forecasts with
 persistence fallback and no causal or clinical authority. See
-`THREE_ADDITIONAL_JEPA_CELLS_FINDINGS_20260803.md`.
+`docs/research/findings/THREE_ADDITIONAL_JEPA_CELLS_FINDINGS_20260803.md`.
 
 Verification on 2026-08-03: the complete `medical_jepa` unit suite passed
 357/357 tests.
@@ -408,7 +408,7 @@ conformal intervals using current value, predicted change, measurement age,
 and hours since stay onset passed the 0.87-0.93 coverage requirement in every
 patient and external split. Catalog v7 records all five new cells under exact
 output contracts with persistence fallback and no causal or clinical
-authority. See `TARGET_SPECIFIC_RESCUE_FINDINGS_20260805.md`.
+authority. See `docs/research/findings/TARGET_SPECIFIC_RESCUE_FINDINGS_20260805.md`.
 
 ## Target-Specific Grid Expansion (2026-08-05)
 
@@ -432,7 +432,7 @@ unique cells. The same interval method did not rescue anion gap, BUN, or
 calcium, so those cells remain fallback-only. Many other cells
 remained fail-closed: some lacked stable point gains, while a distinct group
 won on point error but failed only cross-domain interval calibration. See
-`TARGET_SPECIFIC_GRID_EXPANSION_FINDINGS_20260805.md`.
+`docs/research/findings/TARGET_SPECIFIC_GRID_EXPANSION_FINDINGS_20260805.md`.
 
 Runtime verification on 2026-08-06 materialized all nine new cells across six
 source registries. The serving adapter now preserves the actual source model
@@ -459,7 +459,7 @@ Most target-specific research sources still need serialized inference
 artifacts before an application can generate their candidate predictions
 automatically. Until then, the current personalization demo remains a separate
 belief demonstration and must not be described as the v10 whole-body JEPA
-serving path. See `SYSTEM_INTEGRATION_AUDIT_20260806.md`.
+serving path. See `docs/research/audits/SYSTEM_INTEGRATION_AUDIT_20260806.md`.
 
 ## Strict System-Organ-Body Full-Cohort Update (2026-08-10)
 
@@ -486,7 +486,7 @@ coupling remains disabled. Catalog v11 contains 49 unique validated cells
 across all factual sources, while every unsupported cell still falls back.
 This is a bounded whole-body gain, not a universal checkpoint promotion or a
 causal/clinical claim. See
-`ADJACENT_THREE_LEVEL_FULL_COHORT_FINDINGS_20260810.md`.
+`docs/research/findings/ADJACENT_THREE_LEVEL_FULL_COHORT_FINDINGS_20260810.md`.
 
 ## Organ-Local Patient-State Precision (2026-08-13)
 
@@ -514,8 +514,8 @@ relaxed.
 
 This is factual target-specific precision, not a direct renal-reserve truth
 claim, treatment-effect claim, or clinical authorization. See
-`PATIENT_STATE_ADAPTER_FINDINGS_20260813.md` and
-`PATIENT_STATE_PRECISION_RETRY_FINDINGS_20260814.md`.
+`docs/research/findings/PATIENT_STATE_ADAPTER_FINDINGS_20260813.md` and
+`docs/research/findings/PATIENT_STATE_PRECISION_RETRY_FINDINGS_20260814.md`.
 
 ## Cell-First Rescue Sweep (2026-08-10)
 
@@ -536,4 +536,4 @@ exact full-cohort eICU input contract. Unique catalog coverage remains 49
 cells because `glucose@1h` already existed under another input contract; the
 new result expands validated architecture/contract coverage rather than
 inflating the cell count. See
-`ADJACENT_THREE_LEVEL_CELL_RESCUE_FINDINGS_20260810.md`.
+`docs/research/findings/ADJACENT_THREE_LEVEL_CELL_RESCUE_FINDINGS_20260810.md`.

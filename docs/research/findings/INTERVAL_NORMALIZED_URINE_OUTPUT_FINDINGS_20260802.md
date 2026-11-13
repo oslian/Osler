@@ -138,4 +138,4 @@ did not contain aligned treatment history.
 After rebuilding every event kind on the same synthetic timeline, the
 treatment-aware candidate validated `urine_output@1h`, not 3h. The two cells
 belong to different input contracts and must not be merged or substituted.
-See `EICU_EVENT_TIME_ALIGNMENT_FINDINGS_20260802.md`.
+See `docs/research/findings/EICU_EVENT_TIME_ALIGNMENT_FINDINGS_20260802.md`.

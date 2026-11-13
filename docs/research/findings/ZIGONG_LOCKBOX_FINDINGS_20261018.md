@@ -1,6 +1,6 @@
 # Zigong Lockbox: First Independent Validation of the Self-Adaptive Model (2026-10-18)
 
-Protocol: `ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_20261018.md` (v3, `adaptive_model_lockbox_protocol_v3_20261018.json`).
+Protocol: `docs/research/protocols/ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_20261018.md` (v3, `adaptive_model_lockbox_protocol_v3_20261018.json`).
 Hashes were verified by the scoring script, and the database was scored once
 (`site_adaptive_lockbox_Zigong_20261018.json`). No run was repeated and no code changed after
 scoring.

@@ -25,7 +25,7 @@ Implemented now:
 - `osler_jepa/causal_readiness.py`
 - `next_chapter_ab.py`
 - `next_chapter_ab_contract.json`
-- `CHAPTER_A_CAUSAL_READINESS_FINDINGS.md`
+- `docs/research/findings/CHAPTER_A_CAUSAL_READINESS_FINDINGS.md`
 
 The causal gate accepts only explicit external identification evidence:
 
@@ -198,7 +198,7 @@ AKI:
 - `eicu_aki_target_router.py`
 - `eicu_aki_transition_report.json`
 - `eicu_aki_target_router.json`
-- `EICU_AKI_ROUTER_FINDINGS.md`
+- `docs/research/findings/EICU_AKI_ROUTER_FINDINGS.md`
 - `aki_mechanism.py`
 - `eicu_aki_mechanism_target_router.json`
 - `AKI_MECHANISM_CANDIDATE_FINDINGS.md`

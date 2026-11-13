@@ -84,7 +84,7 @@ python -m bun_forecast_demo.evaluate_local_patients \
 ```
 
 The current independent MIMIC-IV result is documented in
-`BUN_FORECAST_DEMO_EXTERNAL_EVALUATION_20260814.md`. It must not be interpreted
+`docs/research/notes/BUN_FORECAST_DEMO_EXTERNAL_EVALUATION_20260814.md`. It must not be interpreted
 as causal or clinical validation.
 
 ## Website examples and languages

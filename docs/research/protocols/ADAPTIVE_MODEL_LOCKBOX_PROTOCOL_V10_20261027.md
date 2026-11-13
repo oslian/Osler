@@ -3,7 +3,7 @@
 機器可驗證版本：`adaptive_model_lockbox_protocol_v10_20261027.json`（sha256 `4b43aa2c…`）。
 
 - 雜湊值涵蓋 62 個程式／設定檔，以及 6 個 MIMIC-IV v5 訓練資料檔。
-- 取代 v9（`ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_V9_20261027.md`）。v9 下沒有認領過任何步驟，也沒有評分過任何資料庫。
+- 取代 v9（`docs/research/protocols/ADAPTIVE_MODEL_LOCKBOX_PROTOCOL_V9_20261027.md`）。v9 下沒有認領過任何步驟，也沒有評分過任何資料庫。
 - v9 的其餘內容照舊：問題、部署形式、範圍、gate、主要終點、判讀規則、開發庫參考值都相同。
 
 ## 與 v9 的唯一差異（Codex 第二輪 #6）

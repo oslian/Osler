@@ -2,8 +2,8 @@
 
 Scripts: `icu_disease_module_membership.py` (membership for MIMIC-IV and NWICU),
 `module_conditional_interval_audit.py` (v3). Detail tables:
-`MODULE_CONDITIONAL_INTERVAL_eICU_FINDINGS_20261015.md`,
-`MODULE_CONDITIONAL_INTERVAL_NWICU_FINDINGS_20261015.md`. Every v2 number reproduced the v2 audit
+`docs/research/findings/MODULE_CONDITIONAL_INTERVAL_eICU_FINDINGS_20261015.md`,
+`docs/research/findings/MODULE_CONDITIONAL_INTERVAL_NWICU_FINDINGS_20261015.md`. Every v2 number reproduced the v2 audit
 exactly before v3 was applied.
 
 ## Method
