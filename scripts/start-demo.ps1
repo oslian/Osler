@@ -10,7 +10,7 @@
     pinned fixture contract or a worker subprocess inside the research submodule.
 
     Fixture mode is the safe default and needs no configuration. Release mode
-    defaults to the submodule at backend/research/wholebody-jepa; run
+    defaults to the submodule at backend/research/oslian-model; run
     setup-model-runtime.ps1 once first.
 
 .PARAMETER Mode
@@ -19,7 +19,7 @@
 .PARAMETER ReleaseDir
     Override the release checkout. Only for a different working copy of the SAME
     commit model-lock.json approves. Falls back to $env:OSLIAN_WHOLEBODY_RELEASE_DIR,
-    then backend/research/wholebody-jepa.
+    then backend/research/oslian-model.
 
 .PARAMETER ReleasePython
     Interpreter for the release worker; it needs scikit-learn 1.7.2.

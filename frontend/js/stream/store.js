@@ -191,6 +191,7 @@ export function trajectoryFor(variable, horizons) {
     return {
       cell: c.cell, horizon_hours: c.horizon_hours, due_ms: cutoff_ms + c.horizon_hours * HOUR,
       forecast_point: c.forecast_point, status: c.status, source_model: c.source_model,
+      lower: c.lower, upper: c.upper, interval_status: c.interval_status,
       fallback_reason: c.fallback_reason, unit: c.unit, run_id: run.run_id,
       projected: fa.projected, projectedSide: fa.side,
       basis: hasBasis ? { ms: basis_ms, value: c.observed_value, resource_id: matched ? matched.resource_id : null } : null,
@@ -325,7 +326,7 @@ export function forecastAttention(cell, state) {
   return { projected: !!side, side, range };
 }
 
-const ABSTAINED = 'shared_jepa_head_abstained';
+const ABSTAINED = 'continuous_head_abstained';
 
 /* The reading order of every indicator list on this page. Only the first three
  * are "needs attention"; the rest are ordinary rows in a quiet order. */

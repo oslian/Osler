@@ -29,9 +29,11 @@ This is a **methodology and architecture demo, not a clinically validated tool.*
 - The live stream is a **synthetic FHIR R4 fixture**, not an Epic or hospital
   feed, and contains no real patient data. The retrospective case is public,
   HIPAA safe-harbor deidentified eICU CRD Demo data.
-- Forecast cells are **factual point forecasts**. Persistence is a baseline
-  fallback, not a prediction. Intervals are always `null`. Every response carries
-  `causal_claim_allowed: false`.
+- Forecast cells are **factual forecasts**. Persistence is a baseline
+  fallback, not a prediction. A cell shows a 90% interval only when the release
+  emits one from that cell's own externally audited calibrator; every other
+  interval is `null`. Event cells are calibrated probabilities. Every response
+  carries `causal_claim_allowed: false`.
 - The pinned model release is approved **only as a bounded research-demo
   runtime**. It must never be described as a formal adjacent-three-level model, a
   production runtime, or a clinically validated model.
@@ -58,7 +60,7 @@ backend/
     medication/           Medication Safety blueprint, engine/ and data/
     monitoring/           Monitoring blueprint: the FHIR streaming pipeline, fixtures/
     shared/ontology.py    the state vocabulary this repository owns
-  research/wholebody-jepa/  git submodule: the model release (see below)
+  research/oslian-model/    git submodule: the oslian/Model release (see below)
   model-lock.json         the only model release the release runtime may load
 
 tests/                    the demo test suite
@@ -73,35 +75,27 @@ package. `backend/oslian_demo` imports nothing from any other repository.
 
 ---
 
-## The `oslian-demo` branch, and one repository for two things
+## Where the demo and the model live
 
-This branch lives in the **WholeBody-JEPA repository**:
+The demo is the **orphan `oslian-demo` branch** of the WholeBody-JEPA repository;
+the model it serves is the private **oslian/Model** repository, pinned as a
+submodule:
 
 ```text
-https://github.com/Chun0613-code/WholeBody-JEPA.git
+demo   https://github.com/Chun0613-code/WholeBody-JEPA.git   branch oslian-demo
+model  https://github.com/oslian/Model.git                   backend/research/oslian-model
 ```
 
-`main` holds the model research — training scripts, extractors, evaluation
-reports and the released weights. `oslian-demo` is an **orphan branch**: it
-shares no history with `main` and inherits none of those files. Checking out one
-never gives you the other's tree.
+`oslian-demo` shares no history with WholeBody-JEPA `main` and inherits none of its
+files. The model repository is the team's current home for the release, its source
+and its weights; the demo records *which* commit it serves in
+`backend/model-lock.json` and never copies a weight. oslian/Model is private:
+cloning the submodule needs read access to it.
 
-**Why one repository.** The demo's only reason to exist is to serve that model
-release under a lock, and the lock is only meaningful if the demo and the release
-move through the same review, the same access control and the same clone. The
-release `NOTICE.md` requires the repository to stay private and the weights not
-to be redistributed; a second repository would mean a second copy of that
-obligation and a second place for it to drift. Keeping both here means the
-submodule pointer, `model-lock.json` and the weights are one object under one
-policy.
-
-**Why the submodule must never point at `oslian-demo`.** The submodule points at
-`main`. If it pointed at `oslian-demo`, that branch would contain a submodule of
-itself: `git clone --recurse-submodules` would clone the branch, see the
-submodule, clone the branch again, and never stop. Two things prevent it:
-`.gitmodules` pins `branch = main`, and `setup-model-runtime.ps1` and
-`check-model-runtime.ps1` both refuse to run if the locked tree carries a
-`.gitmodules` of its own.
+The submodule declares `branch = main`, there is exactly one, and the locked tree
+carries no `.gitmodules` of its own, so `git clone --recurse-submodules` goes
+exactly one level deep. `setup-model-runtime.ps1` and `check-model-runtime.ps1`
+both refuse to run if that stops being true.
 
 ### Clone
 
@@ -109,8 +103,9 @@ submodule, clone the branch again, and never stop. Two things prevent it:
 git clone --branch oslian-demo --recurse-submodules https://github.com/Chun0613-code/WholeBody-JEPA.git oslian-demo
 ```
 
-Without `--recurse-submodules`, everything except release mode still works;
-`backend/research/wholebody-jepa` is simply empty until you initialise it.
+Without `--recurse-submodules` (or without access to oslian/Model), everything
+except release mode still works; `backend/research/oslian-model` is simply empty
+until you initialise it.
 
 ---
 
@@ -219,16 +214,24 @@ scikit-learn pin, the registry count, or the smoke prediction.
 The pinned registry has 41 target × horizon cells, and the split is a property of
 the release, not a runtime decision:
 
-- **27 model-capable cells** (`can_move: true`) — 16 from `frozen_whole_body_jepa`
-  and 11 from `unified_shared_jepa_target_head`.
-- **14 persistence-fallback cells** (`can_move: false`,
+- **28 model-capable cells** (`can_move: true`), chosen per cell by the release's
+  unified source selector: 11 `frozen_whole_body_jepa`, 11
+  `unified_shared_jepa_target_head`, 4 `multisource_shared_jepa_target_head`, and
+  the 2 `hypoxemia_event` cells from `calibrated_event_risk_head`.
+- **13 persistence-fallback cells** (`can_move: false`,
   `source_model: patient_persistence_anchor`) — the target × horizon did not pass
   its validation gate, so the cell carries the patient's last observed value
   forward and says so. **Persistence is a safety policy, not a prediction.**
 
-All 41 report `lower: null`, `upper: null` and an explicit `interval_status`:
-this release bundles no patient-specific conformal artifact, so no interval may
-be claimed. All 41 carry `causal_claim_allowed: false`.
+**25 continuous cells** may show a 90% interval: the release emits `lower`/`upper`
+only from that cell's own calibrator (`externally_audited_mimic_split_conformal_90`
+or `unified_source_disjoint_calibration_90`). The runtime refuses any other bound —
+on a cell the catalog does not mark `interval_capable`, on a baseline, or one that
+does not contain its point — and fails the run closed. The two event cells are a
+calibrated probability in [0, 1] and never carry an interval. A head that declines
+to move is reported by the release as persistence with
+`fallback_reason: continuous_head_abstained`. All 41 carry
+`causal_claim_allowed: false`.
 
 ---
 
@@ -313,11 +316,11 @@ demo runtime. A candidate that passes is still not the runtime until you edit
 
 ## Changing the model, and pushing
 
-Model and training changes belong on their own branch of the same repository, not
-in a demo commit.
+Model and training changes belong on their own branch of oslian/Model, not in a
+demo commit.
 
 ```powershell
-cd backend\research\wholebody-jepa
+cd backend\research\oslian-model
 git switch -c model-runtime-fix origin/main
 # ... change, test ...
 git commit -am "fix: ..."
@@ -330,7 +333,7 @@ submodule pointer and `model-lock.json` in the same commit:
 
 ```powershell
 cd ..\..\..
-git add backend/research/wholebody-jepa backend/model-lock.json
+git add backend/research/oslian-model backend/model-lock.json
 git commit -m "chore: adopt validated model runtime <sha>"
 ```
 
@@ -357,7 +360,7 @@ never hold a real key.
 | `OSLIAN_STREAM_LOG_FORMAT` | `pretty`, `json` | `pretty` |
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
 | `OSLIAN_WHOLEBODY_RUNTIME` | `fixture`, `release` | `fixture` |
-| `OSLIAN_WHOLEBODY_RELEASE_DIR` | release checkout | `backend/research/wholebody-jepa` |
+| `OSLIAN_WHOLEBODY_RELEASE_DIR` | release checkout | `backend/research/oslian-model` |
 | `OSLIAN_WHOLEBODY_PYTHON` | interpreter for the release worker | this interpreter |
 | `OSLIAN_WHOLEBODY_PYTHONPATH` | dependency overlay for that interpreter | — |
 | `OSLIAN_EPIC_PRIVATE_KEY_PEM` | referenced by name only; never read | — |

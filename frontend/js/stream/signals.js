@@ -23,7 +23,7 @@
 
 import { S, activeHorizon, currentRun, indicatorView, sourceInfo, trajectoryFor } from './store.js';
 import { chartFrame, chartLegend, trajectoryChart } from './chart.js';
-import { esc, fmtNum, DATA_VIEW, FLAG, NO_FORECAST_MODEL, POINT_ONLY_NOTE, PROJECTED, RANGE, TRAJECTORY,
+import { esc, fmtNum, DATA_VIEW, FLAG, NO_FORECAST_MODEL, INTERVAL_NOTE, PROJECTED, RANGE, TRAJECTORY,
   UPDATING_FORECAST, forecastLabel, forecastState, flagOf, isAbstained, unavailableReason } from './format.js';
 import { cellChip, fmtAge, fmtClinical, label } from './render.js';
 
@@ -149,7 +149,7 @@ function detailPanel(row) {
         <p class="why">A retracted or superseded version never reaches this series.</p>
       </section>
       <section><h4>Forecast cells · ${esc(run ? run.runtime_mode : 'no run')}</h4>${cells}
-        <p class="why">${POINT_ONLY_NOTE} A carried-forward value repeats the observation and is not a model forecast.</p>
+        <p class="why">${INTERVAL_NOTE} A carried-forward value repeats the observation and is not a model forecast.</p>
       </section>
     </div>
     <div class="detail-chart">${chart.empty ? '<p class="empty-note">Nothing to plot yet.</p>' : chart.svg}<div class="chart-tip" id="chartTip" role="status" hidden></div></div>
@@ -251,5 +251,5 @@ export function renderDataView(host) {
       ${view.other.length ? table(view.other, DATA_VIEW.otherHeading) : `<p class="empty-note quiet">${DATA_VIEW.emptySearch}.</p>`}
     </section>
     ${unobservedSection(view)}
-    <p class="foot">A flag is the observation's own statement: a reference range it supplies, compared in the unit it was written in, or a reading the source coded. This page writes no threshold, and the multi-stay reading order's grouping is not applied here. ${POINT_ONLY_NOTE} A carried-forward value, a head that abstained included, is never a model forecast and is never projected. Intervals are null · causal_claim_allowed: false · no clinical alert.</p>`;
+    <p class="foot">A flag is the observation's own statement: a reference range it supplies, compared in the unit it was written in, or a reading the source coded. This page writes no threshold, and the multi-stay reading order's grouping is not applied here. ${INTERVAL_NOTE} A carried-forward value, a head that abstained included, is never a model forecast and is never projected. causal_claim_allowed: false · no clinical alert.</p>`;
 }

@@ -1,48 +1,42 @@
 # Model runtime
 
-The demo does not own a model. It points at one release of the WholeBody-JEPA
-research code, checks that release on every start, and refuses to run when
-anything disagrees. This document is how that works and how to change it.
+The demo does not own a model. It points at one release of the oslian/Model
+repository, checks that release on every start, and refuses to run when anything
+disagrees. This document is how that works and how to change it.
 
 ## The shape
 
 ```text
-oslian-demo branch                       (this branch, orphan, no research files)
-  backend/model-lock.json                the only release that may be loaded
-  backend/research/wholebody-jepa/       git submodule -> the same repository, branch main
+oslian-demo branch of WholeBody-JEPA      (orphan, no research files)
+  backend/model-lock.json                 the only release that may be loaded
+  backend/research/oslian-model/          git submodule -> github.com/oslian/Model, branch main
       models/whole_body_joint_jepa.pt
       models/unified_shared_jepa_head_bundle.joblib
+      models/multisource_shared_jepa_head_bundle.joblib
+      models/unified_source_selector.json
       models/runtime_registry.json
-      models/MODEL_MANIFEST.json
-      models/FEATURE_CONTRACT.json
+      models/interval_calibrator.json
+      models/event_risk_heads.joblib
+      models/cross_target_nowcast.joblib
+      models/cross_database_replication_registry.json
       models/external_validation_report.json
+      models/FEATURE_CONTRACT.json
+      models/MODEL_MANIFEST.json
 ```
 
-`main` holds the research; `oslian-demo` is an orphan branch of the same
-repository and shares no history with it. One repository, because the demo exists
-to serve that release under a lock, and the lock is only meaningful if the demo
-and the release travel through the same review, the same access control and the
-same clone. The release `NOTICE.md` requires the repository to stay private and
-the weights not to be redistributed; a second repository would be a second copy
-of that obligation and a second place for it to drift.
+oslian/Model is the team's private repository for the release, its source and its
+weights. The demo pins one commit of it and records every file's SHA-256; it never
+copies a weight into its own tree.
 
-## Why the submodule points at `main` and never at `oslian-demo`
+## Why the submodule stays one level deep
 
-If the submodule pointed at `oslian-demo`, that branch would contain a submodule
-of itself. `git clone --recurse-submodules` would clone the branch, find the
-submodule, clone the branch again, and never terminate.
+The submodule is a different repository, so it cannot contain this branch. The
+demo still guarantees that a recursive clone stops one level deep:
 
-Three things stop that, and two of them are enforced rather than documented:
-
-1. `.gitmodules` pins `branch = main`, and it declares exactly one submodule.
-2. `setup-model-runtime.ps1` refuses to proceed if the declared branch is
-   `oslian-demo`, if more than one submodule is declared, or if the locked tree
-   carries a `.gitmodules` of its own.
-3. `check-model-runtime.ps1` re-checks the third of those on every verification.
-
-The locked commit `5a49b39…` carries no `.gitmodules`, so a recursive clone of
-this branch goes exactly one level deep. That is verified by an actual fresh
-`git clone --recurse-submodules`, not by reasoning.
+1. `.gitmodules` declares exactly one submodule, with `branch = main`.
+2. `setup-model-runtime.ps1` refuses to proceed if more than one submodule is
+   declared, or if the locked tree carries a `.gitmodules` of its own.
+3. `check-model-runtime.ps1` re-checks the second of those on every verification.
 
 ## model-lock.json
 
@@ -69,11 +63,16 @@ checkout. Any failure means the run is refused, not degraded quietly.
 | `module_origin:osler_jepa`, `module_origin:whole_body_joint_jepa` | the modules loaded came from the checkout, not from a same-named package elsewhere |
 | `scikit_learn_pin` | 1.7.2 — the version the serialized population anchors were fitted with |
 | `registry_cells` | the registry has the cell count the manifest declares |
-| `smoke_predict` | a real prediction returns 41 cells: 27 model-capable, 14 persistence, 0 missing |
+| `smoke_predict` | a real prediction returns all 41 catalog cells |
 
-Output boundaries hold in every mode: `lower` and `upper` are always `null` with
-an explicit `interval_status`, persistence is labelled a baseline rather than a
-prediction, and `causal_claim_allowed` is always `false`.
+Output boundaries hold in every mode. A cell shows `lower`/`upper` only when the
+release emits them from that cell's own calibrator with one of the
+`interval_statuses_with_bounds` the lock names, the catalog marks the cell
+`interval_capable`, and the bounds are finite and contain the point; any other
+bound fails the run. Every other cell is `null` with an explicit
+`interval_status`. Event cells are calibrated probabilities. Persistence is
+labelled a baseline rather than a prediction, and `causal_claim_allowed` is always
+`false`.
 
 **CRLF is the usual failure.** The JSON artifacts are hashed byte for byte, so a
 CRLF checkout fails the manifest. `setup-model-runtime.ps1` sets
@@ -113,10 +112,10 @@ opinion. It stops the server again.
 
 ## Changing the model
 
-Model and training changes belong on their own branch of the same repository.
+Model and training changes belong on their own branch of oslian/Model.
 
 ```powershell
-cd backend\research\wholebody-jepa
+cd backend\research\oslian-model
 git switch -c model-runtime-fix origin/main
 # change, test
 git commit -am "fix: ..."
@@ -128,7 +127,7 @@ commit by design, so branch from `main` first. Once the model branch is
 validated, record it on the demo branch in one commit:
 
 ```powershell
-git add backend/research/wholebody-jepa backend/model-lock.json
+git add backend/research/oslian-model backend/model-lock.json
 git commit -m "chore: adopt validated model runtime <sha>"
 ```
 
@@ -139,7 +138,7 @@ release it serves, never *what the release is*.
 
 `requirements.txt` and `pyproject.toml` at the root cover the demo only — Flask,
 plus two optional LLM SDKs. The research code keeps its own
-`backend/research/wholebody-jepa/requirements.txt` (torch, pandas, scikit-learn,
+`backend/research/oslian-model/requirements.txt` (torch, pandas, scikit-learn,
 …) and runs in its own interpreter, chosen with `-ReleasePython` /
 `OSLIAN_WHOLEBODY_PYTHON`. Merging the two would make the demo uninstallable
 without a training stack, and would let the demo process import research code by

@@ -13,8 +13,8 @@ import { renderWardRail, renderWardWorkspace } from './ward.js';
 import { renderDataView } from './signals.js';
 import { mountReportAnatomy, renderReport } from './report.js';
 import { esc, fmtNum, DATA_VIEW, FLAG, FORECAST_LABEL, NO_FORECAST_MODEL, OBSERVED_HISTORY,
-  POINT_ONLY_NOTE, PROJECTED, RANGE, STATUS_MARK, TRAJECTORY, UPDATING_FORECAST, flagOf, forecastLabel,
-  forecastNote, isAbstained, unavailableReason } from './format.js';
+  INTERVAL_NOTE, PROJECTED, RANGE, STATUS_MARK, TRAJECTORY, UPDATING_FORECAST, flagOf, forecastLabel,
+  fmtForecastValue, fmtInterval, forecastNote, isAbstained, unavailableReason } from './format.js';
 
 const el = (id) => document.getElementById(id);
 const LABELS = {
@@ -30,7 +30,9 @@ const LABELS = {
 };
 export const label = (v) => LABELS[v] || String(v || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const SOURCE_LABELS = { frozen_whole_body_jepa: 'frozen JEPA', unified_shared_jepa_target_head: 'shared target head',
-  patient_persistence_anchor: 'persistence anchor', none: 'none', missing: 'missing' };
+  multisource_shared_jepa_target_head: 'multi-source head', calibrated_event_risk_head: 'event-risk head',
+  patient_persistence_anchor: 'persistence anchor', stale_target_abstained: 'stale observation',
+  event_risk_abstained: 'event head abstained', none: 'none', missing: 'missing' };
 const STATUS_WORDS = FORECAST_LABEL;
 
 const fmtTime = () => makeTimeFormatter(timeAxis(), onsetMs());
@@ -101,8 +103,8 @@ export function renderCommandBar() {
       ? '<span class="tag caution">runtime not attached · release validation failed</span>'
       : '<span class="tag caution">runtime not attached · gated</span>';
   const bounded = rt.runtime_attached
-    ? 'bounded research demo · research-only · point forecasts only · no clinical alert · not a formal or clinically validated model'
-    : 'research-only · point forecasts only · no clinical alert';
+    ? 'bounded research demo · research-only · 90% intervals only where calibrated · no clinical alert · not a formal or clinically validated model'
+    : 'research-only · no clinical alert';
   const output = S.lastRunFailed
     ? '<span class="status degraded"><i></i>runtime failure · no current forecast</span>'
     : counts
@@ -145,7 +147,7 @@ export function renderCommandBar() {
       ${developerSpeeds}
       <div class="queue">epoch ${esc(s.epoch ?? '—')} · session <span class="mono">${esc((s.session_id || '').slice(0, 8))}</span> · SSE ${esc(conn)}</div>
     </div>
-    <div class="cmd-sub"><span class="cmd-runtime"><span class="mono">WholeBody-JEPA ${esc((rt.model_commit || '').slice(0, 7) || '—')}</span> ${runtimeTag} ${output}</span><span class="cmd-context">${context}</span><span class="cmd-bounded">${esc(bounded)}</span></div>`;
+    <div class="cmd-sub"><span class="cmd-runtime"><span class="mono">oslian/Model ${esc((rt.model_commit || '').slice(0, 7) || '—')}</span> ${runtimeTag} ${output}</span><span class="cmd-context">${context}</span><span class="cmd-bounded">${esc(bounded)}</span></div>`;
 }
 function simElapsed(s) {
   const base = Number(s.sim_elapsed_seconds) || 0;
@@ -350,7 +352,7 @@ function evidenceTable(variables, title) {
   const run = currentRun();
   const body = !run ? '<p class="empty-note">No model run yet.</p>'
     : !cells.length ? '<p class="empty-note">No target × horizon cell in the pinned registry is attributed here.</p>'
-    : `<div class="scroll-x"><table class="cells-table"><thead><tr><th>Cell</th><th>Observed</th><th>Point forecast</th><th>Status</th><th>Source</th><th></th></tr></thead><tbody>${cells.map((c) => cellRow(c)).join('')}</tbody></table></div>${runFooter(run)}`;
+    : `<div class="scroll-x"><table class="cells-table"><thead><tr><th>Cell</th><th>Observed</th><th>Forecast</th><th>90% interval</th><th>Status</th><th>Source</th><th></th></tr></thead><tbody>${cells.map((c) => cellRow(c)).join('')}</tbody></table></div>${runFooter(run)}`;
   return `<div class="evidence${S.evidenceOpen ? ' open' : ''}">
     <button class="h" type="button" data-act="toggle-evidence" aria-expanded="${S.evidenceOpen}"><b>Forecast evidence · ${esc(title)}</b><span class="note">${cells.length} cell${cells.length === 1 ? '' : 's'}${run ? ` · run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · cutoff ${esc(fmtClinical(run.input_cutoff))}` : ''}</span><span class="x">${S.evidenceOpen ? 'Hide' : 'Show'} cells ${S.evidenceOpen ? '⌃' : '⌄'}</span></button>
     ${S.evidenceOpen ? body : ''}
@@ -383,7 +385,7 @@ export function renderWorkspace() {
     ${secondaryBlock}
     ${spec.related.length ? `<div class="sec">Related indicators · <span class="soft">${esc(spec.relatedNote)}</span></div><div class="rows">${variablesByAttention(spec.related, rows).map((v) => signalRow(v, rows)).join('')}</div>` : ''}
     ${evidenceTable([...spec.primary, ...spec.secondary], spec.label)}
-    <p class="foot">Grouping is navigation and explanation only; it never states that an organ or function is normal or abnormal. Persistence is a baseline fallback, not a prediction · intervals are null · causal_claim_allowed: false.</p>`;
+    <p class="foot">Grouping is navigation and explanation only; it never states that an organ or function is normal or abnormal. Persistence is a baseline fallback, not a prediction · 90% intervals only where the release calibrated the cell · causal_claim_allowed: false.</p>`;
 }
 
 /* ── metric workspace (level 3) ─────────────────────────────────────────── */
@@ -487,9 +489,9 @@ export function renderMetric(host) {
     <section class="run-details${S.runDetailsOpen ? ' open' : ''}" aria-label="Run details and provenance">
       <button class="h" type="button" data-act="toggle-run-details" aria-expanded="${S.runDetailsOpen}"><b>Run details &amp; provenance</b><span class="note">${run ? `run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · ${esc(run.runtime_mode)} · ${cellsHere.length} cell${cellsHere.length === 1 ? '' : 's'}` : TRAJECTORY.noRun}</span><span class="x">${S.runDetailsOpen ? 'Hide' : 'Show'} ${S.runDetailsOpen ? '⌃' : '⌄'}</span></button>
       ${S.runDetailsOpen ? `<div class="run-details-body">
-        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${cellChip(c)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button>${c.target !== v ? `<span class="note derived">${esc(label(c.target))} · derived event, not drawn on this axis</span>` : ''}</div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? UPDATING_FORECAST + ' No run yet for this session.' : NO_FORECAST_MODEL + ': this signal has no target × horizon cell in the pinned registry, so only observations are shown.'}</p>`}
+        <div class="side"><h3>Forecast cells · ${esc(label(v))}</h3>${cellsHere.length ? cellsHere.map((c) => `<div class="hz"><span class="h">${c.horizon_hours}h</span>${cellChip(c)}<span class="pt${c.forecast_point === null ? ' null' : ''}">${esc(fmtForecastValue(c))}${fmtInterval(c) ? ` <small>[${esc(fmtInterval(c))}]</small>` : ''}</span><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">provenance</button>${c.target !== v ? `<span class="note derived">${esc(label(c.target))} · derived event, not drawn on this axis</span>` : ''}</div>`).join('') : `<p class="note">${catalogCellsForVariable(v).length ? UPDATING_FORECAST + ' No run yet for this session.' : NO_FORECAST_MODEL + ': this signal has no target × horizon cell in the pinned registry, so only observations are shown.'}</p>`}
           ${cellsHere.some((c) => c.fallback_reason) ? `<p class="note">${esc(Array.from(new Set(cellsHere.map((c) => c.fallback_reason).filter(Boolean))).join(' · '))}</p>` : ''}
-          <p class="note">${POINT_ONLY_NOTE}</p></div>
+          <p class="note">${INTERVAL_NOTE}</p></div>
         ${run ? `<div class="side"><h3>Run</h3><dl class="kv"><dt>Run</dt><dd class="mono">${esc(run.run_id.slice(0, 8))}</dd><dt>Cutoff</dt><dd>${esc(fmtClinical(run.input_cutoff))}</dd><dt>Input</dt><dd>${esc(run.input_resource_count)} resources</dd><dt>Commit</dt><dd class="mono">${esc((run.model_commit || '').slice(0, 7))}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)}</dd><dt>Duration</dt><dd>${esc(run.duration_ms ?? '—')} ms</dd></dl><p class="note">causal_claim_allowed: false</p></div>` : ''}
         ${state ? `<div class="side"><h3>Latest observation</h3><dl class="kv"><dt>Resource</dt><dd class="mono">${esc(state.resource_id)} v${esc(state.version_id)}</dd></dl><button class="disc" type="button" data-act="prov-obs" data-variable="${esc(v)}">FHIR provenance ⌄</button></div>` : ''}
       </div>` : ''}
@@ -498,15 +500,17 @@ export function renderMetric(host) {
 
 /* ── forecast evidence rows (organ and function workspaces) ─────────────── */
 function cellRow(c, extra = '') {
-  const point = c.forecast_point === null || c.forecast_point === undefined ? '<span class="nullv">null</span>' : `<span class="pt">${esc(fmtNum(c.forecast_point))}</span>`;
+  const point = c.forecast_point === null || c.forecast_point === undefined ? '<span class="nullv">null</span>' : `<span class="pt">${esc(fmtForecastValue(c))}</span>`;
+  const range = fmtInterval(c);
+  const interval = range ? `<span class="pt">${esc(range)}</span>` : `<span class="nullv" title="${esc(c.interval_status || '')}">—</span>`;
   const observed = c.observed_value === null || c.observed_value === undefined ? '<span class="nullv">—</span>' : esc(fmtNum(c.observed_value));
   const age = c.measurement_age_hours === null || c.measurement_age_hours === undefined ? '' : ` <span class="why">age ${esc(fmtAge(c.measurement_age_hours))}</span>`;
-  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td>${cellChip(c)}<div class="why">${esc(forecastNote(c))}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
+  return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td class="num">${interval}</td><td>${cellChip(c)}<div class="why">${esc(forecastNote(c))}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
 }
 function runFooter(run) {
   const note = run.runtime_mode === 'fixture'
     ? 'Runtime not attached: every cell is degraded with a null point. Nothing is fabricated.'
-    : 'Persistence baseline = the patient\'s latest observed value; not a model prediction and not clinical validation. Intervals are null: this release bundles no patient-specific conformal artifact.';
+    : 'Persistence baseline = the patient\'s latest observed value; not a model prediction and not clinical validation. A 90% interval appears only where the release calibrated that cell; event cells are calibrated probabilities.';
   return `<p class="cells-foot">Run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · cutoff ${esc(fmtClinical(run.input_cutoff))} · ${esc(run.input_resource_count)} resources · commit <span class="mono">${esc((run.model_commit || '').slice(0, 7))}</span> · ${esc(note)} · causal_claim_allowed: false.</p>`;
 }
 
@@ -541,7 +545,7 @@ export function renderDrawer() {
   if (d.kind === 'cell') {
     const c = d.cell, run = d.run;
     body.innerHTML = `<div class="prov"><div class="h-sec">Cell ${esc(c.cell)}</div>
-      <dl class="kv"><dt>Status</dt><dd>${cellChip(c)}</dd><dt>Point forecast</dt><dd class="mono">${esc(c.forecast_point === null ? 'null' : fmtNum(c.forecast_point))} ${esc(c.unit || '')}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>Interval</dt><dd>lower ${esc(String(c.lower))} · upper ${esc(String(c.upper))} · ${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
+      <dl class="kv"><dt>Status</dt><dd>${cellChip(c)}</dd><dt>Forecast</dt><dd class="mono">${esc(fmtForecastValue(c))}${c.target === 'hypoxemia_event' ? '' : ` ${esc(c.unit || '')}`}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>90% interval</dt><dd>${fmtInterval(c) ? `<span class="mono">${esc(fmtInterval(c))} ${esc(c.unit || '')}</span> · ` : 'none · '}${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
       <div class="h-sec">Run</div>
       <dl class="kv"><dt>Run id</dt><dd class="mono">${esc(run.run_id)}</dd><dt>Input cutoff</dt><dd class="mono">${esc(run.input_cutoff)}</dd><dt>Watermark</dt><dd class="mono">${esc(run.input_watermark || '—')}</dd><dt>Input</dt><dd class="mono">${esc(run.input_resource_count)} resources · sha256 ${esc((run.input_hash || '').slice(0, 16))}…</dd><dt>Model commit</dt><dd class="mono">${esc(run.model_commit)}</dd><dt>Registry</dt><dd class="mono">${esc(run.registry_sha256)}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)} · attached ${esc(String(rt.runtime_attached))}</dd><dt>Duration</dt><dd class="mono">${esc(run.duration_ms ?? '—')} ms</dd></dl>
       <div class="h-sec">Point history for ${esc(c.cell)}</div>

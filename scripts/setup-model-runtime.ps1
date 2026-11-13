@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Initialise the WholeBody-JEPA research submodule at the commit model-lock.json approves.
+    Initialise the oslian/Model release submodule at the commit model-lock.json approves.
 
 .DESCRIPTION
     Idempotent and non-destructive. It initialises the one submodule, checks that
     it points at the expected repository, checks out the locked commit, verifies
-    every model file against model-lock.json, and proves the submodule cannot
-    recurse into this branch.
+    every model file against model-lock.json, and proves the locked tree declares
+    no submodule of its own, so a recursive clone stops one level deep.
 
     It does NOT install packages, fetch newer commits, or push anything. Use
     sync-model-research.ps1 to look at what upstream has.
@@ -36,7 +36,7 @@ Write-Host "submodule   : $($lock.submodule_path) (branch $($lock.submodule_bran
 Write-Host "locked at   : $commit"
 Write-Host ''
 
-# ---- 1. the submodule declaration must be the only one, and must not self-recurse ----
+# ---- 1. the submodule declaration must be the only one ----
 $modulesFile = Join-Path $root '.gitmodules'
 if (-not (Test-Path $modulesFile)) { Fail '.gitmodules is missing' }
 $declared = @(& git -C $root config --file .gitmodules --get-regexp 'submodule\..*\.path' |
@@ -45,9 +45,6 @@ if ($declared.Count -ne 1) { Fail "expected exactly one submodule, found: $($dec
 if ($declared[0] -ne $lock.submodule_path) { Fail "submodule path is $($declared[0]), expected $($lock.submodule_path)" }
 
 $declaredBranch = & git -C $root config --file .gitmodules --get "submodule.$($lock.submodule_path).branch"
-if ($declaredBranch -eq 'oslian-demo') {
-    Fail 'the submodule points at the demo branch itself; that would recurse forever'
-}
 if ($declaredBranch -ne $lock.submodule_branch) {
     Fail "submodule branch is '$declaredBranch', model-lock.json says '$($lock.submodule_branch)'"
 }
@@ -62,7 +59,7 @@ $url = & git -C $subPath remote get-url origin
 if ($url -ne $lock.repository) { Fail "submodule remote is $url, expected $($lock.repository)" }
 
 # ---- 3. the artifacts are hashed byte for byte, so the checkout must be LF ----
-# The research repository ships no .gitattributes, so a clone on a machine with
+# The model repository ships no .gitattributes, so a clone on a machine with
 # core.autocrlf=true lands CRLF in the working tree and every text file then
 # reads as modified. That is noise, not work, and the lock says to fix the
 # checkout. Real edits are a different matter and are still refused.

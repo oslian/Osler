@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Show what the WholeBody-JEPA research repository has that the locked commit does not.
+    Show what the oslian/Model repository has that the locked commit does not.
 
 .DESCRIPTION
     A dry run by default: it fetches, reports, and changes nothing. It never

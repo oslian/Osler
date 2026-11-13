@@ -25,7 +25,7 @@
 import { S, activeHorizon, currentRun, indicatorView, organAttentionMap, sourceInfo, trajectoryFor } from './store.js';
 import { buildAnatomy } from './anatomy.js';
 import { chartLegend, trajectoryChart } from './chart.js';
-import { esc, fmtNum, BUILDER, FLAG, NO_FORECAST_MODEL, POINT_ONLY_NOTE, PROJECTED, REPORT, TRAJECTORY,
+import { esc, fmtNum, BUILDER, FLAG, NO_FORECAST_MODEL, INTERVAL_NOTE, PROJECTED, REPORT, TRAJECTORY,
   forecastState, flagOf, isAbstained, unavailableReason } from './format.js';
 import { fmtAge, fmtClinical, label } from './render.js';
 import { rangeText } from './signals.js';
@@ -279,7 +279,7 @@ export function renderReport(host) {
         <p class="report-note">Drawn for indicators with a current result outside a supplied range, a forecast projected outside one, or an indicator you selected.
           Observed history is a solid ink line; the model input cutoff is the dashed rule; a model point forecast is a hollow blue diamond;
           a carried-forward value is a grey square; a point projected outside the supplied range is an amber dashed diamond; the supplied
-          reference range is the pale band. ${POINT_ONLY_NOTE}</p>
+          reference range is the pale band. ${INTERVAL_NOTE}</p>
         <div class="report-charts">${chartRows.map(trendChart).join('')}</div>
       </section>` : ''}
 
@@ -294,7 +294,7 @@ export function renderReport(host) {
         <h2>${REPORT.limitsHeading}</h2>
         <ul>
           <li>Reference intervals are supplied by the observations themselves and are reproduced as received; this system writes no threshold of its own. Where none was supplied, the result is reported without a comparison.</li>
-          <li>Forecasts are research-only point values. ${POINT_ONLY_NOTE} Carried-forward values repeat the last observation and are not predictions.</li>
+          <li>Forecasts are research-only. ${INTERVAL_NOTE} Carried-forward values repeat the last observation and are not predictions.</li>
           <li>Runtime: ${m.runtimeAttached ? 'attached' : 'not attached'}${m.runtimeMode ? ` · ${esc(m.runtimeMode)}` : ''}${m.modelCommit ? ` · model <span class="mono">${esc(m.modelCommit.slice(0, 7))}</span>` : ''}${m.registry ? ` · registry <span class="mono">${esc(m.registry.slice(0, 12))}</span>` : ''}.</li>
           <li>No diagnosis, causal claim, treatment recommendation or clinical alert is made. causal_claim_allowed: false.</li>
         </ul>

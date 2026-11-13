@@ -69,7 +69,7 @@ package.
 | `tests/test_shared_ontology.py` | the state vocabulary this repository owns matches the knowledge files exactly |
 | `tests/test_stream_fhir_mapping.py` | R4 structural validation, obs-6/obs-7, code and unit mapping, exact conversions |
 | `tests/test_stream_ledger.py` | the append-only ledger, idempotent delivery, amendments, model input, organ state, exact per-run replay |
-| `tests/test_stream_runtime_contract.py` | the 41-cell registry, statuses, null intervals, fail-closed gating |
+| `tests/test_stream_runtime_contract.py` | the 41-cell catalog, statuses, calibrated-interval and event rules, fail-closed gating |
 | `tests/test_stream_api.py` | HTTP + SSE contract, anchors, reconnect, medication-safety isolation |
 | `tests/test_stream_functions_retro.py` | the functional-group document and the retrospective source |
 | `tests/test_stream_eventlog.py` | the two console stages and structural redaction |
@@ -101,7 +101,7 @@ See [FRONTEND.md](FRONTEND.md) for module boundaries and the React assessment.
 ```powershell
 $env:PYTHONPATH = "backend"
 python -m oslian_demo.monitoring.build_synthetic_fixture --write
-python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir backend\research\wholebody-jepa --commit <sha> --write
+python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir backend\research\oslian-model --commit <sha> --write
 ```
 
 The release contract fixture must be produced **through the worker**, inside the

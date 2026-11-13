@@ -26,13 +26,11 @@ export const FORECAST_NOTE = {
   degraded: 'the model runtime is not attached, so no value is shown',
 };
 
-/* A shared head that declined to move emits the observed value and the release
- * still names the head as the source. The runtime badges that cell `persistence`
- * with this reason, and every view reads the reason rather than the equality:
- * the frozen backbone can equal the observation by coincidence and still be a
- * real prediction. A carried-forward value is never a model forecast, whichever
- * way it came to be one. */
-export const ABSTAINED_REASON = 'shared_jepa_head_abstained';
+/* A target head that declined to move is reported by the release itself as a
+ * persistence cell with this reason. Every view reads the reason, never an
+ * equality between point and observation. A carried-forward value is never a
+ * model forecast, whichever way it came to be one. */
+export const ABSTAINED_REASON = 'continuous_head_abstained';
 export const CARRIED_ABSTAINED = 'Carried forward — model abstained';
 export const isAbstained = (cell) => !!cell && cell.status === 'persistence' && cell.fallback_reason === ABSTAINED_REASON;
 export function forecastLabel(cell) {
@@ -121,7 +119,7 @@ export const REPORT = {
   attentionHeading: 'Results requiring attention',
   otherHeading: 'Other observed results',
   forecastHeading: 'Oslian forecast outlook',
-  forecastNote: 'Research-only point forecasts. No calibrated prediction interval is available for these cells.',
+  forecastNote: 'Research-only forecasts. A 90% interval appears only for a cell whose own release calibrator passed external audit; every other cell is a point or a carried-forward baseline.',
   chartsHeading: 'Trends',
   anatomyHeading: 'Anatomy overview',
   provenanceHeading: 'Provenance appendix',
@@ -174,8 +172,21 @@ export const DATA_VIEW = {
 export const NO_FORECAST_MODEL = 'No forecast model';
 export const OBSERVED_HISTORY = 'Observed history';
 export const UPDATING_FORECAST = 'Updating forecast…';
-export const POINT_ONLY_NOTE =
-  'This release provides point forecasts only; no validated uncertainty interval is available.';
+export const INTERVAL_NOTE =
+  'A shaded 90% interval appears only where the release calibrated that cell; every other forecast is a point.';
+
+/* A cell's 90% interval in words, or null when the release supplied none. */
+export function fmtInterval(cell) {
+  if (!cell || !Number.isFinite(cell.lower) || !Number.isFinite(cell.upper)) return null;
+  return `${fmtNum(cell.lower)}–${fmtNum(cell.upper)}`;
+}
+
+/* A forecast value as a reader should read it: an event cell is a probability. */
+export function fmtForecastValue(cell) {
+  if (!cell || cell.forecast_point === null || cell.forecast_point === undefined) return 'null';
+  if (cell.target === 'hypoxemia_event' && cell.status === 'model') return `${(cell.forecast_point * 100).toFixed(1)}% probability`;
+  return fmtNum(cell.forecast_point);
+}
 
 /* The patient-trajectory chart's own words. One continuous time axis is split at
  * the model input cutoff into two regions; the words below are what a reader
@@ -185,7 +196,7 @@ export const TRAJECTORY = {
   historyTitle: 'OBSERVED HISTORY',
   historySub: 'FHIR observations',
   forecastTitle: 'FUTURE FORECAST',
-  forecastSub: 'Point forecasts',
+  forecastSub: 'Forecasts · 90% interval where calibrated',
   cutoffLabel: 'Forecast starts here',
   cutoffSub: 'Model input cutoff',
   liveHead: 'LIVE HEAD',
@@ -194,7 +205,7 @@ export const TRAJECTORY = {
   noModel: 'No forecast model for this metric',
   unavailable: 'Forecast unavailable',
   noRun: 'No model run yet',
-  futureRegion: 'Future forecast region · point forecasts only, no uncertainty interval',
+  futureRegion: 'Future forecast region · the pale ground is time, not uncertainty',
   observedSeries: 'Observed series',
   observationsOnly: 'Observations only · no forecast requested',
 };

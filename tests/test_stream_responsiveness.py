@@ -21,6 +21,7 @@ os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
 
 from flask import Flask  # noqa: E402
 
+from oslian_demo.config import load_model_lock  # noqa: E402
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.eventlog import StreamEventLogger  # noqa: E402
 from oslian_demo.monitoring.wholebody import (  # noqa: E402
@@ -280,9 +281,10 @@ class ForecastStatesAreDistinguishableTests(unittest.TestCase):
         cells = runtime.contract["catalog"]["cells"]
         model_capable = [c for c in cells if c["can_move"]]
         carried_forward = [c for c in cells if not c["can_move"]]
-        self.assertEqual(len(cells), 41)
-        self.assertEqual(len(model_capable), 27)
-        self.assertEqual(len(carried_forward), 14)
+        contract = load_model_lock()["runtime_contract"]
+        self.assertEqual(len(cells), contract["catalog_cells"])
+        self.assertEqual(len(model_capable), contract["model_capable_cells"])
+        self.assertEqual(len(carried_forward), contract["persistence_fallback_cells"])
         for cell in carried_forward:
             self.assertEqual(cell["source_model"], "patient_persistence_anchor",
                              "a carried-forward cell must never claim a model as its source")

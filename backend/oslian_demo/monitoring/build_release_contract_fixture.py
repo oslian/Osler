@@ -1,13 +1,15 @@
-"""Generate the versioned WholeBody release contract fixture from the real release.
+"""Generate the versioned release contract fixture from the real oslian/Model release.
 
 Runs the pinned release through the same worker the runtime uses, on the
 synthetic patient's full delivered timeline, and records: the pinned commit,
-manifest checksums, registry hash, the 41-cell catalog, the 53 variables and
-units, and one real input/output sample for contract tests. Weights are never
-copied; only metadata and one JSON output are committed.
+manifest checksums, registry and source-selector hashes, the 41-cell catalog
+(source, movability and interval capability as the release's selector and
+calibrators decide them), the 53 variables and units, and one real
+input/output sample for contract tests. Weights are never copied; only metadata
+and one JSON output are committed.
 
     python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir <pinned checkout> \
-        --commit 5a49b3969d69145efa8ef66d0c6e80d24daef5d2 --write
+        --commit <validated_commit from backend/model-lock.json> --write
 """
 
 from __future__ import annotations
@@ -25,16 +27,19 @@ from .mapping import CANONICAL_UNITS
 from .repository import Repository
 from .source import MockFhirSource
 from .timeline import build_model_input, delivered_timeline
-from .wholebody import CONTRACT_FIXTURE, ReleaseWorker, RuntimeConfig
+from ..config import load_model_lock
+from .wholebody import CONTRACT_FIXTURE, EVENT_TARGET, ReleaseWorker, RuntimeConfig
 
 FORMAL_GATE = {
     "rule": ("local AGENTS.md: formal whole-body candidates must be "
              "osler_jepa.adjacent_hierarchy.AdjacentThreeLevelResidualAdapter with canonical organ mapping "
              "(canonical_target_organ_membership) and system->organ->body staged training"),
     "release_satisfies_rule": False,
-    "evidence": ("release 2026-08-22 ships a frozen JointWholeBodyJEPAWorldModel with 11 functional modules and "
-                 "11 shared target heads; neither the release nor this repository contains "
-                 "osler_jepa.adjacent_hierarchy or osler_jepa.organ_schema"),
+    "evidence": ("release 2026-09-02 serves the frozen JointWholeBodyJEPAWorldModel (11 functional modules) "
+                 "through a unified source selector over base, shared-head and multi-source heads; it contains "
+                 "osler_jepa.organ_schema but not osler_jepa.adjacent_hierarchy. The release repository's own "
+                 "AGENTS.md states the system->organ->body latent hierarchy is superseded; that changes no "
+                 "promotion status (clinical_promotion_allowed: false)"),
     "consequence": ("runtime attachment requires explicit approval of the release as a bounded research-demo "
                     "runtime (OSLIAN_WHOLEBODY_RUNTIME=release); default mode keeps it detached"),
 }
@@ -69,6 +74,8 @@ def build(release_dir: Path, commit: str, python: str, pythonpath: str | None) -
     if not worker.alive():
         raise SystemExit(f"release validation failed: {worker.error}\n{json.dumps(startup, indent=1)}")
     registry = json.loads((release_dir / "models" / "runtime_registry.json").read_text(encoding="utf-8"))
+    selector = json.loads((release_dir / "models" / "unified_source_selector.json").read_text(encoding="utf-8"))
+    calibrator = json.loads((release_dir / "models" / "interval_calibrator.json").read_text(encoding="utf-8"))
     contract = json.loads((release_dir / "models" / "FEATURE_CONTRACT.json").read_text(encoding="utf-8"))
     source = MockFhirSource()
     timeline, onset = _synthetic_timeline(source)
@@ -78,23 +85,44 @@ def build(release_dir: Path, commit: str, python: str, pythonpath: str | None) -
     worker.stop()
     result = reply["result"]
     units_by_cell = {cell["cell"]: cell["unit"] for cell in result["cells"]}
+
+    def interval_capable(cell: str, target: str) -> bool:
+        # the release's own rule (whole_body_jepa.runtime.predict_patient): a moving continuous cell
+        # shows bounds from the selector's interval, or from its calibrator when its source is unchanged
+        decision, calibrated = selector["cells"][cell], calibrator["cells"].get(cell) or {}
+        if target == EVENT_TARGET or not decision["can_move"]:
+            return False
+        return bool(decision.get("use_selector_interval")
+                    or (not decision["source_changed"] and calibrated.get("runtime_eligible")))
+
     catalog_cells = [
         {"cell": c["cell"], "target": c["target"], "horizon_hours": int(c["horizon_hours"]),
-         "unit": c.get("target_unit") or units_by_cell.get(c["cell"]), "source_model": c["source_model"],
-         "can_move": bool(c["can_move"]), "fallback_reason": c.get("fallback_reason"),
+         "unit": "probability" if c["target"] == EVENT_TARGET else c.get("target_unit") or units_by_cell.get(c["cell"]),
+         "source_model": selector["cells"][c["cell"]]["source_model"],
+         "can_move": bool(selector["cells"][c["cell"]]["can_move"]),
+         "interval_capable": interval_capable(c["cell"], c["target"]),
+         # the registry's reason predates the selector; a cell the selector moves has no fallback
+         "fallback_reason": None if selector["cells"][c["cell"]]["can_move"] else c.get("fallback_reason"),
          "source_report": c.get("source_report")}
         for c in registry["cells"]
     ]
+    manifest = startup["manifest"]
+    moving = sum(c["can_move"] for c in catalog_cells)
+    bounded = sum(c["interval_capable"] for c in catalog_cells)
+    if moving != manifest["runtime_move_cells"] or bounded != manifest["runtime_interval_cells"]:
+        raise SystemExit(f"catalog disagrees with the release manifest: {moving} moving / {bounded} interval cells, "
+                         f"manifest {manifest['runtime_move_cells']} / {manifest['runtime_interval_cells']}")
     variables = sorted(CANONICAL_UNITS)
     return {
-        "schema": "oslian.wholebody-release-contract.v1",
+        "schema": "oslian.wholebody-release-contract.v2",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "generated_from": f"WholeBody-JEPA release checkout at {commit} via oslian_demo/monitoring/worker.py",
-        "model_repository": "https://github.com/Chun0613-code/WholeBody-JEPA.git",
+        "generated_from": f"oslian/Model release checkout at {commit} via oslian_demo/monitoring/worker.py",
+        "model_repository": load_model_lock()["repository"],
         "model_commit": commit,
         "release_date": startup["release_date"],
-        "manifest": startup["manifest"],
+        "manifest": manifest,
         "registry_sha256": startup["registry_sha256"],
+        "selector_sha256": startup["selector_sha256"],
         "scikit_learn_pin": startup.get("scikit_learn"),
         "worker_checks": startup["checks"],
         "formal_architecture_gate": FORMAL_GATE,
@@ -107,8 +135,9 @@ def build(release_dir: Path, commit: str, python: str, pythonpath: str | None) -
         "catalog": {
             "schema": registry["schema"],
             "catalog_cells": int(registry["catalog_cells"]),
-            "externally_validated_point_cells": int(registry["externally_validated_point_cells"]),
-            "fallback_cells": int(registry["fallback_cells"]),
+            "runtime_move_cells": moving,
+            "fallback_cells": len(catalog_cells) - moving,
+            "interval_cells": bounded,
             "causal_claim_allowed": bool(registry["causal_claim_allowed"]),
             "clinical_promotion_allowed": bool(registry["clinical_promotion_allowed"]),
             "cells": catalog_cells,

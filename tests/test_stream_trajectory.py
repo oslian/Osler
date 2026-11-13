@@ -13,7 +13,8 @@ the SVG back here. The assertions are the invariants a reader relies on:
   baseline, never a marker for a value that does not exist;
 - a historical anchor draws the frozen run's inputs while the live head has
   moved on;
-- the future region is the future, never an uncertainty band;
+- the future region is the future, never an uncertainty band; a calibrated
+  90% interval is drawn only around a model forecast that carries one;
 - the chart carries an accurate accessible description and reachable points.
 
 Node is not part of the demo's runtime and is not installed by any script here;
@@ -71,6 +72,11 @@ S.live.cells = [cell(1, 'model', 68.5), cell(3, 'model', 56.4)];
 out.filtered = draw('urine_output', { horizons: new Set([3]) });
 S.live.cells = [cell(1, 'model', 68.5, { observed_value: null, measurement_age_hours: null })];
 out.nobasis = draw('urine_output');
+const calibrated = { lower: 40.1, upper: 96.9, interval_status: 'externally_audited_mimic_split_conformal_90' };
+S.live.cells = [cell(1, 'model', 68.5, calibrated), cell(3, 'model', 56.4)];
+out.bounded = draw('urine_output');
+S.live.cells = [cell(1, 'persistence', 58, calibrated), cell(3, 'persistence', 58)];
+out.boundedBaseline = draw('urine_output');
 // the live head moves on; an open anchor keeps the old run's inputs and cells
 S.live = { run: run('live-run-2', 10), cells: [cell(1, 'model', 99), cell(3, 'model', 98)] };
 S.series.urine_output.push(obs(8, 70), obs(10, 75));
@@ -148,7 +154,7 @@ class TrajectoryChartTests(unittest.TestCase):
         pts = _points(svg)
         self.assertAlmostEqual(pts[("observed", self.ms(6))], float(rule.group(1)), delta=0.15)
         self.assertEqual(sum(1 for (kind, ms) in pts if ms == self.ms(6)), 1, "exactly one point at the cutoff: the real observation")
-        for text in ("OBSERVED HISTORY", "FHIR observations", "FUTURE FORECAST", "Point forecasts",
+        for text in ("OBSERVED HISTORY", "FHIR observations", "FUTURE FORECAST", "Forecasts · 90% interval where calibrated",
                      "Forecast starts here", "Model input cutoff · Mar 14 12:00Z"):
             self.assertIn(text, svg, text)
         self.assertNotIn("historical anchor", svg.lower())     # the state word lives in the header badge, not on the rule
@@ -252,7 +258,7 @@ class TrajectoryChartTests(unittest.TestCase):
         self.assertIn("1h · 99", live["svg"])
         self.assertEqual(sum(1 for k in _points(live["svg"]) if k[0] == "observed"), 6)
 
-    # ---- no intervals ----------------------------------------------------
+    # ---- intervals only where calibrated -----------------------------------
     def test_the_future_region_is_never_an_uncertainty_band(self):
         for name, s in self.out.items():
             if s["empty"]:
@@ -261,10 +267,29 @@ class TrajectoryChartTests(unittest.TestCase):
             for word in ("confidence", "uncertainty band", "interval band", "prediction interval"):
                 self.assertNotIn(word, text, f"{name}: {word}")
             self.assertEqual(s["svg"].count('data-region="future"'), 1 if s["kind"] != "no-run" else 0, name)
-            # the only filled areas are the two region grounds; nothing is shaded between forecast points
-            fills = re.findall(r"<(?:rect|path|polygon)[^>]*fill=\"(#[0-9A-Fa-f]{6})\"", s["svg"])
+            # the only filled areas are the region grounds and a calibrated interval band
+            shapes = re.findall(r"<(?:rect|path|polygon)([^>]*)>", s["svg"])
+            fills = [re.search(r'fill="(#[0-9A-Fa-f]{6})"', a).group(1) for a in shapes
+                     if 'data-series="interval"' not in a and re.search(r'fill="(#[0-9A-Fa-f]{6})"', a)]
             self.assertFalse([f for f in fills if f.upper() not in {"#FFFFFF", "#EDF2F7", "#FCFAF5", "#171A1C", "#3D4449"}], name)
-        self.assertIn("no uncertainty interval", self.out["model"]["legend"])
+        self.assertIn("every other forecast is a point", self.out["model"]["legend"])
+
+    def test_an_interval_is_drawn_only_around_a_calibrated_model_forecast(self):
+        bounded = self.out["bounded"]
+        self.assertEqual(bounded["svg"].count('data-series="interval"'), 1)
+        self.assertIn('data-interval="urine_output@1h" data-lower="40.1" data-upper="96.9"', bounded["svg"])
+        self.assertNotIn('data-interval="urine_output@3h"', bounded["svg"], "a model point without bounds gets no band")
+        self.assertIn("Calibrated 90% interval", bounded["legend"])
+        desc = re.search(r'<desc id="trajDesc">(.*?)</desc>', bounded["svg"]).group(1)
+        self.assertIn("Calibrated 90% intervals: 1h 40.1 to 96.9 mL/hour", desc)
+        aria = " ".join(re.findall(r'aria-label="([^"]*)"', bounded["svg"]))
+        self.assertIn("90% interval 40.1 to 96.9 mL/hour", aria)
+        # a carried-forward value is never banded, even if a bound reached it
+        self.assertNotIn('data-series="interval"', self.out["boundedBaseline"]["svg"])
+        self.assertNotIn("Calibrated 90% interval", self.out["boundedBaseline"]["legend"])
+        for name, s in self.out.items():
+            if name != "bounded":
+                self.assertNotIn('data-series="interval"', s["svg"], name)
 
     # ---- accessibility and responsiveness --------------------------------
     def test_the_chart_describes_itself_and_every_point_is_reachable(self):
@@ -273,7 +298,7 @@ class TrajectoryChartTests(unittest.TestCase):
         desc = re.search(r'<desc id="trajDesc">(.*?)</desc>', svg).group(1)
         for phrase in ("live head", "Observed history: 4 FHIR observations", "last observed 58.0 mL/hour",
                        "Forecast starts here: model input cutoff Mar 14 12:00Z", "model point forecasts 1h 68.5, 3h 56.4 mL/hour",
-                       "no uncertainty interval"):
+                       "No calibrated interval for these forecasts; points only."):
             self.assertIn(phrase, desc, phrase)
         groups = re.findall(r'<g class="chart-pt[^"]*"([^>]*)>', svg)
         self.assertEqual(len(groups), 6)

@@ -12,6 +12,7 @@ from flask import Flask  # noqa: E402
 
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.timeline import delivered_timeline  # noqa: E402
+from oslian_demo.config import load_model_lock  # noqa: E402
 from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime  # noqa: E402
 
 
@@ -91,7 +92,7 @@ class StreamApiTests(unittest.TestCase):
         run = next(r for r in runs if "Observation/syn-obs-creatinine-h06/_history/1" in r["input_refs"])
         self.assertTrue(all("Observation/syn-obs-creatinine-h06/_history/1" in r["input_refs"]
                             for r in runs if r["started_at"] >= run["started_at"]), "once in, never dropped")
-        self.assertEqual(run["model_commit"], "5a49b3969d69145efa8ef66d0c6e80d24daef5d2")
+        self.assertEqual(run["model_commit"], load_model_lock()["validated_commit"])
         history = self.client.get(f"/api/patients/{pid}/forecast-history").get_json()
         self.assertIn(run["run_id"], {r["run_id"] for r in history["runs"]})
         cell_history = self.client.get(f"/api/patients/{pid}/forecast-history?cell=creatinine@6h").get_json()["cell_history"]
@@ -317,7 +318,12 @@ class ReleaseRuntimeTests(unittest.TestCase):
             cap = client.get("/api/model/capabilities").get_json()
             self.assertEqual(statuses["model"], cap["model_cells"])
             self.assertEqual(statuses["persistence"], cap["persistence_cells"])
-            self.assertTrue(all(c["lower"] is None and c["upper"] is None for c in forecasts["cells"]))
+            # bounds only where the release calibrated the cell, and each one contains its point
+            bounded = [c for c in forecasts["cells"] if c["lower"] is not None]
+            self.assertEqual(len(bounded), cap["interval_cells"])
+            self.assertTrue(all(c["lower"] <= c["forecast_point"] <= c["upper"] for c in bounded))
+            events = [c for c in forecasts["cells"] if c["target"] == "hypoxemia_event"]
+            self.assertTrue(events and all(c["lower"] is None and 0.0 <= c["forecast_point"] <= 1.0 for c in events))
             self.assertEqual(forecasts["run"]["model_commit"], cap["model_commit"])
         finally:
             service.close()

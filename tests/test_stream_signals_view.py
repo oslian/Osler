@@ -119,7 +119,7 @@ S.live = { run: { run_id: 'run-1', input_cutoff: at(30), epoch: 1, runtime_mode:
     cell('bun@24h', 'bun', 24, 'model', 24.5, 26, 'unified_shared_jepa_target_head', null, 'mg/dL'),
     cell('sodium@12h', 'sodium', 12, 'model', 146.2, 139, 'unified_shared_jepa_target_head', null, 'mEq/L'),
     cell('sodium@24h', 'sodium', 24, 'model', 141.0, 139, 'unified_shared_jepa_target_head', null, 'mEq/L'),
-    cell('chloride@12h', 'chloride', 12, 'persistence', 107, 107, 'unified_shared_jepa_target_head', 'shared_jepa_head_abstained', 'mEq/L'),
+    cell('chloride@12h', 'chloride', 12, 'persistence', 107, 107, 'patient_persistence_anchor', 'continuous_head_abstained', 'mEq/L'),
     cell('creatinine@6h', 'creatinine', 6, 'model', 1.25, 1.2, 'frozen_whole_body_jepa', null, 'mg/dL'),
     cell('creatinine@12h', 'creatinine', 12, 'persistence', 1.2, 1.2, 'patient_persistence_anchor', 'shared_jepa_head_not_external_validated', 'mg/dL'),
     cell('glucose@12h', 'glucose', 12, 'model', 171, 171, 'frozen_whole_body_jepa', null, 'mg/dL'),
@@ -207,7 +207,7 @@ out.unitless = observationAttention(state('x', 5, 'u', 1, { reference_range: [{ 
 out.ambiguous = observationAttention(state('x', 1, 'u', 1, { reference_range: [range(0, 1, 'u', { applies_to: true }), range(0, 2, 'u', { applies_to: true })] }));
 out.qualifiedAlone = observationAttention(state('x', 3, 'u', 1, { reference_range: [range(0, 2, 'u', { age: true })] }));
 out.derivedNeverCritical = observationAttention(state('x', 99, 'u', 1, { reference_range: [range(0, 2, 'u')], interpretation: [derived('HH')] })).critical;
-out.projectedPersistence = forecastAttention({ status: 'persistence', forecast_point: 99, unit: 'mg/dL', fallback_reason: 'shared_jepa_head_abstained' }, S.variables.bun).projected;
+out.projectedPersistence = forecastAttention({ status: 'persistence', forecast_point: 99, unit: 'mg/dL', fallback_reason: 'continuous_head_abstained' }, S.variables.bun).projected;
 out.projectedNull = forecastAttention({ status: 'model', forecast_point: null, unit: 'mg/dL' }, S.variables.bun).projected;
 out.projectedDegraded = forecastAttention({ status: 'degraded', forecast_point: 99, unit: 'mg/dL' }, S.variables.bun).projected;
 out.tiers = TIER;

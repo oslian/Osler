@@ -110,13 +110,14 @@ class StreamUiContractTests(unittest.TestCase):
         """The trajectory chart's safety invariants, at source level; the executed
         checks live in test_stream_trajectory.py."""
         chart = MODULES["chart.js"]
-        self.assertIn("An interval band is never drawn", chart)
-        self.assertNotIn("f.lower", chart)
-        self.assertNotIn("f.upper", chart)
+        self.assertIn("A 90% interval is drawn only around a model forecast", chart)
+        # a band is built from model forecasts with two finite bounds, and from nothing else
+        self.assertIn("const bounded = model.filter((f) => Number.isFinite(f.lower) && Number.isFinite(f.upper));", chart)
+        self.assertNotIn("baseline.filter((f) => Number.isFinite(f.lower)", chart)
         without_comment = re.sub(r"/\*.*?\*/", "", chart + MODULES["format.js"], flags=re.S)
         self.assertNotIn("confidence", without_comment.lower())
-        self.assertIn("POINT_ONLY_NOTE", chart)                # the legend says it in plain language
-        self.assertIn("no uncertainty interval is drawn", chart)  # and so does the accessible description
+        self.assertIn("INTERVAL_NOTE", chart)                  # the legend says it in plain language
+        self.assertIn("No calibrated interval for these forecasts; points only.", chart)  # and the description
         self.assertIn("carried forward", chart)
         self.assertIn('stroke-dasharray="5 4"', chart)         # model path is dashed
         self.assertIn('stroke-dasharray="3 4"', chart)         # a baseline is dashed differently, and grey
@@ -147,7 +148,7 @@ class StreamUiContractTests(unittest.TestCase):
 
     def test_bounded_research_demo_wording_and_forbidden_claims(self):
         render = MODULES["render.js"]
-        for phrase in ("bounded research demo", "research-only", "point forecasts only", "no clinical alert"):
+        for phrase in ("bounded research demo", "research-only", "90% intervals only where calibrated", "no clinical alert"):
             self.assertIn(phrase, render)
         self.assertNotIn("production runtime", STREAM_JS)
         self.assertNotIn("formal adjacent", STREAM_JS)
@@ -175,7 +176,7 @@ class StreamUiContractTests(unittest.TestCase):
 
     def test_no_fabrication_and_no_intervals_or_alerts(self):
         self.assertIn("Nothing is fabricated", STREAM_JS)
-        self.assertIn("Intervals are null", STREAM_JS)
+        self.assertIn("A 90% interval appears only where the release calibrated that cell", STREAM_JS)
         self.assertIn("causal_claim_allowed: false", STREAM_JS)
         self.assertNotIn("alert(", STREAM_JS)
         self.assertNotRegex(STREAM_JS, r"\b(deteriorat|sepsis risk|diagnostic|diagnosed)", "no diagnostic narrative")
@@ -449,7 +450,7 @@ class HygieneScanTests(unittest.TestCase):
                 self.assertIsNone(pattern.search(text), f"{name} in {path}")
 
     def test_fixtures_are_synthetic_or_public_deidentified_only(self):
-        for name in ("synthetic_patient_v1.json", "wholebody_release_contract_v1.json", "retrospective_eicu_demo_case.json"):
+        for name in ("synthetic_patient_v1.json", "wholebody_release_contract_v2.json", "retrospective_eicu_demo_case.json"):
             text = (FIXTURE_DIR / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, r"\b(MRN|SSN)\b")
             self.assertNotRegex(text, r"\b\d{3}-\d{2}-\d{4}\b")
@@ -856,7 +857,7 @@ class ReportContractTests(unittest.TestCase):
         for word in ("'Carried forward — model abstained'", "'Model forecast'", "'Carried forward'",
                      "'Missing'", "'Degraded'"):
             self.assertIn(word, forecast, word)
-        self.assertIn("forecastNote: 'Research-only point forecasts.", MODULES["format.js"])
+        self.assertIn("forecastNote: 'Research-only forecasts. A 90% interval appears only for a cell whose own release calibrator", MODULES["format.js"])
         self.assertIn("A carried-forward value is not a model forecast.", self.REPORT)
 
     def test_trend_charts_are_drawn_only_where_they_earn_the_paper(self):

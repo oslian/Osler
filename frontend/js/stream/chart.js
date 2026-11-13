@@ -10,12 +10,13 @@
  * A carried-forward cell is a grey dashed baseline with hollow squares and says
  * "Baseline only · not a model forecast"; a withheld cell draws nothing and says
  * why; a variable with no runtime cell says so in the future region.
- * An interval band is never drawn: this runtime bundles no patient-specific
- * conformal artifact, and the pale future region is the future, not a confidence
- * band. Nothing here depends on colour alone: line style, marker shape, region
+ * A 90% interval is drawn only around a model forecast whose cell the release
+ * calibrated (the runtime refuses any other bound); it is a hatched band with
+ * end caps, never the pale future region, which is time, not uncertainty.
+ * Nothing here depends on colour alone: line style, marker shape, region
  * titles and the point labels carry the same distinction. */
 
-import { esc, fmtNum, POINT_ONLY_NOTE, TRAJECTORY, unavailableReason } from './format.js';
+import { esc, fmtNum, INTERVAL_NOTE, TRAJECTORY, unavailableReason } from './format.js';
 
 const COLORS = { ink: '#171A1C', ink2: '#626762', blue: '#344F69', baseline: '#6F746F', divider: '#D1CCC2', soft: '#E7E3DA',
   surface: '#FCFAF5', history: '#FFFFFF', future: '#EDF2F7', cutoff: '#3D4449', teal: '#27645E', nul: '#8B8F89',
@@ -117,7 +118,9 @@ function describe(t, points, fmt, unit, label, headline) {
     if (baseline.length) parts.push(`${TRAJECTORY.baselineOnly} for ${hs(baseline)}: the last observed value carried forward.`);
     if (withheld.length) parts.push(`${TRAJECTORY.unavailable} for ${hs(withheld)}: ${Array.from(new Set(withheld.map((f) => unavailableReason(f.status, f.fallback_reason)))).join('; ')}.`);
   }
-  if (!observationsOnly) parts.push('Point forecasts only; no uncertainty interval is drawn.');
+  const bounded = model.filter((f) => Number.isFinite(f.lower) && Number.isFinite(f.upper));
+  if (bounded.length) parts.push(`Calibrated 90% intervals: ${bounded.map((f) => `${f.horizon_hours}h ${fmtNum(f.lower)} to ${fmtNum(f.upper)}`).join(', ')} ${unit}.`);
+  else if (!observationsOnly) parts.push('No calibrated interval for these forecasts; points only.');
   return parts.join(' ');
 }
 
@@ -224,7 +227,8 @@ export function trajectoryChart(opts) {
   xMin -= xPad; xMax += xPad;
 
   const band = opts.range && (Number.isFinite(opts.range.low) || Number.isFinite(opts.range.high)) ? opts.range : null;
-  const ys = points.map((p) => p.value).concat(bases.map((b) => b.value), drawn.map((f) => f.forecast_point)).filter((v) => Number.isFinite(v));
+  const ys = points.map((p) => p.value).concat(bases.map((b) => b.value), drawn.map((f) => f.forecast_point),
+    model.flatMap((f) => [f.lower, f.upper])).filter((v) => Number.isFinite(v));
   if (!ys.length) return { svg: '', empty: true };
   // the band is kept in view, so "inside" and "outside" are visible and not implied
   if (band) [band.low, band.high].filter((v) => Number.isFinite(v)).forEach((v) => ys.push(v));
@@ -333,6 +337,22 @@ export function trajectoryChart(opts) {
     });
   }
 
+  // calibrated 90% interval: one band from the basis observation (zero width) through each bounded horizon
+  const bounded = model.filter((f) => Number.isFinite(f.lower) && Number.isFinite(f.upper));
+  if (bounded.length) {
+    const lead = bounded.find((f) => f.basis);
+    const start = lead ? [[X(lead.basis.ms), Y(lead.basis.value)]] : [];
+    const top = start.concat(bounded.map((f) => [X(f.due_ms), Y(f.upper)]));
+    const bottom = bounded.map((f) => [X(f.due_ms), Y(f.lower)]).reverse().concat(start);
+    s += `<polygon data-series="interval" points="${top.concat(bottom).map((p) => p.map(n1).join(',')).join(' ')}" fill="${COLORS.blue}" fill-opacity="0.12" stroke="none"/>`;
+    bounded.forEach((f) => {
+      const x = X(f.due_ms);
+      s += `<g data-interval="${esc(f.cell)}" data-lower="${f.lower}" data-upper="${f.upper}"><line x1="${n1(x)}" y1="${n1(Y(f.upper))}" x2="${n1(x)}" y2="${n1(Y(f.lower))}" stroke="${COLORS.blue}" stroke-width="1" stroke-opacity="0.55"/>`
+        + `<line x1="${n1(x - 4)}" y1="${n1(Y(f.upper))}" x2="${n1(x + 4)}" y2="${n1(Y(f.upper))}" stroke="${COLORS.blue}" stroke-width="1.2"/>`
+        + `<line x1="${n1(x - 4)}" y1="${n1(Y(f.lower))}" x2="${n1(x + 4)}" y2="${n1(Y(f.lower))}" stroke="${COLORS.blue}" stroke-width="1.2"/></g>`;
+    });
+  }
+
   // carried-forward baselines: grey, horizontal, dashed, hollow squares, and named as a baseline
   const point = (f) => `data-kind="forecast" data-cell="${esc(f.cell)}" data-run="${esc(f.run_id)}" data-status="${esc(f.status)}" data-value="${f.forecast_point}" data-ms="${f.due_ms}" data-source="${esc(f.source_model)}" data-horizon="${f.horizon_hours}"${f.basis ? ` data-basis-value="${f.basis.value}" data-basis-ms="${f.basis.ms}"` : ''}`;
   if (baseline.length && cx !== null) {
@@ -363,6 +383,7 @@ export function trajectoryChart(opts) {
       // deep red a current measured abnormality carries: a projection is not a result
       const ink = f.projected ? COLORS.amber : COLORS.blue;
       const aria = `${f.horizon_hours}h model forecast: ${fmtNum(f.forecast_point)} ${unit} at ${fmt.short(f.due_ms)}`
+        + (Number.isFinite(f.lower) && Number.isFinite(f.upper) ? `, 90% interval ${fmtNum(f.lower)} to ${fmtNum(f.upper)} ${unit}` : '')
         + (f.projected ? `, projected ${f.projectedSide} the supplied range` : '');
       s += `<g class="chart-pt" tabindex="0" role="button" aria-label="${esc(aria)}" ${point(f)}${f.projected ? ` data-projected="${esc(f.projectedSide || 'outside')}"` : ''}>${leader}<polygon points="${n1(x)},${n1(y - r)} ${n1(x + r)},${n1(y)} ${n1(x)},${n1(y + r)} ${n1(x - r)},${n1(y)}" fill="${COLORS.surface}" stroke="${ink}" stroke-width="${f.projected ? 2 : 1.7}"${f.projected ? ' stroke-dasharray="3 2"' : ''}/><text x="${n1(tx)}" y="${n1(ty)}" text-anchor="${anchor}" class="cl fc" fill="${ink}">${esc(text)}${f.projected ? ` ${f.projectedSide === 'below' ? '▽' : '△'}` : ''}</text></g>`;
     });
@@ -402,19 +423,21 @@ export function trajectoryChart(opts) {
 
 /** Legend: every entry pairs a line style and a marker shape with its words, so
  * the same distinction survives without colour. The pale future region is named
- * as the future - never as a confidence or uncertainty band, because none exists. */
+ * as the future - never as a confidence band; a calibrated interval has its own entry. */
 export function chartLegend(t, range) {
   const hasModel = t.forecasts.some((f) => f.status === 'model');
   const hasBaseline = t.forecasts.some((f) => f.status === 'persistence');
   const hasProjected = t.forecasts.some((f) => f.projected);
+  const hasInterval = t.forecasts.some((f) => f.status === 'model' && Number.isFinite(f.lower) && Number.isFinite(f.upper));
   return `<div class="chart-legend" aria-label="Chart legend">
     ${range ? `<span><i class="lg-range"></i>Supplied reference range</span>` : ''}
     ${hasProjected ? `<span><svg width="26" height="12" aria-hidden="true"><polygon points="13,1 18,6 13,11 8,6" fill="${COLORS.surface}" stroke="${COLORS.amber}" stroke-width="2" stroke-dasharray="3 2"/></svg>Projected outside supplied range</span>` : ''}
     <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.ink}" stroke-width="1.8"/><circle cx="13" cy="5" r="3.5" fill="${COLORS.ink}"/></svg>Observed · FHIR observation</span>
     ${hasModel ? `<span><svg width="26" height="12" aria-hidden="true"><line x1="1" y1="6" x2="25" y2="6" stroke="${COLORS.blue}" stroke-width="1.5" stroke-dasharray="5 4"/><polygon points="13,1 18,6 13,11 8,6" fill="${COLORS.surface}" stroke="${COLORS.blue}" stroke-width="1.5"/></svg>Model forecast · point forecast</span>` : ''}
+    ${hasInterval ? `<span><svg width="26" height="12" aria-hidden="true"><rect x="1" y="2" width="24" height="8" fill="${COLORS.blue}" fill-opacity="0.12"/><line x1="13" y1="1" x2="13" y2="11" stroke="${COLORS.blue}" stroke-width="1"/></svg>Calibrated 90% interval</span>` : ''}
     ${hasBaseline ? `<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.baseline}" stroke-width="1.4" stroke-dasharray="3 4"/><rect x="9" y="1" width="8" height="8" fill="${COLORS.surface}" stroke="${COLORS.baseline}" stroke-width="1.4"/></svg>${TRAJECTORY.baselineOnly}</span>` : ''}
     ${t.cutoff_ms ? `<span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="0" x2="6" y2="12" stroke="${COLORS.cutoff}" stroke-dasharray="4 3"/></svg>${TRAJECTORY.cutoffLabel} · ${TRAJECTORY.cutoffSub.toLowerCase()}</span>
     <span><i class="lg-band"></i>${TRAJECTORY.futureRegion}</span>` : ''}
-    <span class="lg-note">${POINT_ONLY_NOTE}</span>
+    <span class="lg-note">${INTERVAL_NOTE}</span>
   </div>`;
 }

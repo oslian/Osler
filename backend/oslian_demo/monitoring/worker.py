@@ -1,11 +1,12 @@
-"""WholeBody-JEPA release worker: runs *inside* the pinned release checkout.
+"""oslian/Model release worker: runs *inside* the pinned release checkout.
 
 Launched by ``wholebody.ReleaseWorker`` as a separate interpreter so that the
 release's own ``osler_jepa``/``whole_body_joint_jepa`` modules and its pinned
 scikit-learn are the ones loaded (the web repo has same-named packages).
 
 Protocol (one JSON object per line on stdin/stdout):
-    startup  -> {"ready": bool, "checks": [...], "commit": ..., "registry_sha256": ..., ...}
+    startup  -> {"ready": bool, "checks": [...], "commit": ..., "registry_sha256": ...,
+                 "selector_sha256": ..., ...}
     request  {"op": "predict", "request_id": "...", "csv": "..."}
     reply    {"request_id": "...", "ok": true, "result": {...}} | {"ok": false, "error": "..."}
 
@@ -76,6 +77,7 @@ def main() -> int:
     manifest_path = release_dir / "models" / "MODEL_MANIFEST.json"
     manifest: dict = {}
     registry_sha = None
+    selector_sha = None
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         for name, expected in manifest["files"].items():
@@ -88,6 +90,8 @@ def main() -> int:
             check(f"sha256:{name}", ok, f"actual={actual}{hint}")
             if name == "runtime_registry.json" and ok:
                 registry_sha = actual
+            if name == "unified_source_selector.json" and ok:
+                selector_sha = actual
     except Exception as exc:  # noqa: BLE001
         check("manifest", False, f"{type(exc).__name__}: {exc}")
 
@@ -123,6 +127,7 @@ def main() -> int:
         "checks": checks,
         "commit": head,
         "registry_sha256": registry_sha,
+        "selector_sha256": selector_sha,
         "release_date": manifest.get("release_date"),
         "manifest": manifest,
         "scikit_learn": __import__("sklearn").__version__ if ready else None,

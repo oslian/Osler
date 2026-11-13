@@ -4,8 +4,8 @@ Two modes, chosen by ``OSLIAN_WHOLEBODY_RUNTIME``:
 
 ``fixture`` (default)
     The pinned release is *not* attached. The 41-cell catalog, model commit,
-    registry hash and units come from the versioned contract fixture
-    (``fixtures/wholebody_release_contract_v1.json``, generated from the real
+    registry and selector hashes and units come from the versioned contract fixture
+    (``fixtures/wholebody_release_contract_v2.json``, generated from the real
     release). Every run completes with ``status: degraded`` cells and a null
     ``forecast_point`` — nothing is fabricated and the UI must say the runtime
     is not attached.
@@ -19,19 +19,28 @@ Cell contract (every mode)::
 
     cell, target, unit, horizon_hours, observed_value, measurement_age_hours,
     observations, forecast_point, source_model, status (model | persistence |
-    missing | degraded), fallback_reason, interval_status, lower, upper (null
-    unless an exact patient-specific conformal artifact exists — none does),
+    missing | degraded), fallback_reason, interval_status, lower, upper,
     causal_claim_allowed (always false)
 
-``status`` is decided per prediction, not per cell. ``can_move`` is the catalog's
-statement that a cell *has* a head; it is not that head's statement that it moved
-this time. See ``head_abstained``.
+``lower``/``upper`` are accepted only from a model cell the catalog marks
+``interval_capable``, with one of the lock's calibrated ``interval_status``
+values, finite bounds and ``lower <= forecast_point <= upper``. Anything else
+that carries a bound fails the run closed. Every other cell is null.
+
+``hypoxemia_event`` cells carry a calibrated event probability in [0, 1] as their
+``forecast_point``; they never carry an interval.
+
+``status`` is decided per prediction, not per cell. The release reports a head
+that declined to move as ``patient_persistence_anchor`` with
+``fallback_reason: continuous_head_abstained``; that is a baseline, not a model
+prediction.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -47,24 +56,33 @@ from .timeline import ModelInput
 MODE_FIXTURE = "fixture"
 MODE_RELEASE = "release"
 PERSISTENCE_SOURCE = "patient_persistence_anchor"
-SHARED_HEAD_SOURCE = "unified_shared_jepa_target_head"
-ABSTENTION_REASON = "shared_jepa_head_abstained"
+# every release source that is a model prediction when the release says the cell moved
+MODEL_SOURCES = frozenset({
+    "frozen_whole_body_jepa", "unified_shared_jepa_target_head", "multisource_shared_jepa_target_head",
+    "calibrated_event_risk_head",
+})
+ABSTENTION_REASON = "continuous_head_abstained"
+EVENT_TARGET = "hypoxemia_event"
 STATUS_MODEL, STATUS_PERSISTENCE, STATUS_MISSING, STATUS_DEGRADED = "model", "persistence", "missing", "degraded"
-INTERVAL_STATUS_NONE = "no_patient_specific_conformal_artifact"
-# User decision (2026-09-01): the 2026-08-22 release may produce real outputs in an explicit demo
-# launch profile, as a *bounded research-demo runtime* only. It is not the formal
-# adjacent-three-level architecture required by AGENTS.md, not a production runtime, and not a
-# clinically validated model; every fail-closed check and every output boundary stays as is.
+INTERVAL_STATUS_NOT_ATTACHED = "runtime_not_attached"
+# User decisions. 2026-09-01: the release may produce real outputs in an explicit demo launch
+# profile, as a *bounded research-demo runtime* only. 2026-11-12: the demo moves to the
+# oslian/Model 2026-09-02 release and shows its calibrated 90% intervals and event probabilities
+# where - and only where - the release emits them from a cell's own calibrator. It is still not the
+# formal adjacent-three-level architecture, not a production runtime and not a clinically
+# validated model; every fail-closed check stays.
 BOUNDED_DEMO_APPROVAL = {
     "approved_scope": "bounded research-demo runtime",
     "approved_on": "2026-09-01",
+    "release_adopted_on": "2026-11-12",
     "launch_profile": "OSLIAN_WHOLEBODY_RUNTIME=release with a pinned LF checkout (see README.md)",
-    "required_ui_wording": ["bounded research demo", "research-only", "point forecasts only", "no clinical alert"],
+    "required_ui_wording": ["bounded research demo", "research-only", "no clinical alert"],
     "must_not_be_called": ["formal adjacent-three-level model", "production runtime", "clinically validated model"],
     "formal_architecture_rule_satisfied": False,
     "promotion_registry_entry": False,
     "fail_closed_checks_unchanged": True,
-    "output_boundaries_unchanged": ["persistence baseline", "null interval", "causal_claim_allowed: false"],
+    "output_boundaries": ["persistence baseline", "interval only from the cell's own release calibrator",
+                          "event cells are calibrated probabilities", "causal_claim_allowed: false"],
     "safe_default_mode": MODE_FIXTURE,
 }
 
@@ -106,34 +124,35 @@ class RuntimeUnavailable(RuntimeError):
 
 def load_contract_fixture(path: Path = CONTRACT_FIXTURE) -> dict[str, Any]:
     document = json.loads(path.read_text(encoding="utf-8"))
-    if document.get("schema") != "oslian.wholebody-release-contract.v1":
+    if document.get("schema") != "oslian.wholebody-release-contract.v2":
         raise ValueError("unsupported WholeBody contract fixture schema")
     return document
 
 
-def head_abstained(source: str, point: Any, observed: Any) -> bool:
-    """True when a shared head declined to move and emitted the anchor value.
-
-    The release zeroes any normalized delta below the head's
-    ``normalized_abstention_threshold`` and then returns ``current + 0``, so the
-    forecast is bit-identical to the observation while the release still reports
-    ``can_move: true`` and the head's own ``source_model``. Reading ``can_move``
-    alone therefore badges a copied lab value as a model prediction. Measured on
-    the eICU and MIMIC-IV demo sets (2026-09-02), that is 54-71% of
-    ``chloride@12h`` rows and 39-53% of ``sodium@24h`` rows.
-
-    Only the shared-head path carries that threshold. The frozen backbone can
-    equal the observation by coincidence — a binary ``hypoxemia_event`` forecast
-    of 0.0 on an observed 0.0 is a real prediction — so the source is part of the
-    test and not just the equality.
-    """
-    if source != SHARED_HEAD_SOURCE or point is None or observed is None:
-        return False
-    return abs(float(point) - float(observed)) < 1e-9
+def _bounds(cell: str, raw: dict[str, Any], status: str, point: float | None, spec: dict[str, Any],
+            bounded_statuses: frozenset[str]) -> tuple[float | None, float | None]:
+    """The interval a cell may show, or a refusal. Never a repaired or guessed bound."""
+    lower, upper = raw.get("lower"), raw.get("upper")
+    interval_status = str(raw.get("interval_status") or "")
+    if lower is None and upper is None:
+        if interval_status in bounded_statuses:
+            raise RuntimeUnavailable(f"{cell}: release claims {interval_status} but emitted no bounds")
+        return None, None
+    if status != STATUS_MODEL or not spec.get("interval_capable") or interval_status not in bounded_statuses:
+        raise RuntimeUnavailable(f"{cell}: release emitted an interval the pinned catalog does not allow "
+                                 f"(status={status}, interval_status={interval_status!r})")
+    try:
+        lo, hi = float(lower), float(upper)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeUnavailable(f"{cell}: release emitted a non-numeric interval") from exc
+    if not (math.isfinite(lo) and math.isfinite(hi) and point is not None and lo <= point <= hi):
+        raise RuntimeUnavailable(f"{cell}: release interval [{lo}, {hi}] does not contain its point {point}")
+    return lo, hi
 
 
 def normalize_release_cells(release_cells: list[dict[str, Any]], state: dict[str, dict[str, Any]],
-                            catalog: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+                            catalog: dict[str, dict[str, Any]],
+                            bounded_statuses: frozenset[str]) -> list[dict[str, Any]]:
     """Map raw release cells onto the Oslian cell contract.
 
     ``state`` is the delivered-timeline variable state (observed value, age,
@@ -144,39 +163,39 @@ def normalize_release_cells(release_cells: list[dict[str, Any]], state: dict[str
         cell = str(raw["cell"])
         if cell not in catalog:
             raise RuntimeUnavailable(f"release returned a cell outside the pinned registry: {cell}")
+        spec = catalog[cell]
         target = str(raw["target"])
-        state_variable = "o2sat" if target == "hypoxemia_event" else target
+        state_variable = "o2sat" if target == EVENT_TARGET else target
         observed = state.get(state_variable)
         point = raw.get("forecast_point")
         source = str(raw.get("source_model") or "unknown")
-        fallback_reason = raw.get("fallback_reason")
         if point is None:
             status = STATUS_MISSING
         elif source == PERSISTENCE_SOURCE:
             status = STATUS_PERSISTENCE
-        elif head_abstained(source, point, raw.get("observed_value")):
-            status, fallback_reason = STATUS_PERSISTENCE, ABSTENTION_REASON
-        elif raw.get("can_move"):
+        elif source in MODEL_SOURCES and raw.get("can_move"):
             status = STATUS_MODEL
         else:
-            status = STATUS_PERSISTENCE
-        if raw.get("lower") is not None or raw.get("upper") is not None:
-            raise RuntimeUnavailable(f"{cell}: release emitted an interval but no patient-specific artifact exists")
+            raise RuntimeUnavailable(f"{cell}: release returned a point from an unrecognised source {source!r}")
+        point = float(point) if point is not None else None
+        if target == EVENT_TARGET and status == STATUS_MODEL and not 0.0 <= point <= 1.0:
+            raise RuntimeUnavailable(f"{cell}: event probability {point} is outside [0, 1]")
+        lower, upper = _bounds(cell, raw, status, point, spec, bounded_statuses)
         out.append({
             "cell": cell,
             "target": target,
-            "unit": raw.get("unit") or catalog[cell].get("unit"),
+            "unit": raw.get("unit") or spec.get("unit"),
             "horizon_hours": int(raw["horizon_hours"]),
             "observed_value": raw.get("observed_value"),
             "measurement_age_hours": raw.get("measurement_age_hours"),
             "observations": int(raw.get("observations") or 0),
-            "forecast_point": float(point) if point is not None else None,
+            "forecast_point": point,
             "source_model": source,
             "status": status,
-            "fallback_reason": fallback_reason,
-            "interval_status": str(raw.get("interval_status") or INTERVAL_STATUS_NONE),
-            "lower": None,
-            "upper": None,
+            "fallback_reason": raw.get("fallback_reason"),
+            "interval_status": str(raw.get("interval_status") or "unknown"),
+            "lower": lower,
+            "upper": upper,
             "causal_claim_allowed": False,
             "ledger_observation_count": int(observed["count"]) if observed else 0,
         })
@@ -298,6 +317,10 @@ class WholeBodyRuntime:
             raise RuntimeUnavailable(
                 f"model-lock.json approves {self.lock['validated_commit']} but the runtime contract "
                 f"fixture was generated from {self.contract['model_commit']}")
+        for key in ("registry_sha256", "selector_sha256"):
+            if self.lock[key] != self.contract[key]:
+                raise RuntimeUnavailable(f"model-lock.json and the runtime contract fixture disagree on {key}")
+        self.bounded_statuses = frozenset(self.lock["output_boundaries"]["interval_statuses_with_bounds"])
         self.worker = ReleaseWorker(self.config, self.lock["validated_commit"]) if self.config.mode == MODE_RELEASE else None
 
     # ---- discovery ------------------------------------------------------------
@@ -313,6 +336,7 @@ class WholeBodyRuntime:
             "model_commit": self.contract["model_commit"],
             "release_date": self.contract["release_date"],
             "registry_sha256": self.contract["registry_sha256"],
+            "selector_sha256": self.contract["selector_sha256"],
             "registry_schema": self.contract["catalog"]["schema"],
             "runtime_scope": "bounded research demo" if self.mode == MODE_RELEASE else "gated fixture (safe default)",
             "approval": BOUNDED_DEMO_APPROVAL,
@@ -329,6 +353,8 @@ class WholeBodyRuntime:
             "catalog_cells": len(cells),
             "model_cells": move,
             "persistence_cells": len(cells) - move,
+            "interval_cells": sum(1 for c in cells if c["interval_capable"]),
+            "event_risk_cells": sum(1 for c in cells if c["target"] == EVENT_TARGET and c["can_move"]),
             "variables": self.contract["variables"],
             "variable_units": self.contract["variable_units"],
             "modules": self.contract["modules"],
@@ -337,11 +363,11 @@ class WholeBodyRuntime:
             "cells": [
                 {"cell": c["cell"], "target": c["target"], "horizon_hours": c["horizon_hours"],
                  "unit": c.get("unit"), "source_model": c["source_model"], "can_move": c["can_move"],
-                 "fallback_reason": c.get("fallback_reason")}
+                 "interval_capable": c["interval_capable"], "fallback_reason": c.get("fallback_reason")}
                 for c in cells
             ],
-            "interval_policy": ("lower/upper are null for every cell: the release bundles no "
-                                "patient-specific conformal interval artifact"),
+            "interval_policy": self.lock["output_boundaries"]["interval_policy"],
+            "event_policy": self.lock["output_boundaries"]["event_cells"],
             "persistence_policy": "persistence is a baseline fallback, not a model prediction",
             "causal_claim_allowed": False,
             "clinical_promotion_allowed": False,
@@ -385,7 +411,9 @@ class WholeBodyRuntime:
             raise RuntimeUnavailable("worker commit differs from the pinned contract commit")
         if startup.get("registry_sha256") != self.contract["registry_sha256"]:
             raise RuntimeUnavailable("worker registry hash differs from the pinned contract registry")
-        cells = normalize_release_cells(reply["result"]["cells"], state, self.catalog)
+        if startup.get("selector_sha256") != self.contract["selector_sha256"]:
+            raise RuntimeUnavailable("worker source selector hash differs from the pinned contract selector")
+        cells = normalize_release_cells(reply["result"]["cells"], state, self.catalog, self.bounded_statuses)
         return RuntimeResult(cells, self._summary(cells), self.provenance(),
                              int((time.perf_counter() - started) * 1000))
 
@@ -393,16 +421,16 @@ class WholeBodyRuntime:
         cells = []
         for spec in self.contract["catalog"]["cells"]:
             target = spec["target"]
-            variable = "o2sat" if target == "hypoxemia_event" else target
+            variable = "o2sat" if target == EVENT_TARGET else target
             observed = state.get(variable)
             cells.append({
                 "cell": spec["cell"], "target": target, "unit": spec.get("unit"),
                 "horizon_hours": int(spec["horizon_hours"]),
-                "observed_value": (float(observed["value"] <= 92.0) if target == "hypoxemia_event" else observed["value"]) if observed else None,
+                "observed_value": (float(observed["value"] <= 92.0) if target == EVENT_TARGET else observed["value"]) if observed else None,
                 "measurement_age_hours": observed["age_hours"] if observed else None,
                 "observations": int(observed["count"]) if observed else 0,
                 "forecast_point": None, "source_model": "none", "status": STATUS_DEGRADED,
-                "fallback_reason": reason, "interval_status": INTERVAL_STATUS_NONE,
+                "fallback_reason": reason, "interval_status": INTERVAL_STATUS_NOT_ATTACHED,
                 "lower": None, "upper": None, "causal_claim_allowed": False,
                 "ledger_observation_count": int(observed["count"]) if observed else 0,
             })
