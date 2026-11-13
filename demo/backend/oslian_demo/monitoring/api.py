@@ -254,7 +254,7 @@ def create_blueprint(service: StreamService) -> Blueprint:
             # timeline is built from, so the figure and the charts cannot disagree
             "organs": organ_state_for_run(service.repo, run),
             "runtime": service.runtime.provenance(),
-            "interval_policy": "lower/upper are null: no patient-specific conformal artifact in this release",
+            "interval_policy": service.runtime.lock["output_boundaries"]["interval_policy"],
             "persistence_policy": "persistence is a baseline fallback, not a model prediction",
             "causal_claim_allowed": False,
             "clinical_alerts_supported": False,

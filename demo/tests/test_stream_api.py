@@ -93,6 +93,9 @@ class StreamApiTests(unittest.TestCase):
         self.assertTrue(all("Observation/syn-obs-creatinine-h06/_history/1" in r["input_refs"]
                             for r in runs if r["started_at"] >= run["started_at"]), "once in, never dropped")
         self.assertEqual(run["model_commit"], load_model_lock()["validated_commit"])
+        # the response states the lock's interval policy, never a stale "always null"
+        body = self.client.get(f"/api/patients/{pid}/forecasts").get_json()
+        self.assertEqual(body["interval_policy"], load_model_lock()["output_boundaries"]["interval_policy"])
         history = self.client.get(f"/api/patients/{pid}/forecast-history").get_json()
         self.assertIn(run["run_id"], {r["run_id"] for r in history["runs"]})
         cell_history = self.client.get(f"/api/patients/{pid}/forecast-history?cell=creatinine@6h").get_json()["cell_history"]
