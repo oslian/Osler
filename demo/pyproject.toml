@@ -1,0 +1,32 @@
+[project]
+name = "oslian-demo"
+version = "1.0.0"
+description = "Oslian Demo — research-only medication-safety and FHIR monitoring demonstration"
+requires-python = ">=3.11"
+# The demo backend needs Flask and nothing else. The WholeBody research code has
+# its own dependencies and its own requirements file inside the submodule; they
+# are deliberately not merged into this project.
+dependencies = ["flask>=3.0"]
+
+[project.scripts]
+oslian-demo = "oslian_demo.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "backend" }
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["oslian_demo*"]
+
+[tool.pytest.ini_options]
+# `backend` puts oslian_demo on the path without an install, so the checkout can
+# be moved or renamed without repairing an editable install. The research
+# submodule is never on this path: the Flask process must run from this
+# repository alone, and the release worker loads the checkout in its own
+# subprocess.
+pythonpath = ["backend"]
+testpaths = ["tests"]
