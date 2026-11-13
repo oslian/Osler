@@ -13,9 +13,8 @@ renamed or copied.
   `python -m oslian_demo`.
 - **By hand** — `$env:PYTHONPATH = "backend"` then `python -m oslian_demo`.
 
-The research submodule is never on that path. The Flask process must run from
-this repository alone; the release worker loads the checkout in its own
-subprocess.
+`model/` and `osler/` are never on that path. The Flask process imports only
+`demo/backend`; the release worker loads `model/` in its own subprocess.
 
 Rules the package keeps:
 
@@ -53,9 +52,7 @@ Rules the package keeps:
 .\scripts\test-demo.ps1 -Mode release -ReleasePythonPath C:\path\to\overlay
 
 # model runtime
-.\scripts\setup-model-runtime.ps1
 .\scripts\check-model-runtime.ps1 -ReleasePythonPath C:\path\to\overlay
-.\scripts\sync-model-research.ps1
 ```
 
 Every script takes `-Python` (or `$env:OSLIAN_PYTHON`) if `python` on `PATH` is
@@ -101,7 +98,7 @@ See [FRONTEND.md](FRONTEND.md) for module boundaries and the React assessment.
 ```powershell
 $env:PYTHONPATH = "backend"
 python -m oslian_demo.monitoring.build_synthetic_fixture --write
-python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir backend\research\oslian-model --commit <sha> --write
+python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir ..\model --commit <git log -1 --format=%H -- ..\model> --write
 ```
 
 The release contract fixture must be produced **through the worker**, inside the
@@ -146,10 +143,10 @@ and a stored session is resumed only onto the fixture revision it was opened on;
 `tests/test_stream_resource_versions.py` covers all of it, including an old
 ledger meeting the revised stream.
 
-## What must not be committed to this branch
+## What must not be committed under demo/
 
 - model weights or any `.pt` / `.pth` / `.ckpt` / `.joblib` file — they live in
-  the submodule, verified there against a SHA-256 manifest
+  `model/models/`, verified there against a SHA-256 manifest
 - research findings, validation result JSON, audit or training scripts
 - the SQLite ledger and anything else under `var/`
 - scratch directories from other checkouts

@@ -100,7 +100,7 @@ class RuntimeConfig:
         mode = env.get("OSLIAN_WHOLEBODY_RUNTIME", MODE_FIXTURE).strip().lower()
         if mode not in {MODE_FIXTURE, MODE_RELEASE}:
             raise ValueError("OSLIAN_WHOLEBODY_RUNTIME must be 'fixture' or 'release'")
-        # the submodule is the default checkout; an override is for a working copy of it
+        # model/ in this repository is the default; an override is for another working copy of it
         release_dir = env.get("OSLIAN_WHOLEBODY_RELEASE_DIR") or RESEARCH_DIR
         return cls(
             mode=mode,

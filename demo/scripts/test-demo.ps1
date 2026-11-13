@@ -47,10 +47,10 @@ $env:OSLIAN_WHOLEBODY_RUNTIME = $Mode
 
 if ($Mode -eq 'release') {
     $lock = Get-Content (Join-Path $root 'backend\model-lock.json') -Raw | ConvertFrom-Json
-    $default = Join-Path $root $lock.submodule_path
+    $default = Join-Path $root $lock.model_path
     $ReleaseDir = Resolve-Setting $ReleaseDir 'OSLIAN_WHOLEBODY_RELEASE_DIR' $default
     if (-not (Test-Path (Join-Path $ReleaseDir 'models'))) {
-        throw "no models directory in $ReleaseDir. Run: .\scripts\setup-model-runtime.ps1"
+        throw "no models directory in $ReleaseDir"
     }
     $env:OSLIAN_WHOLEBODY_RELEASE_DIR = (Resolve-Path $ReleaseDir).Path
     $env:OSLIAN_WHOLEBODY_PYTHON = Resolve-Setting $ReleasePython 'OSLIAN_WHOLEBODY_PYTHON' $pythonExe

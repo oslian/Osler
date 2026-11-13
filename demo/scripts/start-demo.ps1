@@ -7,11 +7,10 @@
     Everything runs inside this one process. Flask serves frontend/ directly; the
     stream playback clock, the SSE bus and the run scheduler are threads; the
     ledger is SQLite in WAL mode under var/; the WholeBody runtime is either the
-    pinned fixture contract or a worker subprocess inside the research submodule.
+    pinned fixture contract or a worker subprocess inside model/.
 
     Fixture mode is the safe default and needs no configuration. Release mode
-    defaults to the submodule at backend/research/oslian-model; run
-    setup-model-runtime.ps1 once first.
+    defaults to model/ in this repository.
 
 .PARAMETER Mode
     fixture (default) or release.
@@ -19,7 +18,7 @@
 .PARAMETER ReleaseDir
     Override the release checkout. Only for a different working copy of the SAME
     commit model-lock.json approves. Falls back to $env:OSLIAN_WHOLEBODY_RELEASE_DIR,
-    then backend/research/oslian-model.
+    then ../model.
 
 .PARAMETER ReleasePython
     Interpreter for the release worker; it needs scikit-learn 1.7.2.
@@ -119,15 +118,15 @@ $env:OSLIAN_WHOLEBODY_RUNTIME = $Mode
 
 if ($Mode -eq 'release') {
     $lock = Get-Content (Join-Path $root 'backend\model-lock.json') -Raw | ConvertFrom-Json
-    $default = Join-Path $root $lock.submodule_path
+    $default = Join-Path $root $lock.model_path
     $ReleaseDir = Resolve-Setting $ReleaseDir 'OSLIAN_WHOLEBODY_RELEASE_DIR' $default
     if (-not (Test-Path $ReleaseDir)) { throw "release checkout not found: $ReleaseDir" }
     if (-not (Test-Path (Join-Path $ReleaseDir 'models'))) {
-        throw "no models directory in $ReleaseDir. Run: .\scripts\setup-model-runtime.ps1"
+        throw "no models directory in $ReleaseDir"
     }
-    $head = (& git -C $ReleaseDir rev-parse HEAD).Trim()
+    $head = (& git -C $ReleaseDir log -1 --format=%H -- .).Trim()
     if ($head -ne $lock.validated_commit) {
-        throw "release checkout is at $head; model-lock.json approves $($lock.validated_commit). Run: .\scripts\setup-model-runtime.ps1"
+        throw "model/ was last changed in $head; model-lock.json approves $($lock.validated_commit). Re-lock deliberately (docs/MODEL_RUNTIME.md)."
     }
 
     $ReleasePython = Resolve-Setting $ReleasePython 'OSLIAN_WHOLEBODY_PYTHON' $pythonExe

@@ -1,4 +1,4 @@
-"""oslian/Model release worker: runs *inside* the pinned release checkout.
+"""Model release worker: runs *inside* the pinned release directory (model/).
 
 Launched by ``wholebody.ReleaseWorker`` as a separate interpreter so that the
 release's own ``osler_jepa``/``whole_body_joint_jepa`` modules and its pinned
@@ -42,9 +42,10 @@ def _emit(payload: dict) -> None:
 
 
 def _git_head(release_dir: Path) -> str | None:
+    """The last commit that changed the release directory - its pinned identity in a monorepo."""
     try:
-        return subprocess.run(["git", "-C", str(release_dir), "rev-parse", "HEAD"], capture_output=True,
-                              text=True, check=True, timeout=30).stdout.strip()
+        return subprocess.run(["git", "-C", str(release_dir), "log", "-1", "--format=%H", "--", "."],
+                              capture_output=True, text=True, check=True, timeout=60).stdout.strip() or None
     except Exception:
         return None
 
@@ -72,7 +73,7 @@ def main() -> int:
             ready = False
 
     head = _git_head(release_dir)
-    check("pinned_commit", head == args.expected_commit, f"HEAD={head} expected={args.expected_commit}")
+    check("pinned_commit", head == args.expected_commit, f"last model commit={head} expected={args.expected_commit}")
 
     manifest_path = release_dir / "models" / "MODEL_MANIFEST.json"
     manifest: dict = {}

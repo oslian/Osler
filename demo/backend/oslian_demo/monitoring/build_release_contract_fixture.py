@@ -116,7 +116,7 @@ def build(release_dir: Path, commit: str, python: str, pythonpath: str | None) -
     return {
         "schema": "oslian.wholebody-release-contract.v2",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "generated_from": f"oslian/Model release checkout at {commit} via oslian_demo/monitoring/worker.py",
+        "generated_from": f"model/ at commit {commit} via oslian_demo/monitoring/worker.py",
         "model_repository": load_model_lock()["repository"],
         "model_commit": commit,
         "release_date": startup["release_date"],

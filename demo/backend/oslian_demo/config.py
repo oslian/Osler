@@ -58,8 +58,8 @@ ORGAN_MAP_PATH = MONITORING_DIR / "organ_target_map.json"
 FUNCTION_MAP_PATH = MONITORING_DIR / "functional_group_map_v1.json"
 RELEASE_CONTRACT_FIXTURE = FIXTURE_DIR / "wholebody_release_contract_v2.json"
 
-# ---- the WholeBody research submodule and its lock -------------------------
-RESEARCH_DIR = BACKEND_DIR / "research" / "oslian-model"
+# ---- the model release (model/ in this repository) and its lock -------------
+RESEARCH_DIR = REPO_ROOT.parent / "model"              # the merged repository's model/
 MODEL_LOCK_PATH = BACKEND_DIR / "model-lock.json"
 
 # ---- runtime state ---------------------------------------------------------

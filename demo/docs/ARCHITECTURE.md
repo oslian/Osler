@@ -39,7 +39,7 @@ every variable in them resolves exactly as before — and that the table carries
 nothing the demo never asks for.
 
 The only component that loads research code is the release worker, and it does
-so in a separate interpreter, inside the submodule. See
+so in a separate interpreter, inside `model/`. See
 [MODEL_RUNTIME.md](MODEL_RUNTIME.md).
 
 ## Medication Safety

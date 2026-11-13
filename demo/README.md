@@ -60,7 +60,6 @@ backend/
     medication/           Medication Safety blueprint, engine/ and data/
     monitoring/           Monitoring blueprint: the FHIR streaming pipeline, fixtures/
     shared/ontology.py    the state vocabulary this repository owns
-  research/oslian-model/    git submodule: the oslian/Model release (see below)
   model-lock.json         the only model release the release runtime may load
 
 tests/                    the demo test suite
@@ -77,35 +76,30 @@ package. `backend/oslian_demo` imports nothing from any other repository.
 
 ## Where the demo and the model live
 
-The demo is the **orphan `oslian-demo` branch** of the WholeBody-JEPA repository;
-the model it serves is the private **oslian/Model** repository, pinned as a
-submodule:
+The demo is the `demo/` folder of the **oslian/Osler** repository. The model it
+serves is `model/` in the same repository; the demo never copies a weight, it
+records *which* model it serves in `backend/model-lock.json`:
 
 ```text
-demo   https://github.com/Chun0613-code/WholeBody-JEPA.git   branch oslian-demo
-model  https://github.com/oslian/Model.git                   backend/research/oslian-model
+https://github.com/oslian/Osler.git
+  demo/    this application
+  model/   the whole-body JEPA release (model/models/) and its source
+  osler/   the earlier research tree
 ```
 
-`oslian-demo` shares no history with WholeBody-JEPA `main` and inherits none of its
-files. The model repository is the team's current home for the release, its source
-and its weights; the demo records *which* commit it serves in
-`backend/model-lock.json` and never copies a weight. oslian/Model is private:
-cloning the submodule needs read access to it.
-
-The submodule declares `branch = main`, there is exactly one, and the locked tree
-carries no `.gitmodules` of its own, so `git clone --recurse-submodules` goes
-exactly one level deep. `setup-model-runtime.ps1` and `check-model-runtime.ps1`
-both refuse to run if that stops being true.
+The lock pins the last commit that changed `model/` and every artifact's SHA-256.
+Any later change to `model/` makes release mode refuse to start until the lock is
+regenerated on purpose (see [docs/MODEL_RUNTIME.md](docs/MODEL_RUNTIME.md)).
 
 ### Clone
 
 ```powershell
-git clone --branch oslian-demo --recurse-submodules https://github.com/Chun0613-code/WholeBody-JEPA.git oslian-demo
+git clone https://github.com/oslian/Osler.git
+cd Osler\demo
 ```
 
-Without `--recurse-submodules` (or without access to oslian/Model), everything
-except release mode still works; `backend/research/oslian-model` is simply empty
-until you initialise it.
+The repository root carries `.gitattributes` with `* text=auto eol=lf`, so the
+hashed JSON artifacts in `model/models/` check out byte for byte on Windows.
 
 ---
 
@@ -146,21 +140,10 @@ ledger actually in use:
 
 ---
 
-## Initialising the model runtime
+## Release mode
 
-Once per clone:
-
-```powershell
-.\scripts\setup-model-runtime.ps1
-```
-
-It initialises the one submodule, checks its remote, checks out the commit
-`backend/model-lock.json` approves, forces an LF checkout (the JSON artifacts are
-hashed byte for byte, so a CRLF checkout fails the manifest), verifies every
-model file against the lock, and proves the locked tree declares no submodule of
-its own. It installs nothing, fetches nothing newer and pushes nothing.
-
-Then:
+There is nothing to initialise: `model/` is part of the clone. Start the release
+runtime with:
 
 ```powershell
 .\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
@@ -172,7 +155,7 @@ With its own ledger as well:
 .\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -Python C:\path\to\python.exe -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
 ```
 
-The release worker needs an interpreter that can import the checkout with
+The release worker needs an interpreter that can import `model/` with
 `scikit-learn==1.7.2` — the version the serialized population anchors were fitted
 with. `-ReleasePythonPath` prepends a dependency overlay if your main interpreter
 has a different scikit-learn. Both also read
@@ -290,58 +273,27 @@ Deep links:
 
 ---
 
-## Syncing the model research
+## Changing the model
+
+A model change is a commit to `model/`, and it is not live in the demo until the
+lock is regenerated in a separate commit:
 
 ```powershell
-.\scripts\sync-model-research.ps1
+# 1. change and validate the model, from model/
+cd ..\model
+python -m scripts.validate_release
+git commit -am "model: ..."
+
+# 2. regenerate the contract fixture through the worker, from demo/
+cd ..\demo
+$commit = git log -1 --format=%H -- ..\model
+$env:PYTHONPATH = "backend"
+python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir ..\model --commit $commit --write
 ```
 
-A dry run: it refuses to touch a dirty submodule, fetches, and shows the locked
-commit, the submodule HEAD, `origin/main`, the commits between them and the files
-that differ under `models/`. It checks out nothing, rewrites no lock and pushes
-nothing.
-
-To try a candidate:
-
-```powershell
-.\scripts\sync-model-research.ps1 -Update
-```
-
-That checks the candidate out, runs the runtime contract tests against it, and
-restores the locked commit either way. A candidate that fails must not become the
-demo runtime. A candidate that passes is still not the runtime until you edit
-`backend/model-lock.json` deliberately.
-
----
-
-## Changing the model, and pushing
-
-Model and training changes belong on their own branch of oslian/Model, not in a
-demo commit.
-
-```powershell
-cd backend\research\oslian-model
-git switch -c model-runtime-fix origin/main
-# ... change, test ...
-git commit -am "fix: ..."
-git push -u origin model-runtime-fix
-```
-
-Never commit on a detached HEAD, and always branch from `main`. After the model
-branch is validated, come back out and record it on the demo branch — the
-submodule pointer and `model-lock.json` in the same commit:
-
-```powershell
-cd ..\..\..
-git add backend/research/oslian-model backend/model-lock.json
-git commit -m "chore: adopt validated model runtime <sha>"
-```
-
-Push the demo branch:
-
-```powershell
-git push -u origin oslian-demo
-```
+Then update `backend/model-lock.json` (commit and artifact hashes from
+`model/models/MODEL_MANIFEST.json`), run the tests in fixture and release mode,
+and commit the lock and fixture together, touching nothing under `model/`.
 
 ---
 
@@ -360,7 +312,7 @@ never hold a real key.
 | `OSLIAN_STREAM_LOG_FORMAT` | `pretty`, `json` | `pretty` |
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
 | `OSLIAN_WHOLEBODY_RUNTIME` | `fixture`, `release` | `fixture` |
-| `OSLIAN_WHOLEBODY_RELEASE_DIR` | release checkout | `backend/research/oslian-model` |
+| `OSLIAN_WHOLEBODY_RELEASE_DIR` | release directory | `../model` |
 | `OSLIAN_WHOLEBODY_PYTHON` | interpreter for the release worker | this interpreter |
 | `OSLIAN_WHOLEBODY_PYTHONPATH` | dependency overlay for that interpreter | — |
 | `OSLIAN_EPIC_PRIVATE_KEY_PEM` | referenced by name only; never read | — |
@@ -424,8 +376,8 @@ session-creation route answers 409) instead of being served from the old copy.
 | `flask is not installed for ...` | That interpreter has no Flask. `python -m pip install -r requirements.txt`, or pass `-Python`. |
 | `port 5000 is already in use` | An earlier run is still bound. Stop it (above) or pass `-Port`. |
 | `frontend is missing` | The checkout is incomplete — `frontend/index.html` must exist beside `backend/`. |
-| `no models directory in ...` | The submodule is not initialised. Run `.\scripts\setup-model-runtime.ps1`. |
-| `release checkout is at <sha>` | The submodule drifted off the lock. Run `.\scripts\setup-model-runtime.ps1`. |
+| `no models directory in ...` | `OSLIAN_WHOLEBODY_RELEASE_DIR` points somewhere other than `model/`. |
+| `model/ was last changed in <sha>` | `model/` changed after the lock was written. Re-lock deliberately (Changing the model). |
 | `model files do not match model-lock.json` | Almost always a CRLF checkout. The setup script forces LF; fix the checkout, never the check. |
 | `/api/model/health` returns 503 `runtime_not_attached` | Fixture mode. Correct and intended; start with `-Mode release`. |
 | Release health is `degraded`, `ready: false` | A fail-closed check failed. Read `checks` and `reason`. |
@@ -436,14 +388,13 @@ session-creation route answers 409) instead of being served from the old copy.
 
 ---
 
-## Why the weights are not on this branch
+## Why the demo does not copy the weights
 
-The weights live on `main`, versioned there and verified by a SHA-256 manifest
-against a pinned commit. Copying them onto the demo branch would fork that
-verification: a file in two places drifts, and the demo could then load an
-artifact nobody validated. Instead the demo points at a checkout it does not own,
-checks the commit and every hash on every start, and refuses to run — rather than
-degrading quietly — when either disagrees.
+The weights live in `model/models/`, verified by a SHA-256 manifest. Copying them
+into `demo/` would fork that verification: a file in two places drifts, and the
+demo could then load an artifact nobody validated. Instead the demo points at
+`model/`, checks the pinned commit and every hash on every start, and refuses to
+run — rather than degrading quietly — when either disagrees.
 
 The pinned release passes its own manifest, load and end-to-end validation, but
 does **not** satisfy the formal architecture rule

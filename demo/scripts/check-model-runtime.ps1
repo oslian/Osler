@@ -37,7 +37,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $lock = Get-Content (Join-Path $root 'backend\model-lock.json') -Raw | ConvertFrom-Json
-$subPath = Join-Path $root $lock.submodule_path
+$subPath = Join-Path $root $lock.model_path
 $failures = @()
 
 function Step([string] $name, [bool] $ok, [string] $detail) {
@@ -46,12 +46,10 @@ function Step([string] $name, [bool] $ok, [string] $detail) {
 }
 
 Write-Host 'git'
-$head = (& git -C $subPath rev-parse HEAD).Trim()
-Step 'pinned_commit' ($head -eq $lock.validated_commit) "HEAD=$head"
-$url = (& git -C $subPath remote get-url origin).Trim()
-Step 'submodule_remote' ($url -eq $lock.repository) $url
-$selfModules = & git -C $subPath ls-tree --name-only $lock.validated_commit '.gitmodules'
-Step 'no_self_submodule' (-not $selfModules) 'the locked tree declares no submodule'
+$head = (& git -C $subPath log -1 --format=%H -- .).Trim()
+Step 'pinned_commit' ($head -eq $lock.validated_commit) "last model commit=$head"
+$dirty = @(& git -C $subPath status --porcelain -- .)
+Step 'model_clean' (-not $dirty) "$($dirty.Count) uncommitted change(s) under $($lock.model_path)"
 
 Write-Host 'artifacts'
 $models = Join-Path $subPath 'models'
