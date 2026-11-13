@@ -1,0 +1,38 @@
+{
+  "schema": "shared_whole_body_jepa_head_features.v1",
+  "feature_width": 311,
+  "blocks": [
+    {"name": "shared_context", "start": 0, "stop": 64, "width": 64},
+    {"name": "patient_belief", "start": 64, "stop": 160, "width": 96},
+    {"name": "target_future", "start": 160, "stop": 224, "width": 64},
+    {"name": "target_organ", "start": 224, "stop": 256, "width": 32},
+    {
+      "name": "base_point",
+      "start": 256,
+      "stop": 257,
+      "width": 1,
+      "semantics": "frozen shared JEPA forecast for this target and horizon in normalized target units; never the anchor target value"
+    },
+    {
+      "name": "measurement_pure_state",
+      "start": 257,
+      "stop": 310,
+      "width": 53,
+      "semantics": "latest valid pre-anchor values in checkpoint variable order, normalized with checkpoint scaler; missing uses normalized training median; physical zero remains observed zero"
+    },
+    {
+      "name": "target_current",
+      "start": 310,
+      "stop": 311,
+      "width": 1,
+      "semantics": "anchor value for this target in normalized target units"
+    }
+  ],
+  "asof_contract": {
+    "direction": "event_time <= anchor_time",
+    "release_max_age_hours": 6.0,
+    "old_values_within_limit_are_carried_forward": true,
+    "physical_zero_is_missing": false
+  },
+  "manual_raw_vector_construction_allowed": false
+}

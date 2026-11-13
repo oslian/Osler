@@ -1,0 +1,78 @@
+{
+  "schema": "online_config_reselection_protocol.v1",
+  "written_before_results": true,
+  "written": "2026-10-23, after the DtACI delayed-feedback fix and the dev-database re-evaluation (REEVALUATION_AFTER_LEAK_FIX_20261023.md), before any candidate below was scored",
+  "reason": "every online configuration of the v8 form was selected under the leaky replay (CODEX_REVIEW_20261022.md); selection is redone under the leak-free replay with the original predeclared rules, unchanged",
+  "disclosure": "the v8 configurations' re-evaluation results on eICU, NWICU, Zigong and Emory were seen before this protocol; no rule, candidate set or threshold below was changed after seeing them",
+  "replay": "shared deployment clock (osler_jepa.deployment_clock), outcomes used only after anchor + h + |label offset|, warm-up stays unscored, selection/conformal patient split (osler_jepa.patient_split), DtACI updated against current thresholds",
+  "data": {
+    "mimic": "mimiciv_observation_transitions_{horizon}h_full_v31_treatment_unit_safe_v5.parquet",
+    "eicu": "eicu_harmonized_20261022",
+    "nwicu": "nwicu_observation_transitions_{horizon}h_v5.parquet",
+    "zigong": "zigong_observation_transitions_{horizon}h_v2.parquet"
+  },
+  "steps": [
+    {
+      "step": 0,
+      "what": "fixed-step interval tracker (used under every point candidate and as the bar DtACI must beat)",
+      "script": "site_adaptive_interval_dev.py",
+      "data": "MIMIC-IV only (S1 time, S2 cardiac units)",
+      "rule": "most streams with patient- and care-unit-equal coverage in [0.87, 0.93]; ties -> smaller median width vs static v2; must beat static v2",
+      "output": "site_adaptive_interval_dev_20261023.json"
+    },
+    {
+      "step": 1,
+      "what": "online point recalibration",
+      "script": "site_adaptive_point_dev.py",
+      "data": "MIMIC-IV only",
+      "rule": "most full-pass streams; ties -> lower median MAE ratio vs none; adopt only if not fewer full passes than none and MAE ratio < 1",
+      "output": "site_adaptive_point_dev_20261023.json"
+    },
+    {
+      "step": 2,
+      "what": "DtACI meta learning rate vs the step-0 tracker",
+      "script": "site_adaptive_dtaci_dev.py",
+      "data": "MIMIC-IV only (long and 300-row pseudo-site streams)",
+      "rule": "most passing streams; ties -> narrower width; DtACI adopted only with strictly more passes than the fixed-step tracker",
+      "output": "site_adaptive_dtaci_dev_20261023.json"
+    },
+    {
+      "step": 3,
+      "what": "per-cell point recipe (included by the researcher's decision, 2026-10-23, before step 0 finished)",
+      "script": "external_recipe_selection_dev.py, run on the catalog cells and on glucose_poc_catalog_extension_20261020.json",
+      "data": "eICU, NWICU, Zigong (development)",
+      "rule": "unchanged from external_recipe_selection_dev.py docstring",
+      "output": "external_recipe_selection_dev_20261023.json, glucose_poc_recipe_selection_dev_20261023.json, merged into deployment_recipes_20261023.json"
+    },
+    {
+      "step": 4,
+      "what": "DtACI new-site starting multiplier theta0",
+      "script": "site_adaptive_dtaci_prior_dev.py",
+      "data": "eICU, NWICU, Zigong, leave-one-database-out",
+      "rule": "unchanged from the script docstring; candidates 0, 0.05, 0.10, 0.15, 0.20, 0.30",
+      "output": "site_adaptive_dtaci_prior_dev_20261023.json"
+    },
+    {
+      "step": 5,
+      "what": "network-shared DtACI",
+      "script": "site_adaptive_network_dev.py",
+      "data": "eICU, fixed hospital halves by hash",
+      "rule": "unchanged from the script docstring; candidates current, network_0.5, network_1.0",
+      "output": "site_adaptive_network_dev_20261023.json"
+    }
+  ],
+  "then": "re-evaluate eICU, NWICU, Zigong, Emory once with the re-selected form; jepa_gate_rule points to these outputs",
+  "execution": "strictly serial (17 GB RAM)",
+  "independent_validation": false,
+  "causal_claim_allowed": false,
+  "amendments": [
+    {
+      "date": "2026-10-24",
+      "post_hoc": true,
+      "change": "step 1 point correction set to affine_0.005 (site_adaptive_point_amendment_20261024.json) instead of the rule's 'none'; steps 2-6 re-run with it, rules unchanged",
+      "reason": "see site_adaptive_point_amendment_20261024.json",
+      "outputs": "site_adaptive_dtaci_dev_20261024.json, external_recipe_selection_dev_20261024.json, glucose_poc_recipe_selection_dev_20261024.json, deployment_recipes_20261024.json, site_adaptive_dtaci_prior_dev_20261024.json, site_adaptive_network_dev_20261024.json, site_adaptive_amended_{db}_20261024.json",
+      "first_reselection_kept_as_history": "*_20261023.json, site_adaptive_reselected_{db}_20261023.json"
+    }
+  ]
+}

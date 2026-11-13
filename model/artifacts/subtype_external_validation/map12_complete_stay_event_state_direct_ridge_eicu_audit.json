@@ -1,0 +1,547 @@
+{
+  "schema": "whole_body_jepa.stable_background_subtype_eicu_audit.v2",
+  "database": "eICU",
+  "mimic_iv_read": false,
+  "discovery_sources": {
+    "map@12h": {
+      "module": "sepsis",
+      "file": "eicu_sepsis_transitions_12h.parquet",
+      "rows": 6000,
+      "patients": 3074,
+      "hospitals": 182
+    }
+  },
+  "trajectory_contract": {
+    "map@6h": {
+      "window_hours": 6.0,
+      "current_weight": 0.75
+    },
+    "map@12h": {
+      "window_hours": 12.0,
+      "current_weight": 0.5
+    },
+    "respiratory_rate@6h": {
+      "window_hours": 6.0,
+      "current_weight": 0.75
+    }
+  },
+  "phenotype_covariates": {
+    "mode": "event_state",
+    "stable_background": [
+      "age",
+      "sex",
+      "admission_bmi",
+      "diabetes_documented_pre_anchor",
+      "ckd_documented_pre_anchor",
+      "heart_failure_documented_pre_anchor",
+      "copd_documented_pre_anchor"
+    ],
+    "history_summary": [
+      "level",
+      "slope",
+      "median_absolute_deviation",
+      "observation_density",
+      "measurement_age"
+    ],
+    "hospital_or_careunit_feature_used": false,
+    "treatment_context_columns": [
+      "hist_antibiotics",
+      "hist_antibiotics_evidence_count",
+      "hist_fluids",
+      "hist_fluids_evidence_count",
+      "hist_renal_replacement",
+      "hist_renal_replacement_evidence_count",
+      "hist_vasopressor",
+      "hist_vasopressor_evidence_count",
+      "hist_ventilation",
+      "hist_ventilation_evidence_count"
+    ],
+    "future_treatment_used": false
+  },
+  "consensus_members": 3,
+  "target_adapter": "direct_ridge",
+  "target_adapter_alpha": 100.0,
+  "group_robust_stack": false,
+  "consensus_gate": false,
+  "crossfit_selective_gate": false,
+  "causal_patient_update": false,
+  "patient_prior_strength": 4.0,
+  "cells": {
+    "map@12h": {
+      "split_modes": {
+        "patient": {
+          "splits": 7,
+          "pass_splits": 1,
+          "median_delta_vs_base": 0.06801009288758374,
+          "median_delta_vs_placebo": -0.22753646891723764,
+          "median_delta_vs_trajectory": 0.0841810311443516,
+          "median_delta_vs_row_level": 0.08447700757143758
+        },
+        "hospital": {
+          "splits": 3,
+          "pass_splits": 1,
+          "median_delta_vs_base": -0.027161056199555507,
+          "median_delta_vs_placebo": -0.24842385418470098,
+          "median_delta_vs_trajectory": 0.07380019072956827,
+          "median_delta_vs_row_level": 0.07591316970844277
+        },
+        "forward_time": {
+          "splits": 1,
+          "pass_splits": 0,
+          "median_delta_vs_base": 1.2692266198746824,
+          "median_delta_vs_placebo": 1.098975969414744,
+          "median_delta_vs_trajectory": 0.819680162350245,
+          "median_delta_vs_row_level": 0.8280758661339157
+        }
+      },
+      "development_pass": false,
+      "runtime_eligible": false
+    }
+  },
+  "split_results": [
+    {
+      "mode": "patient",
+      "seed": 7,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1802,
+          "patients": 923,
+          "base_mae": 11.754233600612249,
+          "background_mae": 11.60426631157836,
+          "unstacked_background_mae": 11.60426631157836,
+          "placebo_mae": 11.878433899923348,
+          "trajectory_mae": 11.77034004880721,
+          "row_level_mae": 11.770361206576743,
+          "patient_equal_deltas": {
+            "vs_base": -0.14364178666864527,
+            "vs_placebo": -0.2552912356737198,
+            "vs_trajectory": -0.15956747284821501,
+            "vs_row_level": -0.1586492368841572
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 19,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1803,
+          "patients": 923,
+          "base_mae": 11.906215107683316,
+          "background_mae": 12.108205474954167,
+          "unstacked_background_mae": 12.108205474954167,
+          "placebo_mae": 12.533772170719097,
+          "trajectory_mae": 11.922473569815548,
+          "row_level_mae": 11.921469505517274,
+          "patient_equal_deltas": {
+            "vs_base": 0.15501336085075904,
+            "vs_placebo": -0.4416681127364039,
+            "vs_trajectory": 0.15384722331172235,
+            "vs_row_level": 0.15485440310496107
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 31,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1802,
+          "patients": 923,
+          "base_mae": 11.79674676751008,
+          "background_mae": 11.886163513712376,
+          "unstacked_background_mae": 11.886163513712376,
+          "placebo_mae": 11.955639817122846,
+          "trajectory_mae": 11.80430617650997,
+          "row_level_mae": 11.80355467453773,
+          "patient_equal_deltas": {
+            "vs_base": 0.09224313386044303,
+            "vs_placebo": -0.07234971767148364,
+            "vs_trajectory": 0.0841810311443516,
+            "vs_row_level": 0.08447700757143758
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 43,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1800,
+          "patients": 923,
+          "base_mae": 11.879103913073628,
+          "background_mae": 11.895587405653323,
+          "unstacked_background_mae": 11.895587405653323,
+          "placebo_mae": 12.122211927655153,
+          "trajectory_mae": 11.80294489401288,
+          "row_level_mae": 11.79503777839154,
+          "patient_equal_deltas": {
+            "vs_base": 0.005981736815007387,
+            "vs_placebo": -0.22753646891723764,
+            "vs_trajectory": 0.09346960971169686,
+            "vs_row_level": 0.10138328424611284
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 59,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1799,
+          "patients": 923,
+          "base_mae": 11.572555400721054,
+          "background_mae": 11.644881832799062,
+          "unstacked_background_mae": 11.644881832799062,
+          "placebo_mae": 11.71636914719249,
+          "trajectory_mae": 11.615979090208567,
+          "row_level_mae": 11.626585691456826,
+          "patient_equal_deltas": {
+            "vs_base": 0.06801009288758374,
+            "vs_placebo": -0.08442501537594593,
+            "vs_trajectory": 0.01937758661371327,
+            "vs_row_level": 0.008922389891316435
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 71,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1796,
+          "patients": 923,
+          "base_mae": 11.8039681418822,
+          "background_mae": 11.730610669586092,
+          "unstacked_background_mae": 11.730610669586092,
+          "placebo_mae": 12.069727007878413,
+          "trajectory_mae": 11.7119791989226,
+          "row_level_mae": 11.71066225765161,
+          "patient_equal_deltas": {
+            "vs_base": -0.0646275704534375,
+            "vs_placebo": -0.33762739789239893,
+            "vs_trajectory": 0.01900166114775848,
+            "vs_row_level": 0.02057358670892774
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "patient",
+      "seed": 83,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1802,
+          "patients": 923,
+          "base_mae": 11.83537950616841,
+          "background_mae": 12.024799815954326,
+          "unstacked_background_mae": 12.024799815954326,
+          "placebo_mae": 12.035091717802644,
+          "trajectory_mae": 11.715423460604212,
+          "row_level_mae": 11.716066763487968,
+          "patient_equal_deltas": {
+            "vs_base": 0.17739081745855775,
+            "vs_placebo": -0.024606390939194575,
+            "vs_trajectory": 0.2985738683977456,
+            "vs_row_level": 0.2973795793545458
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "hospital",
+      "seed": 107,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1230,
+          "patients": 637,
+          "base_mae": 11.796102230994297,
+          "background_mae": 11.72398520473558,
+          "unstacked_background_mae": 11.72398520473558,
+          "placebo_mae": 12.218299169827592,
+          "trajectory_mae": 11.842743538244253,
+          "row_level_mae": 11.843808119852856,
+          "patient_equal_deltas": {
+            "vs_base": -0.0593616337080646,
+            "vs_placebo": -0.45778311282034007,
+            "vs_trajectory": -0.14188189890805972,
+            "vs_row_level": -0.14301076638390853
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "mode": "hospital",
+      "seed": 131,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 1761,
+          "patients": 917,
+          "base_mae": 11.887839618572299,
+          "background_mae": 11.88180383072495,
+          "unstacked_background_mae": 11.88180383072495,
+          "placebo_mae": 12.132815028106744,
+          "trajectory_mae": 11.801046129521215,
+          "row_level_mae": 11.79951392179706,
+          "patient_equal_deltas": {
+            "vs_base": -0.027161056199555507,
+            "vs_placebo": -0.24842385418470098,
+            "vs_trajectory": 0.07380019072956827,
+            "vs_row_level": 0.07591316970844277
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "hospital",
+      "seed": 163,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 2047,
+          "patients": 1059,
+          "base_mae": 11.624882645071079,
+          "background_mae": 11.81599421507342,
+          "unstacked_background_mae": 11.81599421507342,
+          "placebo_mae": 11.837335268247454,
+          "trajectory_mae": 11.684598222612303,
+          "row_level_mae": 11.687959903036733,
+          "patient_equal_deltas": {
+            "vs_base": 0.19956589448719986,
+            "vs_placebo": -0.0012293377421011792,
+            "vs_trajectory": 0.13435550184234854,
+            "vs_row_level": 0.1311881495587914
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    },
+    {
+      "mode": "forward_time",
+      "seed": 211,
+      "status": "complete",
+      "cells": [
+        {
+          "cell": "map@12h",
+          "rows": 2926,
+          "patients": 2926,
+          "base_mae": 11.841905678232388,
+          "background_mae": 13.111132298107067,
+          "unstacked_background_mae": 13.111132298107067,
+          "placebo_mae": 12.012156328692328,
+          "trajectory_mae": 12.291452135756826,
+          "row_level_mae": 12.283056431973154,
+          "patient_equal_deltas": {
+            "vs_base": 1.2692266198746824,
+            "vs_placebo": 1.098975969414744,
+            "vs_trajectory": 0.819680162350245,
+            "vs_row_level": 0.8280758661339157
+          },
+          "stack_contract": {
+            "candidate": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            },
+            "placebo": {
+              "phenotype_weight": 1.0,
+              "correction_scale": 1.0
+            }
+          },
+          "selective_gate": {},
+          "selective_gate_move_fraction": 1.0,
+          "placebo_gate_move_fraction": 1.0,
+          "causal_patient_update_fraction": 0.0,
+          "mean_patient_update_weight": 0.0,
+          "pass": false
+        }
+      ]
+    }
+  ],
+  "development_pass_cells": [],
+  "runtime_changed": false,
+  "external_promotion_allowed": false,
+  "causal_claim_allowed": false
+}
