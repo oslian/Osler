@@ -47,7 +47,7 @@ hours_since_onset,heart_rate,map,o2sat,glucose,creatinine,urine_output
 - 不必填滿全部變數；freshness、觀測支持與已驗證資格決定是否可輸出。
 - 正式區間只有相容calibrator及gate通過時輸出，null不等於零寬區間。
 - 詳細CSV、單位、缺失、輸出與MIMIC/eICU提取命令見
-  [RUNTIME_GUIDE.md](RUNTIME_GUIDE.md)。其歷史成果段落並非本次重新驗證。
+  [RUNTIME_GUIDE.md](docs/research/notes/RUNTIME_GUIDE.md)。其歷史成果段落並非本次重新驗證。
 
 ### 311維shared-head內部介面
 
@@ -133,7 +133,16 @@ python -m scripts.restore_research_assets --asset-dir downloaded-assets --extrac
 | artifacts/ | 可分享彙總結果；排除項列在publication manifest |
 | ROOT_CAUSE_LEDGER.md | 唯一根因帳本，已做／未做與負結果 |
 | PROJECT_STATE.md、EXPERIMENT_INDEX.md、graph.md | 日期化狀態與歷史索引 |
-| PUBLICATION_MANIFEST.json、SNAPSHOT_SHA256.json | 快照來源、範圍與完整性 |
+| adaptive_lockbox_v10/、adaptive_event_lockbox_v11/ | 凍結的一次性外部lockbox協議、結果與權重 |
+| docs/INDEX.md | 全部研究文件依主題分組的索引（自動產生） |
+| docs/research/{findings,protocols,results,notes}/ | 沒有任何程式或證據以路徑綁定的研究文件 |
+| 根目錄的 *_PROTOCOL_*.md、*_FINDINGS_*.md 等 | 被程式或凍結證據以根目錄路徑綁定（hash、bindings），不可移動 |
+| publication/ | 2026-10-05快照的PUBLICATION_*.json、SNAPSHOT_SHA256.json與範圍說明 |
+
+根目錄只保留入口文件、套件設定與被路徑綁定的研究檔案。研究文件請從 [docs/INDEX.md](docs/INDEX.md) 找；
+仍在根目錄的協議／結果文件被 audit script 的 `sha256(Path(...))`、報告 `bindings` 或 lockbox
+`frozen_code_sha256` 以根目錄路徑引用，搬動會使既有證據無法重新核對。`publication/` 內的快照清單
+記錄的是2026-10-05當時的路徑，屬歷史紀錄，不代表目前檔案位置。
 
 本次獨立副本完成release端到端驗證、188個fold-target合成parity檢查、
 19項input/runtime/archive回歸。不是新的臨床准确率或外部泛化證據。

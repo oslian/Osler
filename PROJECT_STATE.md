@@ -1211,7 +1211,7 @@ onlyfit.16/80scheduledstates;remainingfolds/outerassessmentpending. No
 generalization/promotion/runtimeclaim. See additionaltrainingprogress doc.
 
 Additional-domain MATCHED TRAINING STARTED/fold0epoch1both COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_TRAINING_PROGRESS_20260923.md`.47targets,
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_TRAINING_PROGRESS_20260923.md`.47targets,
 29542fitpeople/698766pairs;eacharm50384updates/43132uniquepairs(6.17%).
 FitSmoothL1real.6253965/process.6330501,NOTefficacy. Seenpairs/RNG/medians/
 bindingsmatch;onlyfit,allfinite,98statetensorsdiffer.2of80scheduledstates
@@ -1219,7 +1219,7 @@ complete;resumeoptimizer/RNG. No outerevaluation/calibration/runtime/promotion.
 Protocol `RECONSTRUCTION_ADDITIONAL_TRAINING_PROTOCOL_20260923.md`.
 
 Additional-domain FULL HISTORY CACHE COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_FULL_CACHE_20260923.md`. Original20.7hprocess,
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_FULL_CACHE_20260923.md`. Original20.7hprocess,
 105sites/1800214examples/73670people,4.92GiBSQLite. Allfivefolds zeroobserved
 unsupportedinputs. Labels/masks/historycounts verifiedduringbuild;independent
 fullpatient-targetidentitymatrix andlabels matchscalingcenters;allhashesvalid,
@@ -1232,7 +1232,7 @@ Lossless SQLite cache follow-up:847pilotexamples roundtrip exactly,2.15MB
 databasevs12.77MBrawtensors;4235transformsrepeat.2cachetests pass inclatomic
 rollback/read-only/duplicates/corruption. No truncation/downcast. Fullcache/
 trainingpending;pilotcompressionnotpopulationestimate. Newcache reportbound.
-`RECONSTRUCTION_ADDITIONAL_TENSORS_20260922.md`. Priorfixed38personpilot yields
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_TENSORS_20260922.md`. Priorfixed38personpilot yields
 847acceptedexamples/37people;rawlabels,fulltarget/siblingmasks,eventcounts match.
 4235foldtransformsfinite/nonvaluechannelsidentical;nounsupportedinputsINPILOT.
 12.77MBpayload;illustrativefull25.29GiBbeforeoverhead,notrepresentativeestimate.
@@ -1242,7 +1242,7 @@ trainingstillpending;no runtime/promotion. Use rawsharedcache,notfivecopies.
 Additional-domain fit-only SCALING COMPLETE:
 Follow-up:12randommixed-source streams match reference acceptedlabelvalues;
 9combinedtests pass;scaling/upstream code+eventindex bindings reverified.
-`RECONSTRUCTION_ADDITIONAL_SCALING_20260922.md`. All1800214acceptedlabels/
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_SCALING_20260922.md`. All1800214acceptedlabels/
 73670people recovered;five fit-only patient-equal raw-unit median/IQR scalers.
 Heldout mutation leaves parameters exactly unchanged. Six schema channels
 unsupported in every fold. New extraction SQL conflict regression fixed before
@@ -1250,7 +1250,7 @@ use;five tests pass,not an explanation of historical failures. No training,
 runtime or promotion. Next fit-only input support and masked history preparation.
 
 Additional-domain independent ROLES COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_PARTITIONS_20260922.md`. All73944candidatepeople,
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_PARTITIONS_20260922.md`. All73944candidatepeople,
 38components;5outerfolds,fit/selection/calibration/test fullyseparate;testonce.
 Fit29542-29634people13-18components;calibration14768-14772people7-8components.
 36/47targets>=30in>=3componentsEVERYrole/fold;11thin-domaininclaniongap/
@@ -1263,7 +1263,7 @@ vocabulary/normalization+maskedtraininghistories,matchedphysiology/process.
 Oldselectedcohortgapunchanged;no newuntouchedexternalclaim.
 
 Additional-domain FULL masked-history acceptance COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_MASK_FULL_20260922.md`. All1810110anchors73812people;
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_MASK_FULL_20260922.md`. All1810110anchors73812people;
 1800214accepted/5467no-fresh-label/4429no-independent-history.73670peoplewith
 acceptedexamples47targets;46targets>=30in>=6components(myoglobinonly2).
 105shardhashes+allbounddependencies+EXACToriginalqueryidentityverified.
@@ -1274,7 +1274,7 @@ Next prospectivecomponent-disjointfit/cal/test+role/vocabularysupportbefore
 matchedphysiology/process fitting. Earlier full-run-pending notes superseded.
 
 Additional-domain masked-history PARITY PILOT COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_MASK_PARITY_20260921.md`. Fixedonepatient/component,
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_MASK_PARITY_20260921.md`. Fixedonepatient/component,
 38people850frozenanchors;existingreconstruction_examples acceptanceandcounts
 exactlymatchaudit:847accepted,2no-fresh-label,1no-independent-history. Existing
 sourceversion/conflict replay reused;quality/latestdraw/age/target+siblingmask.
@@ -1283,7 +1283,7 @@ replay NOT run;pilotfractionnotpopulationestimate. No training/roles/promotion/
 runtime. Fullmodeimplemented;nextcompleteallanchoracceptancebeforepartition.
 
 Additional-domain candidate ANCHORS COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_ANCHORS_20260921.md`. All105lab+bedsidehospital
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_ANCHORS_20260921.md`. All105lab+bedsidehospital
 shards verified;73812people/1810110patient-targetanchors/47targets,zero
 duplicatepatient-targets. Fixedhashpriority acrossallstays/sites,no numerical
 values/outcomes/roles/insulinflags. Noredrawafterlaterrejection. Fourtests,
@@ -1292,7 +1292,7 @@ revision/conflict replay andtarget+siblingmaskednonemptyhistory stillpending.
 No roles/training/accuracy/runtime/promotion. Prior selectedcohortlimitremains.
 
 Additional-domain SELECTED-COHORT preflight COMPLETE/insufficient:
-`RECONSTRUCTION_ADDITIONAL_COHORT_SUPPORT_20260921.md`. 73944candidatepeople
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_COHORT_SUPPORT_20260921.md`. 73944candidatepeople
 have127992rawinsulinrows/5394people,but127565rowsareml/hr;only32accepted
 units/hrrows/15people/fivecomponents,ratechangesfivepeople. Zero>=30component
 supportforselectedrenal/metabolic targets. Morelab/vitaldomainsNOTsamecohort
@@ -1305,7 +1305,7 @@ Proceedbroadcohortwithexplicitroles;oldselectedexpansionremainsunsupported,
 not silently replaced. Anyclinicalsubgroupmustuseverifiedpreanchorevidence.
 
 Additional-domain BEDSIDE extraction COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_DOMAIN_BEDSIDE_20260921.md`. 40,865,099mappednumeric
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_DOMAIN_BEDSIDE_20260921.md`. 40,865,099mappednumeric
 rows ->40,775,882timevalid ->40,714,118qualityvalid ->35,697,038freshunambiguous.
 70770people,5vitals each27-28components>=30people. Lab+bedsideunion73812people/
 47variables;69775both. Empty-hospital pandas string-reduction/isfinite bug
@@ -1315,7 +1315,7 @@ Next target+siblingmaskedhistorysupport,selectedcohortqualification,and
 component-disjoint fit/cal/test design; no new untouchedlockbox claim.
 
 Additional-domain canonical LAB extraction COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_DOMAIN_LABS_20260921.md`. 13,067,972mappedrawrows ->
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_DOMAIN_LABS_20260921.md`. 13,067,972mappedrawrows ->
 12,458,563unitqualitycanonical ->10,070,389freshunambiguousrows;72817people
 withfreshlab,42variables/41with>=6components>=30people. Creat70003/BUN69915/
 glucose71312 each30supportedcomponents;albumin29/protein27. Sameunit/quality/
@@ -1324,7 +1324,7 @@ runtime/promotion. Stillneedbedsideevents,targetmaskednonemptyhistory,and
 selectedcohortqualification/roleassignment. Labtablezeroisnotvitaldataabsence.
 
 Additional development-domain inventory COMPLETE:
-`RECONSTRUCTION_ADDITIONAL_DOMAINS_20260921.md`. Fullraw139367patients/208siteIDs/
+`docs/research/notes/RECONSTRUCTION_ADDITIONAL_DOMAINS_20260921.md`. Fullraw139367patients/208siteIDs/
 57components. Exclude22011knownpeople/71completehistorysites inclallroles,
 ancestor,broad,confirmation,currentcrossfit;excludeentireconnectedcomponents
 usingALLrawhistories.86447directdisjoint minus12503transitivebridgepeople=
@@ -1334,7 +1334,7 @@ tests,no extraction/training/runtime/promotion. Next samecontracteventquality
 and per-target/component support, preserve selectedcohortdefinition explicitly.
 
 Multi-domain calibration feasibility COMPLETE:
-`RECONSTRUCTION_CALIBRATION_DOMAIN_SUPPORT_20260921.md`. Current10737patients/
+`docs/research/notes/RECONSTRUCTION_CALIBRATION_DOMAIN_SUPPORT_20260921.md`. Current10737patients/
 14hospitals/8wholehistorycomponents; each existing innercal only1component.
 Selectedcreat/BUN/glucose/albumin/protein eachonly3components>=30patients
 (broad8). Enumeratealllegal>=3cal/>=3fitcomponentpartitions preservingouter:
@@ -1345,7 +1345,7 @@ developmentdomains under samecohort/timecontract+reserved-roleexclusions;
 do not rerunsameonesitecalibration or optimizewhichhospitalsusingerrors.
 
 Calibration transport diagnosis COMPLETE:
-`RECONSTRUCTION_CROSSFIT_CALIBRATION_TRANSFER_20260921.md`. All165targetfolds,
+`docs/research/notes/RECONSTRUCTION_CROSSFIT_CALIBRATION_TRANSFER_20260921.md`. All165targetfolds,
 sourceoffsetsexactlyreproduced;86supportedbothsides,20oppositesignmedian,
 38equalgroupharm/34patientharm. Retrospectiveoracle diagnosticONLY,nullwhen
 unsupported. Bitwiseequivalentfold0/1 requirealbuminoffsets .17065vs.56512
@@ -1355,7 +1355,7 @@ Five tests,no runtime/promotion. Check sourcecalibrationdomainfeasibilitybefore
 anothertraining;do not deployoracle or tuneonoutermedian.
 
 Independent crossfit offset repair COMPLETE/NOT PROMOTED:
-`RECONSTRUCTION_CROSSFIT_OFFSET_CALIBRATION_20260921.md`. All33x5folds,frozen
+`docs/research/notes/RECONSTRUCTION_CROSSFIT_OFFSET_CALIBRATION_20260921.md`. All33x5folds,frozen
 encoders, offsets fit only preassigned encoder_tune patients; no testoverlap.
 247611outerpairsretained. Macro1.673005->1.673893;selected1.874418->1.886968;
 broad1.663383->1.664499.24/14/24numericgains all/selected/broad,0incremental
@@ -1376,7 +1376,7 @@ PosthocnumericOODsensitivity,notcausal;conditionalstrength/interactions/calibrat
 remainunseparated,not a demonstrated source-trainedrepair.
 
 Exact outer variable-relation audit COMPLETE:
-`RECONSTRUCTION_CROSSFIT_VARIABLE_RELATIONS_20260921.md`. Same247610examples/
+`docs/research/notes/RECONSTRUCTION_CROSSFIT_VARIABLE_RELATIONS_20260921.md`. Same247610examples/
 33targets, latestavailable values/anchorages, alltarget+siblingmasks asserted.
 Creatinine adversecomponent: potassiumrho broad/selected .260/.264, butbicarb
 -.264/-.039 withsame .767hmedianage;phosphate294broad/15selected support.
@@ -1387,7 +1387,7 @@ no runtime/promotion. Next controlled numericablation before relationrepair;
 do not selectfeaturesusingtheseouteroutcomes.
 
 Exact outer observation-support audit COMPLETE:
-`RECONSTRUCTION_CROSSFIT_OBSERVATION_SUPPORT_20260921.md`. All247610eligible
+`docs/research/notes/RECONSTRUCTION_CROSSFIT_OBSERVATION_SUPPORT_20260921.md`. All247610eligible
 examples/33targets, same shards/fold masks, exact labels/prediction bindings.
 Glucose selected/broad fresh1h variables2.95/6.28 despite longerhistory30.87/
 26.31h; meanmedianage10.93/8.30h, labelmean differs. Creatinine adverse156person
@@ -1397,7 +1397,7 @@ summaries, not matchedphysiology or causalproof. Three tests, no model/runtime/
 promotion. Do not globallydeleteoldhistory; further relationaldiagnosisneeded.
 
 Fixed outer group-shift decomposition COMPLETE:
-`RECONSTRUCTION_CROSSFIT_GROUP_SHIFT_20260921.md`. All33targets/hash-bound
+`docs/research/notes/RECONSTRUCTION_CROSSFIT_GROUP_SHIFT_20260921.md`. All33targets/hash-bound
 predictions, exact parent means and symmetric decomposition. Against process,
 19/33 positive within-component selected/broad terms,15/33 composition terms
 (descriptive,not significance). Totalprotein selected equal-component harm
@@ -1409,7 +1409,7 @@ no exclusions/fitting/runtime/promotion. Next inspect exact same examples'
 input support/ages and label distributions within components, not another head.
 
 Fresh encoder crossfit TRAINING+OUTER EVALUATION COMPLETE:
-`RECONSTRUCTION_ENCODER_CROSSFIT_FINDINGS_20260921.md`. All5folds/2arms/8epochs,
+`docs/research/findings/RECONSTRUCTION_ENCODER_CROSSFIT_FINDINGS_20260921.md`. All5folds/2arms/8epochs,
 72executed8equivalent reused.247611pairs/10717people,247610eligible. Realmacro
 all1.673005 vsprocess1.748309/population1.726672;selected1.874418vs1.964726/
 1.954685,broad1.663383vs1.738083/1.716379. All/broad4descriptivescreens:
@@ -1421,14 +1421,14 @@ crossfitoverlapmakesinferenceconditional/descriptive.15tests,allcheckpoint
 integrityverified,no runtime/promotion/livejob. Older pendingcounts superseded.
 
 Encoder crossfit FOLD3 TRAINING COMPLETE:
-`RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Real/process8fixed
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Real/process8fixed
 epochs283008updates each,6299fitpeople;predeclaredunsupportedaniongapmask
 retained. Finalsampledfitloss.841241/.911205,noouterassessment. Finite/RNG/
 median/dependency/checkpointsha checks pass.64/80statesavailable(56executed,
 8reused). Fold4andfullouterevaluationpending. No runtime/promotion/livejob.
 
 Encoder crossfit FOLD2 TRAINING COMPLETE:
-`RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Bothreal/process8fixed
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Bothreal/process8fixed
 epochs283008updates each,5513fitpatients,differentfoldscalers. Finalfitloss
 .491907/.545704,notholdoutaccuracy. Finite/RNG/median/bindings/checkpointsha
 verified.48/80statesavailable (40executed8reused),folds3-4andallouterevaluation
@@ -1436,7 +1436,7 @@ pending. No runtime/promotion;no livejobatstageclose. Do notcomparelossacross
 folds withtheir differentnormalization.
 
 Encoder crossfit FOLD1 AVAILABLE via verified equivalence:
-`RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Fold1real independently
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Fold1real independently
 ran8epochs/283008updates; entiremodel/optimizer/RNG/log bitwiseequalfold0.
 Sameordered4969fitpatients/scalers;test andunusedinnerselectionexchange.
 Fold1process explicitlyreusesfold0process withzeroadditionaloptimization,
@@ -1445,14 +1445,14 @@ plusallouterevaluationpending. Two newtests. Notindependentmodelreplication,
 notaccuracy/promotion/runtimechange. No livejobatstageclose.
 
 Encoder crossfit FOLD0 TRAINING COMPLETE (supersedes stage1 below):
-`RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Bothfreshreal/process
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Bothfreshreal/process
 finish8fixedepochs/283008updates each,zero skips. Finalsampledloss.922825/
 .999242;notheldoutaccuracy. Finiteweights/bindings/checkpointsha/finalRNG
 matched,normalexit.16/80armepochscomplete;folds1-4plusouterevaluationpending.
 Noepochselection,noexternal/runtime/promotionclaim. No live jobatstageclose.
 
 Independent encoder training STARTED/stage1 complete (not efficacy):
-`RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Fixed5folds/2arms/8epochs,
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PROGRESS_20260920.md`. Fixed5folds/2arms/8epochs,
 fresh samearchitecture real/process numericcontrol. Fold0both epoch1complete,
 35376updates each,loss1.119969/1.131107 innewfoldunits; noouterevaluation.
 Releaselearnedweightsnotloaded;11tests includingmutatedcheckpointinitialization
@@ -1461,7 +1461,7 @@ thenfullouterassessment. Epochboundaryresumable,no live jobatstageclose.
 No runtime/promotion; cannotinfergeneralizationfromtrainingloss.
 
 Encoder fold input scaling/support replay COMPLETE (not training):
-`RECONSTRUCTION_ENCODER_FOLD_INPUTS_20260920.md`. Fit-onlypatientcenter/IQR,
+`docs/research/notes/RECONSTRUCTION_ENCODER_FOLD_INPUTS_20260920.md`. Fit-onlypatientcenter/IQR,
 unclippedaffinereplay/full10737people; masks/age/time preserved, observedzero
 distinct. Fold2myoglobin absentfit/102queryexamples,fold3aniongap absentfit/
 7269inputexamples+404unsupportedlabels. Fit-onlyvocabularymask repairsinput
@@ -1470,7 +1470,7 @@ abstention. Nine tests. No encoder/runtime/promotion changed. Pooledsource
 contains these variables: not proofoldfullmodel lackedthem or universalcause.
 
 Encoder crossfit feasibility COMPLETE (not encoder training):
-`RECONSTRUCTION_ENCODER_CROSSFIT_PREFLIGHT_20260920.md`. Full10737fitpatients,
+`docs/research/notes/RECONSTRUCTION_ENCODER_CROSSFIT_PREFLIGHT_20260920.md`. Full10737fitpatients,
 raw complete-history crosswalk:14hospitals form8components/44multisitepeople.
 Five outer folds patient/site safe, exactly-once test; inner selection only
 1-2sites.31/33patient-supported allroles;fibrinogen24test in2folds,troponin
@@ -1480,7 +1480,7 @@ Three tests/no runtime/promotion. Fold assignments private/hashbound; old
 bounded7/caches cannot provide encoder-independent outer predictions.
 
 Robust matched raw/body probe COMPLETE:
-`RECONSTRUCTION_ROBUST_RAW_BODY_PROBE_20260920.md`. All33x3fits,same64features/
+`docs/research/notes/RECONSTRUCTION_ROBUST_RAW_BODY_PROBE_20260920.md`. All33x3fits,same64features/
 alpha100/n,onlySmoothL1lossreplacesquadratic;99converged. Bodymacro3.197/2.708
 ->1.851/1.574,raw1.901/1.611,original1.798/1.560. Raw0gates;BUNpatientmean
 rawgain reversesat equal-site(.02447/.00570harm). Glucose/PTTbodybetterboth.
@@ -1488,7 +1488,7 @@ Two tests/no runtime/promotion. Lossconfoundrepaired,nouniversalrawinfoadvantage
 do notkeepreadout/lossvariants asuntestedsolecauses.
 
 Current probe tail/objective diagnosis COMPLETE:
-`RECONSTRUCTION_PROBE_TAIL_OBJECTIVE_20260920.md`. TroponinI/CPK account77.92%/
+`docs/research/notes/RECONSTRUCTION_PROBE_TAIL_OBJECTIVE_20260920.md`. TroponinI/CPK account77.92%/
 80.40%ofpositivebody-ridgeregression; CPK1.507%weightedsource mass accounts
 98.60%meansquaredloss. Fitmean/medianconstantcontrols clarifylossdependence,
 notuniformcollapseproof/PTTcounterexample. No clipping/exclusions. Two tests,
@@ -1496,14 +1496,14 @@ no runtime/promotion. Robustraw-vs-bodycomparisondistinctfromalreadyfailed
 body-onlySmoothL1refits; do notinferallrawsignalabsencefromridge.
 
 Raw-probe scaling warning REPAIRED/VERIFIED:
-`RECONSTRUCTION_RAW_PROBE_SCALING_20260920.md`. All33x3probes,32warnings/
+`docs/research/notes/RECONSTRUCTION_RAW_PROBE_SCALING_20260920.md`. All33x3probes,32warnings/
 288negativevars allsource-exactconstant,min-9.7e-35,originalscalesfinite.
 Exactconstant-onlyhandling+standardscalerothers removeswarnings;prediction
 maxdelta1.44e-11/MAE2.03e-13. Notfailurecause;priorraw/bodyfindingsunchanged.
 Two tests,no runtime/promotion;do notrepeatwarningasasignal-loss hypothesis.
 
 Current dimension-matched raw/body probe COMPLETE:
-`RECONSTRUCTION_CURRENT_RAW_BODY_PROBE_20260920.md`. All14150sourcepatients,
+`docs/research/notes/RECONSTRUCTION_CURRENT_RAW_BODY_PROBE_20260920.md`. All14150sourcepatients,
 33targets,exactmaskedhistories/currentbounded7. Raw/processPCA64vsbody64,
 samefixedridge100;rawnumericbeatsbody14/33eachgroup,zerojointgates. Glucose/PTT
 bodybetterboth;BUNsmallrawgainnotstable. Probesmacromuchworseoriginal;not
@@ -1511,7 +1511,7 @@ proofrawsignalabsence(PCA/summary/MSElimits). Two tests,no runtime/promotion.
 Weightedscalerwarningsoccurred;allreportedMAEsfinite,originnotfullyaudited.
 
 Exact MAE site-constrained readout COMPLETE:
-`RECONSTRUCTION_MAE_SITE_READOUT_20260920.md`.66HiGHSfits/all33, fixed.1L1
+`docs/research/notes/RECONSTRUCTION_MAE_SITE_READOUT_20260920.md`.66HiGHSfits/all33, fixed.1L1
 anchor/matchedobjective. Every sourceMAEconstraint passes(max~8.7e-12);
 17changed16effectivelyoriginal. Heldselected1.797984->1.791458,broad1.559771->
 1.552942;matched1.793823/1.553108. Zeroincrementalgates. PTTregressionreduced
@@ -1519,14 +1519,14 @@ notreversed;BUNbroadgain/selectedharm persists. Metricmismatchrepairedin
 candidate,nottransfer. Two tests/no runtime/promotion; no morepenaltysweeps.
 
 Site-constraint metric reconciliation COMPLETE:
-`RECONSTRUCTION_SITE_CONSTRAINT_METRICS_20260920.md`. All692SmoothL1constraints
+`docs/research/notes/RECONSTRUCTION_SITE_CONSTRAINT_METRICS_20260920.md`. All692SmoothL1constraints
 reproduce,but94site-target-groupMAEincreases(across45/66groups). Notsolecause:
 fiveheld-harminggroups have no source-siteMAEharm;PTTselectedall8sourceimprove
 yetheldpatient+.07566/site+.09878. Two tests,no fitting/runtime/promotion.
 ExactMAEconstraint notrun; scipyHiGHSavailable,requiresmatchedobjectivecontrol.
 
 Source-site constrained readout COMPLETE:
-`RECONSTRUCTION_SITE_CONSTRAINED_READOUT_20260920.md`. Samebody33linearheads,
+`docs/research/notes/RECONSTRUCTION_SITE_CONSTRAINED_READOUT_20260920.md`. Samebody33linearheads,
 fixedstrength1+pergroup/siteSmoothL1nonregression.33solves12-19iterations,
 allconstraintswithin7e-11. Heldmacroselected1.797984->1.788583,broad1.559771->
 1.550221;matchedunconstrained1.789484/1.551793.21numericgainsbothvsoriginal,
@@ -1534,7 +1534,7 @@ allconstraintswithin7e-11. Heldmacroselected1.797984->1.788583,broad1.559771->
 meanharms. Two tests,no runtime/promotion; sourceconstraintnottransferguarantee.
 
 Current latent-support diagnosis COMPLETE:
-`RECONSTRUCTION_READOUT_LATENT_SUPPORT_20260920.md`. All33/groupfit-only
+`docs/research/notes/RECONSTRUCTION_READOUT_LATENT_SUPPORT_20260920.md`. All33/groupfit-only
 standardization+LedoitWolf, fixedfit99%distance. Medianoutside9.52%selected/
 1.50%broad.14/17patient-meanregressingtarget-groups alsoinsideharm atN>=30;
 glucosebroad3084/PTT1317inside stillharm. Descriptive,notCI/promotion;
@@ -1542,7 +1542,7 @@ ellipsoidmembershipnotmatchedphysiology. Distance-onlyguardnotfullrepair.
 Two tests,no runtime; encoder-independent relation stillunresolved.
 
 Conditional nested readout CV COMPLETE:
-`RECONSTRUCTION_NESTED_READOUT_CV_20260920.md`. All33 same bounded7cachedstates,
+`docs/research/notes/RECONSTRUCTION_NESTED_READOUT_CV_20260920.md`. All33 same bounded7cachedstates,
 5outer/4innerhospitalfolds, fixed4penalties+unchanged. Ordinary selected mean
 delta-.022519->nested-.006126;14numericgains17harms2unchanged. Glucose/PTT
 stillnestedgainbutpriorencoder-unseenhospitalharm: selectionoptimismnotsolecause.
@@ -1551,7 +1551,7 @@ Two tests, no runtime/promotion. Independentheadselection already tested0917;
 fullencoder crossfit distinct, not merely repeating old head confirmation.
 
 Readout CV transfer diagnosis COMPLETE:
-`RECONSTRUCTION_READOUT_CV_TRANSFER_20260920.md`. Matched group/site weighting:
+`docs/research/notes/RECONSTRUCTION_READOUT_CV_TRANSFER_20260920.md`. Matched group/site weighting:
 24 changed heads,18 mean gains/6 harms,12 numeric gains both groups; expected
 CV delta-.030964 versus held-source-.001430, rank correlation.224 descriptive.
 No common incremental gates. Inner CV conditional on already-trained encoder
@@ -1560,7 +1560,7 @@ One test/audit pass,no runtime/promotion. Next selection must isolate encoder
 fit from head-selection roles; do not tune exclusions on these outcomes.
 
 Source-CV anchored SmoothL1 readout COMPLETE:
-`RECONSTRUCTION_ANCHORED_READOUT_20260920.md`. Currentstate, samecapacity,
+`docs/research/notes/RECONSTRUCTION_ANCHORED_READOUT_20260920.md`. Currentstate, samecapacity,
 sourcefit5hospitalfolds select.01/.1/1/10orunchanged(9targets). Anchoring
 reducesunregularizedregression: selected1.896874->1.817772(still>1.797984),
 broad1.601832->1.556647(<1.559771). Gatesselectednone,broadBUNonly.
@@ -1568,14 +1568,14 @@ Two tests,no runtime/promotion; partialoverfitrepairnotcommontransferfix.
 InnerCVconditionalonencoderalreadyfitonsource, notindependentendtoend.
 
 Frozen readout SVD diagnosis COMPLETE:
-`RECONSTRUCTION_FROZEN_READOUT_SPECTRUM_20260920.md`. Fixedbottom16/64fitSVD,
+`docs/research/notes/RECONSTRUCTION_FROZEN_READOUT_SPECTRUM_20260920.md`. Fixedbottom16/64fitSVD,
 medianvariance.655%, mediannewweightnormsquared70.95%. Removeonlycenterednew
 weakcorrection:20/33numericgainsboth, macroselected1.896874->1.882583,broad
 1.601832->1.601027, bothstillworseoriginal. Partialconditioningcause, not
 noise/collapseprooforuniversalrankfix. One test,no runtime/promotion.
 
 Current frozen-state linear readout refit COMPLETE:
-`RECONSTRUCTION_FROZEN_READOUT_REFIT_20260920.md`. Full14150sourcepatients,
+`docs/research/notes/RECONSTRUCTION_FROZEN_READOUT_REFIT_20260920.md`. Full14150sourcepatients,
 247611fit/77219selectionpairs exactpredictions. Same64dimlinearhead, weighted
 SmoothL1L-BFGS,33converged,onlyreadoutweight/biaschanged. Fit1.258742->1.190608
 butselectionselected1.797984->1.896874,broad1.559771->1.601832;0/33gatesboth.
@@ -1583,21 +1583,21 @@ BUNmeanimprovesbutfails. Two tests,no runtime/promotion. Optimizationgapnot
 sufficientcause; currentbodyfeaturescachedforconditioning/shift diagnosis.
 
 Bias-polish source-held-site selection COMPLETE:
-`RECONSTRUCTION_BIAS_POLISH_SELECTION_20260920.md`. All33,90/3323sourcepeople,
+`docs/research/notes/RECONSTRUCTION_BIAS_POLISH_SELECTION_20260920.md`. All33,90/3323sourcepeople,
 2470/74749pairs, verifiedfit/tunepatient+siteisolation. Existingbothgroup
 incrementalgate:selected0,broadBUNonly,intersection0. Savedselectedcandidate
 alltensorsexactoriginal; no accuracybenefit/promotion. Three tests. Universal
 biasrepairrejected; stop offset/slope/gatetuning, reviewrepresentationevidence.
 
 All33 bias-polish site diagnosis COMPLETE:
-`RECONSTRUCTION_BIAS_POLISH_SITES_20260920.md`. BUNselected9/11sitegains,allLOO
+`docs/research/notes/RECONSTRUCTION_BIAS_POLISH_SITES_20260920.md`. BUNselected9/11sitegains,allLOO
 negative,onlysiteevidencefails; broad7/7gains. Bicarbbroad5/7sitesharm,
 equal-sitepositive, notjustpower. Creatbroad5/7harms,allLOOpositive.
 Weighting flips13selected/6broadtargets. No gate/site changes or promotion;
 distinguish insufficient evidence from opposing effects before furtherrepair.
 
 All33 source-fit bias polish COMPLETE:
-`RECONSTRUCTION_BIAS_POLISH_20260920.md`. Full10737patients247611pairs;
+`docs/research/notes/RECONSTRUCTION_BIAS_POLISH_20260920.md`. Full10737patients247611pairs;
 expectedSmoothL1biasoptima, onlyreadout.biaschanged, allotherweightsidentical.
 Fitmacro1.258742->1.246812. ReusedevaluationselectedMAE2.909265->2.895306,
 broad1.280861->1.278737;22/18numericgains,12both. Incrementalpatient/site
@@ -1606,7 +1606,7 @@ averageimprovesbutsitep.0967, unlike90selection. Three tests, no runtime.
 Trainingreadoutgaprepairedincandidate; ranking/generalizationunresolved.
 
 BUN bias stationarity COMPLETE:
-`RECONSTRUCTION_BUN_BIAS_STATIONARITY_20260920.md`. Expectedboundedweights,
+`docs/research/notes/RECONSTRUCTION_BUN_BIAS_STATIONARITY_20260920.md`. Expectedboundedweights,
 equalgroupSmoothL1scalar optimumshift-.259876; gradient.193945->0.
 FitMAE.889197->.833171,SmoothL1.517784->.492410,so metrictradeoffnotsoleoffset
 cause. Broadselection7.28%gain,selectedCIcrosszero. Nonstationaryreadoutdata
@@ -1614,14 +1614,14 @@ risknotglobaloptimizerfailure. Two tests,no runtime/promotion. Fixedalltarget
 source-fitbiaspolish isdistinctnextrepair; mustretainindependentgates.
 
 BUN signed site residual/contract audit COMPLETE:
-`RECONSTRUCTION_BUN_SITE_RESIDUAL_20260920.md`. Selected90:71at449,effective
+`docs/research/notes/RECONSTRUCTION_BUN_SITE_RESIDUAL_20260920.md`. Selected90:71at449,effective
 sites1.55; median+.157CI[-.410,.498], no provenoppositebias. Broad3086same4
 sites allnegative medianCIs, effective2.60. Cohortinsulinrestrictiondistinct
 fromrawmeasurementanchor; hospitalrolesnonrandom. Broadbiasnotonesiteonly,
 selectedconditionalshiftunproven. Auditexit0,no weights/split/runtime/promotion.
 
 BUN fit-defined conditional residual audit COMPLETE:
-`RECONSTRUCTION_BUN_CONDITIONAL_RESIDUAL_20260920.md`. Four pooledfitprediction
+`docs/research/notes/RECONSTRUCTION_BUN_CONDITIONAL_RESIDUAL_20260920.md`. Four pooledfitprediction
 bins, broadselection allmedianresidualCIsnegative. SelectedselectionN11/12/19/48,
 onlylast>=30CI[-.488,.464]; insufficienttoestablishoppositeconditionalregime.
 Highestbin53.3%selectionvs28.2%fitselected. Composition/supportremain; no
@@ -1629,14 +1629,14 @@ outcome-derivedrouting. Two tests,no runtime/promotion. Do notclaim identical
 states requireoppositeanswers orfitcorrections on90selectionpatients.
 
 BUN affine-calibration/rank diagnostic COMPLETE:
-`RECONSTRUCTION_BUN_AFFINE_TRANSFER_20260920.md`. Samefit/selectioncachedpairs,
+`docs/research/notes/RECONSTRUCTION_BUN_AFFINE_TRANSFER_20260920.md`. Samefit/selectioncachedpairs,
 medianaffine source-only. Fullslopes1.042/.922; extra slope vs offset has
 oppositegroupbenefits, no transferablefix. Spearman.440/.384, outputSDsmaller
 thantruth but notproofmiscalibration (conditionalmedian). Two tests,no runtime/
 promotion. Do not keep escalating scalarcalibration onthese reusedoutcomes.
 
 BUN source-fit offset transfer COMPLETE:
-`RECONSTRUCTION_BUN_OFFSET_TRANSFER_20260920.md`. Fitmedianintercepts529/9664,
+`docs/research/notes/RECONSTRUCTION_BUN_OFFSET_TRANSFER_20260920.md`. Fitmedianintercepts529/9664,
 applybothsets90/3086disjointsource-selectionpairs, exactbaseline. Broadfull
 MAE.893612->.822632/.820202 (7.94/8.21%gain); selected worsensnumerically,
 CIcrosszero. Aftercalibratingbotharms bodyoff stillbroadgain-.01139/-.00873,
@@ -1645,7 +1645,7 @@ notuniquephysiologicalcause. Two tests,no runtime/promotion. Signedpredictions
 cached; next diagnose remaining conditional error without outcome-tuned routing.
 
 BUN integration-resolution diagnostic COMPLETE:
-`RECONSTRUCTION_BUN_INTEGRATION_RESOLUTION_20260920.md`. Same90/3086source
+`docs/research/notes/RECONSTRUCTION_BUN_INTEGRATION_RESOLUTION_20260920.md`. Same90/3086source
 pairs, fixed bounded7; steps1/.5/.25h, originalerrors reproduce1e-7.
 Broad quarter-step MAE .893612->.893357 (0.0285%), selected CIcrosszero.
 Much smaller than body-off4.751%; coarse stepping insufficient explanation.
@@ -1653,7 +1653,7 @@ Field itself uses substep input, not pure solver convergence. Two tests,
 no runtime/promotion; do not repeat finer-step tuning as an untested repair.
 
 Protected dynamics finite-step replay COMPLETE:
-`RECONSTRUCTION_DYNAMICS_FINITE_STEP_20260920.md`. Fixed.01,2directionsand
+`docs/research/notes/RECONSTRUCTION_DYNAMICS_FINITE_STEP_20260920.md`. Fixed.01,2directionsand
 equal-L2unprotectedcontrols; all33originalsource-selectiontargets,exactbaseline.
 TinyBUNchanges,onlyprobe0broadnominalCIgain; no consistentselectedbenefit.
 ProtectednumericalSmoothL1harms12-16/33pergroup. Not significance/promotion;
@@ -1661,14 +1661,14 @@ no probe/stepselectedafterresults. Four tests,runtimeunchanged. Representative
 lossprotection unresolved; no repeatedtiny-stepsearch ontheseoutcomes.
 
 Body-dynamics protected-descent probe COMPLETE:
-`RECONSTRUCTION_DYNAMICS_DESCENT_20260920.md`. All66group-targettasks,up-to64
+`docs/research/notes/RECONSTRUCTION_DYNAMICS_DESCENT_20260920.md`. All66group-targettasks,up-to64
 disjointfitpatients/probe. Convexprojection feasible,norm.533/.688; BUNpositive
 descent onotherprobe, but27/66and20/66other-taskdotsnegative(vs31/28unprotected).
 Not actualstep/accuracy, not robustlossprotection or impossibility. Three tests,
 no weights/runtime/promotion. Source-selection finite-step response untested.
 
 BUN weighted-objective reconciliation COMPLETE:
-`RECONSTRUCTION_BUN_WEIGHTED_OBJECTIVE_20260920.md`. Exactsampler7selected/
+`docs/research/notes/RECONSTRUCTION_BUN_WEIGHTED_OBJECTIVE_20260920.md`. Exactsampler7selected/
 8finalRNG/sets,3752BUNdrawseach. BodyofflowerMAE/SmoothL1underpatient,expected
 boundedweights,andactualdrawweightsbothgroups. ActualdrawSmoothL1delta-.003992/
 -.013471. Not solelysamplerweightmismatch; BUNcomponentnotwholemultitargetloss,
@@ -1676,7 +1676,7 @@ not convergenceproof. No training/runtime/promotion. Common loss-preserving
 repair remains unproven; global deletion already rejected.
 
 BUN fitting loss/exposure diagnosis COMPLETE:
-`RECONSTRUCTION_BUN_DYNAMICS_FIT_20260920.md`.529/9664fitpairs; exact8epoch
+`docs/research/notes/RECONSTRUCTION_BUN_DYNAMICS_FIT_20260920.md`.529/9664fitpairs; exact8epoch
 sampler counts/RNG/seen sets reconstruct selected7. Broad2934actuallyseen BUN
 pairs bodyoff improvesMAE-.021316andSmoothL1-.014481, bothdescriptiveCInegative.
 Selected527seen SmoothL1CIcrosszero. Not solely externalshift or MAEobjective
@@ -1684,7 +1684,7 @@ mismatch; harmfulbranch exists on trainedpairs. Not convergence/gradientconflict
 proof or draww eightedobjective. Four tests,no fitting/runtime/promotion.
 
 All33 dynamics branch diagnostic COMPLETE:
-`RECONSTRUCTION_ALL_DYNAMICS_BRANCHES_20260920.md`. Original90+90source,
+`docs/research/notes/RECONSTRUCTION_ALL_DYNAMICS_BRANCHES_20260920.md`. Original90+90source,
 2470/2025pairs,fullpatienterrorsreproduce. Bodyoffmacro1.797984->1.811577selected,
 1.787841->1.796712broad;24/33and21/33numeric harms. No nominalbodyoffCIgain
 inbothtargetgroups. Organoffmixed. Universalbranchdeletion REJECTED; BUNharm
@@ -1692,7 +1692,7 @@ notglobaldynamicsfailure. Four tests,no fitting/runtime/promotion. Remaining
 conditionaldrift/supervision problem notsolecausedetermined; sixheads pending.
 
 BUN body/organ dynamics branches COMPLETE:
-`RECONSTRUCTION_BUN_DYNAMICS_BRANCHES_20260920.md`.90/3086source,normalfullerror
+`docs/research/notes/RECONSTRUCTION_BUN_DYNAMICS_BRANCHES_20260920.md`.90/3086source,normalfullerror
 exact. Broadoffbody-.042459(4.751%gain),offorgan-.013330(1.492%gain),bothCI
 negative; selectedbothCIs crosszero. Offbodyequalsbothoff exactlybycurrent
 readout graph, not organuselessness. Priorno-dynamics mismatch max1.192e-7,
@@ -1700,7 +1700,7 @@ recorded numericalcheck only; no statisticalgatechange. Two tests,no runtime/
 promotion. All33sourcebranch replay needed before globaldynamics trainingrepair.
 
 BUN history/dynamics factorial replay COMPLETE:
-`RECONSTRUCTION_BUN_HISTORY_DYNAMICS_20260920.md`.90/3086sourcepairs,fullforward
+`docs/research/notes/RECONSTRUCTION_BUN_HISTORY_DYNAMICS_20260920.md`.90/3086sourcepairs,fullforward
 exact. Allobservations/no between-eventdynamics broad.893612->.851153(-4.751%),
 deltaCInegative;selected1.105465->1.136537CIcrosszero. Afterdynamicsdisabled,
 deletingoldobservations additional-.001424broadCIcrosszero. Originalclock,
@@ -1709,7 +1709,7 @@ not universaldeletionrepair; bodyvsorgan driftunisolated. Focusedreplaytest
 passes,no fitting/runtime/promotion. Next distinguish body/organ contributions.
 
 BUN site/support localization COMPLETE:
-`RECONSTRUCTION_BUN_HISTORY_STRATA_20260920.md`. Exact90/3086source pairs and
+`docs/research/notes/RECONSTRUCTION_BUN_HISTORY_STRATA_20260920.md`. Exact90/3086source pairs and
 sample-site metadata. All4broad sites favor latestcoverage; equal-site sign
 stillselectedharm/broadgain. Within449site+33events signreversal persists but
 selectedCIcrosszero. Broad benefit mainlylong/repeatedhistories, alsofreshlatest
@@ -1717,7 +1717,7 @@ values. No site-only/length-only universalrepair; content versus elapsed-time
 state evolution remainsunisolated. Three tests,no fitting/runtime/promotion.
 
 Full BUN latest-coverage source replication COMPLETE:
-`RECONSTRUCTION_BUN_FULL_HISTORY_20260920.md`.90selected/3086broad, exactold
+`docs/research/notes/RECONSTRUCTION_BUN_FULL_HISTORY_20260920.md`.90selected/3086broad, exactold
 patient replay. Broad full.893612->latest.857813(-4.006%), deltaCI[-.04246,-.02914];
 additional3003replicate. Selected1.105465->1.157538(+4.711%, borderlineunadjusted
 CIpositive). Morehistory notuniversallybeneficial, not a universal truncation
@@ -1725,7 +1725,7 @@ fix. Initialization/age/frequency/casemix remainconfounded; site/pre-anchor
 support diagnosis before retention gate. Five tests; no fitting/runtime/promotion.
 
 Latest-variable coverage control COMPLETE:
-`RECONSTRUCTION_LATEST_COVERAGE_20260920.md`. Original90+90source-selection,
+`docs/research/notes/RECONSTRUCTION_LATEST_COVERAGE_20260920.md`. Original90+90source-selection,
 2470/2025pairs,33targets; full/last1 exactly reproduce. Latest-per-variable
 MAE1.810225selected/1.781377broad vs full1.797984/1.787841; most last1 aggregate
 loss removed, so coverage loss confounded prior memory interpretation. Repeat
@@ -1735,7 +1735,7 @@ confounds remain. Seven tests; no fit/runtime/promotion. Replicate BUN source
 reversal on larger existing source before inventing a history gate.
 
 History suffix diagnostic COMPLETE:
-`RECONSTRUCTION_HISTORY_SUFFIX_20260920.md`. Original90+90source-selection,
+`docs/research/notes/RECONSTRUCTION_HISTORY_SUFFIX_20260920.md`. Original90+90source-selection,
 2470/2025pairs,33targets; exactfullscore replay. Last1 worsens bothaggregate
 scores, last8 mixed. Not total history non-use. Truncation also removes latest
 variable coverage and changes initialization; latest-per-variable control next.
@@ -1743,7 +1743,7 @@ Raw-summary/body ridge already tested20260917, not a new untested remedy.
 Four tests; no runtime/weights/interval/promotion changes.
 
 Full source creatinine update trace COMPLETE:
-`RECONSTRUCTION_CREATININE_FULL_UPDATE_20260920.md`.90selected/3095broad,
+`docs/research/notes/RECONSTRUCTION_CREATININE_FULL_UPDATE_20260920.md`.90selected/3095broad,
 exactfinalsource scores. Updatechange-.0177CI[-.1223,.0845]selected;
 -.07537CI[-.08927,-.06162]broad;original83alsoimprove. Earlier8patientharm
 DOESNOTreplicate; do not remove lastupdate. No >=30broadpresent-variable
@@ -1751,7 +1751,7 @@ stratum has positivemean, exploratory/overlappingnotcausal. No fit/runtime/
 promotion; finalupdateusefulness differsfrommodel-to-modelgeneralization.
 
 Final state-update trace COMPLETE:
-`RECONSTRUCTION_FINAL_UPDATE_TRACE_20260920.md`.525sourceencoderexamples,<=8per
+`docs/research/notes/RECONSTRUCTION_FINAL_UPDATE_TRACE_20260920.md`.525sourceencoderexamples,<=8per
 target/group,finaloutputs reproduce1e-7. Lastupdate macro-.0463/-.1535benefit,
 lastadvance+.0012/+.00485,finalgap+.00044/+.00034. Creatlastupdateharm bothsmall
 probes,other renal/metabolic mixed; notsignificance/skipupdatejustification.
@@ -1759,14 +1759,14 @@ Intermediateanchortruth errors retrospective,notearliertimeforecasts. No fit/
 runtime/promotion; expand sourcepaired/content diagnostic before intervention.
 
 Full gradient reachability COMPLETE:
-`RECONSTRUCTION_GRADIENT_PATHS_20260920.md`.66sourceprobes/33targets,bounded7;
+`docs/research/notes/RECONSTRUCTION_GRADIENT_PATHS_20260920.md`.66sourceprobes/33targets,bounded7;
 99/2245requiresgradtensors connected. Allbody/organupdate,dynamics,message,
 readoutandmixers receive nonzerogradients. Unusedfutureheads expected in current
 reconstruction;one-stepbelief recurrence not fullpersistent disconnect. No
 blanket deadpath supported,notgeneralizationproof. No updates/runtime/promotion.
 
 Bounded-site frozen EVALUATION COMPLETE:
-`RECONSTRUCTION_BOUNDED_SITE_EVALUATION_20260920.md`. Broaduniform1.277458->
+`docs/research/notes/RECONSTRUCTION_BOUNDED_SITE_EVALUATION_20260920.md`. Broaduniform1.277458->
 bounded1.280861(+.266%),selected2.918501->2.909265(-.316%);17/33,20/33numeric
 gains. Creatbothimprove,BUN/lipasebothharm,glucosetradeoff. Zero pairedpatient/
 sitepassesboth;0alldiagnosticcomparisons.11bindingsverified,exactpairs/reference
@@ -1774,21 +1774,21 @@ scores. Source-1.14%doesnottransfer uniformly; boundedsite sampling notrepair.
 Newcontrolsnotfit,33trained6pending;no runtime/promotion. Do not repeat asnew.
 
 Bounded-site matched TRAINING COMPLETE, evaluation pending:
-`RECONSTRUCTION_BOUNDED_SITE_TRAINING_20260920.md`. Bothuniform/boundedreplacement
+`docs/research/notes/RECONSTRUCTION_BOUNDED_SITE_TRAINING_20260920.md`. Bothuniform/boundedreplacement
 8epochs283008updates,selected7both. Source macro1.813590->1.792913(-1.14%),
 20/33numericimprovements eachgroup. Creat/BUNselected improvebutbroad worsen;
 tradeoffs remain. Seven tests; no evaluation/promotion/runtimechanges. Freeze
 selectedcheckpoints for identical-pair evaluation; oldcontrolsnotnewpromotion.
 
 Bounded site sampler IMPLEMENTED/PREFLIGHTED, not trained:
-`RECONSTRUCTION_BOUNDED_SITE_PREFLIGHT_20260920.md`. Source-count-only weights
+`docs/research/notes/RECONSTRUCTION_BOUNDED_SITE_PREFLIGHT_20260920.md`. Source-count-only weights
 projected [.5,2],mean1; five tests. Median site-massTV.139selected/.276broad;
 min effectivepatientfraction.672/.677. Bound expected, notrealized repeats.
 Matched uniform with-replacement control required; previous queues not enough
 to isolate sites. Protocolfixed, no outcome-tuned weights/runtime/promotion.
 
 Complete source-site preflight COMPLETE:
-`RECONSTRUCTION_SITE_BALANCE_PREFLIGHT_20260920.md`. Selected3multi-sitepeople/
+`docs/research/notes/RECONSTRUCTION_SITE_BALANCE_PREFLIGHT_20260920.md`. Selected3multi-sitepeople/
 98pairs uniquelyrawmatched; all335780sourceexamples mapped, roles/shards checked.
 Naive equal-site weights inflate singleton selectedpatients48.73x; broadtrig
 52.39x(4people),directbili80.27x(3,untrained). Not measured harm but major
@@ -1797,7 +1797,7 @@ no training/runtime/promotion. Bothgroup provenance nowresolved; source-only
 bounded-influence weighting plus matchedcontrol needed before efficacy claims.
 
 Broad-source sample site recovery COMPLETE:
-`RECONSTRUCTION_SAMPLE_SITE_RECOVERY_20260920.md`. All45ambiguouspatients,
+`docs/research/notes/RECONSTRUCTION_SAMPLE_SITE_RECOVERY_20260920.md`. All45ambiguouspatients,
 1286pairs exact tensor/time/truth/query replay incl4legacy shared-RNGpatients.
 All45have targets spanning sites. Private sidecar retains sample stay/site/
 anchor and13479singleton site mappings; no samples changed/excluded. Fourtests.
@@ -1806,7 +1806,7 @@ group site provenance still needs checking for two-group balanced training.
 No runtime/interval/weight/promotion changes.
 
 Source-only site alignment COMPLETE:
-`RECONSTRUCTION_SOURCE_SITE_ALIGNMENT_20260920.md`. Fit10201people/11sites,
+`docs/research/notes/RECONSTRUCTION_SOURCE_SITE_ALIGNMENT_20260920.md`. Fit10201people/11sites,
 tune3323/4sites; unambiguous tune largestsite50.44%, effective2.55sites.
 35fit/10tune multi-site patients lack per-target stay/site in cached samples,
 excluded only from diagnostic site summaries, never arbitrarily assigned.
@@ -1816,7 +1816,7 @@ Five tests,no fitting/runtime/promotion. Recover exact sample provenance before
 site-balanced training; do not equate morepeople with moreindependent hospitals.
 
 Continued site-weighting diagnosis COMPLETE:
-`RECONSTRUCTION_CONTINUED_SITE_TRANSFER_20260920.md`. Frozen latest evidence
+`docs/research/notes/RECONSTRUCTION_CONTINUED_SITE_TRANSFER_20260920.md`. Frozen latest evidence
 reproduces. Broad vs old32/33 favorable pooled/site means,22fail site evidence;
 vs previous expanded10pooled/12site mean failures,all33site evidence failures.
 Weighting sign flips8/33broad incremental,11/33selected-vs-old. Objective
@@ -1825,7 +1825,7 @@ Three tests; aggregate-only artifact; no runtime/promotion. Next source-only
 site support/loss check before any reweighting, never evaluation-derived weights.
 
 Continued expanded-source replay COMPLETE:
-`RECONSTRUCTION_CONTINUED_SELECTION_RESULTS_20260920.md`. All0-19epochs on
+`docs/research/results/RECONSTRUCTION_CONTINUED_SELECTION_RESULTS_20260920.md`. All0-19epochs on
 3323broadsource,original90scores exact. Allscopes/equalgroupstillselect16;
 32/33fullbroadnumericallybeatprior,notpromotion. Creat/lipase7->16means turn
 harm withlargersourcebutpaired95%CIs crosszero bothold/new: unsupportedtiny
@@ -1834,7 +1834,7 @@ postselection/unadjusted. No alternativecheckpointrepair or runtimepromotion;
 sixheadsremainpending. Newepochsource replay no longeruntested.
 
 Continuation transfer localization COMPLETE:
-`RECONSTRUCTION_CONTINUATION_TRANSFER_20260920.md`. Selected7->16creatinine
+`docs/research/notes/RECONSTRUCTION_CONTINUATION_TRANSFER_20260920.md`. Selected7->16creatinine
 source slightlyimprovesbothgroups butevaluation worsensboth; lipasesamesigns.
 Not simply sacrificedsource score; smallsourcegains/noiseshift unseparated.
 Source/evaluation signs disagree15/33broad12/33selected, descriptiveonly.
@@ -1843,7 +1843,7 @@ bindings/logsexact. No runtime/promotion. Expandedsourceepoch9-19replay remains
 distinctnextdiagnostic, not newexternaltest;33trained6pending retained.
 
 Complete-exposure continuation TRAINED/EVALUATED:
-`RECONSTRUCTION_COVERAGE_CONTINUATION_RESULTS_20260920.md`. All3arms8->19,
+`docs/research/results/RECONSTRUCTION_COVERAGE_CONTINUATION_RESULTS_20260920.md`. All3arms8->19,
 672144updates each, old8logs exact/fullfinalbroadexposureverified. Source
 selectsreal16/process6/placebo18: selectedrealnotfullcoverage(8576draws).
 Broadmacro1.269761->1.265322(-.350%),selected2.911144->2.893127(-.619%);
@@ -1854,7 +1854,7 @@ Moreexposurehelpspartly,notuniquecause/retentionsolution. Newepochs expanded
 source selection remains separate; avoidevaluation-oracle target checkpoints.
 
 Expanded source selection replay COMPLETE:
-`RECONSTRUCTION_EXPANDED_SELECTION_RESULTS_20260919.md`. Allsavedepochs0-8,
+`docs/research/results/RECONSTRUCTION_EXPANDED_SELECTION_RESULTS_20260919.md`. Allsavedepochs0-8,
 3323sourcepatients incl90original/3233additional; oldscores reproduce1e-7.
 Equalgroup best7->8only.0312%gain. Fullbroad31/33numericallybeatprior(epoch8),
 trig/tropstillharm; not31promotions. Glucoseold90harm becomesfullbroadgain,
@@ -1864,7 +1864,7 @@ Fulltrainingexposure andsixpendingheads remain; source re-evaluation is no
 longer untested. Bestlast epoch doesnotproveconvergence.
 
 Complete-source scope reconciliation COMPLETE:
-`RECONSTRUCTION_COMPLETE_SOURCE_SCOPE_20260919.md`. Actualdense exposure3752
+`docs/research/notes/RECONSTRUCTION_COMPLETE_SOURCE_SCOPE_20260919.md`. Actualdense exposure3752
 selected/4288final vs~9500-10100available; sparse6trainedtargets fullyvisited.
 Sixuntrainedtargets allhaveexpandedfit/tunesupport, butoldselectedfit3AG/15LDH/
 23amylase insufficient for naiveequalgroupdraws. Originalbroadtune6fib/7lipase/
@@ -1873,14 +1873,14 @@ verified;2tests. Supportnotaccuracycauseproof. Next source-only fullselection
 epoch replay before complete-source training; no runtime/interval/promotion.
 
 Score-versus-local-gradient replay COMPLETE:
-`RECONSTRUCTION_SCORE_GRADIENT_20260919.md`. Topfive51.19%sourceMAE contribute
+`docs/research/notes/RECONSTRUCTION_SCORE_GRADIENT_20260919.md`. Topfive51.19%sourceMAE contribute
 22.12%/20.65%gradientnormmass,19.11%/11.73%signedmeanprojection in savedtwo
 8patient probes. ExactGram-dot reconstruction verified. Not majority local
 gradient domination or fullAdam/encoder causalityproof. Six tests; no fitting,
 newweights/runtime/promotion. Do not set target weights from smallprobe ranks.
 
 Source selection concentration audit COMPLETE:
-`RECONSTRUCTION_SELECTION_CONCENTRATION_20260919.md`. Sixsource trajectories
+`docs/research/notes/RECONSTRUCTION_SELECTION_CONCENTRATION_20260919.md`. Sixsource trajectories
 reproduce; AST/CPK/ALT/bilirubin/lipase contribute50.20%-51.88%ofmacroerror.
 But leave-one-target-out changes0/33epochs in5/6arms; relativeerror selection
 stillchooses7expanded/5moment. Not score-rescaling-alone repair or proof of
@@ -1888,7 +1888,7 @@ training gradient domination. Five tests; no newselector/evaluation/fitting,
 runtime or promotion. All33trained/sixpending retained.
 
 Moment-clock training/evaluation COMPLETE:
-`RECONSTRUCTION_MOMENT_CLOCK_RESULTS_20260919.md`. Same accumulated setup,
+`docs/research/results/RECONSTRUCTION_MOMENT_CLOCK_RESULTS_20260919.md`. Same accumulated setup,
 only betas changed to(.9**528,.999**528). Source selects5(score1.816181), but
 broadmacro1.279049->1.285663 andselected2.893760->2.927830 worsen.13/33targets
 numerically improve each,0reportedcomparisonpasses. Glucose slightly improves
@@ -1898,14 +1898,14 @@ cohorts/no matchednewcontrols/future/interval/promotion; runtime unchanged.
 Supersedes moment-clock-untested statements below. Do not repeat as untested.
 
 Decay-only accumulation trial COMPLETE:
-`RECONSTRUCTION_DECAY_RESULTS_20260919.md`.8epochs,same528blocks/sqrtLR/source
+`docs/research/results/RECONSTRUCTION_DECAY_RESULTS_20260919.md`.8epochs,same528blocks/sqrtLR/source
 order; onlywd.01->.229722. Selected7(source1.820250vs1.817846). Broadmacro
 1.279049->1.280008,selected2.893760->2.907537: noaggregate repair. Decayclock
 difference exists but matchingnotmissing solution. No runtime/interval/promotion;
 33trained6pending. Momentclock/stepcount remainunisolated,notprovedcauses.
 
 Accumulation optimizer-clock audit COMPLETE:
-`RECONSTRUCTION_OPTIMIZER_CLOCK_20260919.md`.ActualAdamW(.9,.999),wd.01;
+`docs/research/notes/RECONSTRUCTION_OPTIMIZER_CLOCK_20260919.md`.ActualAdamW(.9,.999),wd.01;
 momenthalf-life grows528xperexample; decay-only factor sequential.753514 vs
 sameLR.999464/sqrtLR.987759.81tensors283008steps,18have276357;accum99all536.
 2212no-state notprovenbug. Exactdecaymatchinghelper testedrealAdamWzero-grad;
@@ -1913,7 +1913,7 @@ notfullAdam equivalence or causalerrorproof.4tests,no training/runtimechange.
 Next separate decay-clock intervention from moment-clock adjustment.
 
 Balanced accumulation intervention COMPLETE:
-`RECONSTRUCTION_ACCUMULATION_RESULTS_20260919.md`.2real8epoch fits,283008same
+`docs/research/results/RECONSTRUCTION_ACCUMULATION_RESULTS_20260919.md`.2real8epoch fits,283008same
 examples but536Adamsteps; sourcechoosessqrtLR epoch7. Broadmacro1.269761->
 1.279049harm,selected2.911144->2.893760gain;9/33,16/33numericimprovements.
 Glucosebothimproveandselectedbeatsprioragain;BUNbothharm.0reportedcomparison
@@ -1922,7 +1922,7 @@ currentreconstructiononly;notpurevariancecausality(steps/LR/decaychanged).
 33trained/6pending;runtimeunchanged. Do not repeat exactaccumulationasnew.
 
 Gradient sample-size reliability COMPLETE:
-`RECONSTRUCTION_GRADIENT_SAMPLE_SIZE_20260919.md`.Disjointnested8/16/32/64patient
+`docs/research/notes/RECONSTRUCTION_GRADIENT_SAMPLE_SIZE_20260919.md`.Disjointnested8/16/32/64patient
 sourceprobes; common63tasks cosine median.024/.075/.204/.372. Negativepairs
 32/26/21/14(all supported). At64 no repeatedlynegative crossgroup target among
 30supported;selectedCPK/lipase/tropunsupportedat64,notpassed. Localgateonly,
@@ -1931,7 +1931,7 @@ Next distinctrepair: controlled balancedpatientgradientaccumulation,not small-
 probe gradient surgery. Must control sampleexposure and optimizerstep differences.
 
 Trained body-update gradient probe COMPLETE:
-`RECONSTRUCTION_TRAINED_GRADIENTS_20260919.md`.8320bodygateparams,all33targets,
+`docs/research/notes/RECONSTRUCTION_TRAINED_GRADIENTS_20260919.md`.8320bodygateparams,all33targets,
 2groups,2disjoint8patientprobes.4crossgroupconflicts repeat; glucose notopposed,
 troponin stronglyaligned. Same-task crossprobe median cosine.098,26/66negative:
 smallprobe instability prevents universalgradientconflictclaim. LocalSGDgeometry
@@ -1939,7 +1939,7 @@ notAdam/fullencoder/intervention.2tests,no update/runtimechange. Need source-onl
 sample-size reliability before gradient surgery,not anotherunjustifiedarchitecture.
 
 Expanded checkpoint feasibility COMPLETE:
-`RECONSTRUCTION_EXPOSURE_SELECTION_20260919.md`.Onlyepoch0nonnumericallyharming
+`docs/research/notes/RECONSTRUCTION_EXPOSURE_SELECTION_20260919.md`.Onlyepoch0nonnumericallyharming
 all66; expandedtrainedepochs harm12-17,small12-18. No other commoncheckpoint
 dominates selected7expanded/8small.10expandedgroup-target transientgainslost;
 2neverbeatprior. Selectionalonecannotretainallobservedgains; notimpossibility
@@ -1947,7 +1947,7 @@ or statisticalnoninferiorityproof. Prioruniform/selectedoutputretention already
 traded electrolytebenefitforrenalharm.2tests,nooracleheads/runtimechange.
 
 Paired expanded retention localization COMPLETE:
-`RECONSTRUCTION_EXPOSURE_RETENTION_FIT_20260919.md`. Bothmodels same1252source
+`docs/research/notes/RECONSTRUCTION_EXPOSURE_RETENTION_FIT_20260919.md`. Bothmodels same1252source
 patients,132encoder scores exact. Expandedselectedglucosefit1.213390 losesprior
 1.198364; notonly generalizationfailurefor thischeckpoint. Epoch2glucose gains
 inbothsourcegroupslost atglobalselected7. OtherAST/troponinfitworsebuttunebetter,
@@ -1956,7 +1956,7 @@ Broadoldfitsubsetnotfullnewexposure. Source-only target-retention repair remains
 untested here; no oracleheads, evaluationretuning or runtimechange.
 
 Paired exposure error decomposition COMPLETE:
-`RECONSTRUCTION_EXPOSURE_INCREMENT_20260919.md`. All66pairedscores reproduce.
+`docs/research/notes/RECONSTRUCTION_EXPOSURE_INCREMENT_20260919.md`. All66pairedscores reproduce.
 Broadtotal-.048489=prior-.004524+conditional-.043965;selected+.012255=
 prior+.004615+conditional+.007640. Notcausal. Selectedglucoseprior improves
 but conditionalerror+.105779 worsens; AST+.372038,troponin+.212687. Broad
@@ -1965,7 +1965,7 @@ Remainingtradeoff notuniformoffset; source-only fit/selection followup warranted
 No fitting, routing, gates or runtimechanged; all39scope retained.
 
 Matched small/full source training + frozen evaluation COMPLETE:
-`RECONSTRUCTION_SOURCE_EXPOSURE_RESULTS_20260919.md`. Six8epoch fits,
+`docs/research/results/RECONSTRUCTION_SOURCE_EXPOSURE_RESULTS_20260919.md`. Six8epoch fits,
 283008updates/arm; selected8/2/0small,7/6/8expanded. Same queues/budget and90+90
 encoderpatients. Broadmacro1.318251small->1.269761expanded(-3.68%);selected
 2.898888->2.911144(+.42%).26/33broad,16/33selected numeric improvementsvs small.
@@ -1976,7 +1976,7 @@ averages but retention notsolved. Reusedcohorts/no external,future,interval or
 runtimepromotion. Supersedes paired-training-pending entries below.
 
 Expanded source loading and queue preflight COMPLETE:
-`RECONSTRUCTION_SOURCE_STORE_20260918.md`. Real shard hashes/identities and nested
+`docs/research/notes/RECONSTRUCTION_SOURCE_STORE_20260918.md`. Real shard hashes/identities and nested
 roles verified; expanded broad fit10201/234618pairs (original33targets), fixed
 selected536fit90encoder and broad90encoder. Bounded16-shard LRU,7tests pass.
 Initial new-loader embedded-role check corrected to authoritative nested split;
@@ -1984,38 +1984,38 @@ not evidence of old model failure or untouched evaluation. Queue replay sees
 min(N,4288)patients/target. Paired training NOT started;runtime unchanged.
 
 Full broad-source sample expansion COMPLETE:
-`RECONSTRUCTION_FULL_SOURCE_SAMPLES_20260918.md`.10201fit/3323encoder patients,
+`docs/research/notes/RECONSTRUCTION_FULL_SOURCE_SAMPLES_20260918.md`.10201fit/3323encoder patients,
 240729/79001acceptedpairs;all39>=30bothroles. Lipase1239/455,CPK2605/751,
 troponin2325/811. Old626shards unchanged;newhashseededonepair/target,no redraw.
 Basic support only,notaccuracy/sitegate. Trainingpending,runtimeunchanged.
 
 Joint exposure replay COMPLETE:
-`RECONSTRUCTION_JOINT_EXPOSURE_20260918.md`.Exact283008draws,all66groups covered.
+`docs/research/notes/RECONSTRUCTION_JOINT_EXPOSURE_20260918.md`.Exact283008draws,all66groups covered.
 Broadlipase46pairs averaged93.22uses,glucose504averaged8.51;source diversity
 differs despiteequaltarget effort. Notcausaloversamplingproof. Fullsource
 sample expansion stillpending;no scope/gate/runtimechange.
 
 Joint error geometry COMPLETE:
-`RECONSTRUCTION_JOINT_ERROR_GEOMETRY_20260918.md`.Allsourceincrements reproduce.
+`docs/research/notes/RECONSTRUCTION_JOINT_ERROR_GEOMETRY_20260918.md`.Allsourceincrements reproduce.
 SelectedCPK rank.714->-.110,lipase.862->-.080;smallN30/28. Centraltruthrange
 alsoharms,not tail-only. Broadtroponin retainsrank.660(N18)despiteMAEharm:
 notuniversalorderingfailure. Retrospectivetruthstrata notroutes;no runtimechange.
 
 Joint fit/selection replay COMPLETE:
-`RECONSTRUCTION_JOINT_FIT_GAP_20260918.md`.All66selection scores reproduce1e-7.
+`docs/research/notes/RECONSTRUCTION_JOINT_FIT_GAP_20260918.md`.All66selection scores reproduce1e-7.
 32/33fit targets beat population inbothgroups;all9selected/8broad selection
 failures improvefit. Source generalization gap confirmed before externalgate,
 not universal inabilitytofit. O2fitonlyexception improvesselection. Sparse
 support/site shift confounduniquecause;no memorizationproof/runtimechange.
 
 Joint constant-loss diagnostic COMPLETE:
-`RECONSTRUCTION_CONSTANT_OBJECTIVE_20260918.md`. Equalgroup sourcefit median vs
+`docs/research/notes/RECONSTRUCTION_CONSTANT_OBJECTIVE_20260918.md`. Equalgroup sourcefit median vs
 SmoothL1constant,all33targets. Encoder macro Huber-minus-median-.010736selected,
 +.011093broad (average+.000178). Mixed effects,notlargeuniformbias explanation;
 conditional neural effects nottested.3tests,source-only,no runtimechanges.
 
 Retention-selection feasibility COMPLETE:
-`RECONSTRUCTION_RETENTION_FEASIBILITY_20260918.md`. Onlyepoch0numerically
+`docs/research/notes/RECONSTRUCTION_RETENTION_FEASIBILITY_20260918.md`. Onlyepoch0numerically
 nonharming all66group-targetpairs;everytrained epoch harms some. Selected
 CPK/glucose/lipase/troponin andbroadCPK/temp/troponin neverbeatinitial across8.
 Other5pergroup improve transiently then lose atselectedepoch6. Selectionalone
@@ -2023,13 +2023,13 @@ cannot repair observedtrajectory;notimpossibility/gradientcauseproof.3tests,
 nooracleheads/gates/runtime changes.
 
 Joint source-selection trajectory audited:
-`RECONSTRUCTION_JOINT_SELECTION_20260918.md`. Exactepoch6aggregate replay;
+`docs/research/notes/RECONSTRUCTION_JOINT_SELECTION_20260918.md`. Exactepoch6aggregate replay;
 9/33selected and8/33broad targets already lose epoch0prior on encoderselection,
 despite macro gainsboth. Aggregate objective permits harm, not gradient-conflict
 or solecauseproof. No eval-informed choice, pertargetoracle or runtimechange.
 
 Joint gate localization COMPLETE:
-`RECONSTRUCTION_JOINT_GATE_DIAGNOSIS_20260918.md`. Core gate(excluding additional
+`docs/research/notes/RECONSTRUCTION_JOINT_GATE_DIAGNOSIS_20260918.md`. Core gate(excluding additional
 broad-only comparator)still0. Site evidence fails>=1reference33/33bothcohorts;
 actual pooled mean failures9broad16selected,site-mean failures11/19.
 22broad11selected source-supported targets have favorable meansallcore, not
@@ -2037,7 +2037,7 @@ significantpasses. Evidence limitation and true numeric harms coexist; no
 solepower/heterogeneityclaim.3tests,no gates changed,runtime unchanged.
 
 Joint-source training/evaluation COMPLETE:
-`RECONSTRUCTION_JOINT_SOURCE_RESULTS_20260918.md`. Three8epoch arms selected6/1/0,
+`docs/research/results/RECONSTRUCTION_JOINT_SOURCE_RESULTS_20260918.md`. Three8epoch arms selected6/1/0,
 283008updates/arm. Broad macro1.365619old->1.305363joint,selected2.934232->2.912258.
 30/33broad,19/33selected pooled improvements; average retention harm mitigated,
 not per-target solved(glucose/bicarb/O2selectedstillharm).0reportedfullpasses.
@@ -2053,14 +2053,14 @@ Fixed8epochs33targets/threecontrols and both-cohort evaluation predeclared.
 Double source/compute not isolated mixture effect. No efficacy/runtime claim.
 
 Broad-source old-cohort retention COMPLETE:
-`RECONSTRUCTION_BROAD_RETENTION_20260917.md`. Fixednew weights,178oldheldout
+`docs/research/notes/RECONSTRUCTION_BROAD_RETENTION_20260917.md`. Fixednew weights,178oldheldout
 patients4637pairs;28/33numerically worsen,macro2.934232->3.007420(+2.49%),
 versus expandedconfirmation28/33improve(-4.18%). Measured distribution tradeoff,
 not universalrepair; individual significance not implied. No overlap/retuning,
 all39statuses/runtime unchanged. Retrospective cohort rule cannot be a router.
 
 Broad-source prior/increment decomposition COMPLETE:
-`RECONSTRUCTION_PRIOR_INCREMENT_20260917.md`. Exact83874pair identity and3tests.
+`docs/research/notes/RECONSTRUCTION_PRIOR_INCREMENT_20260917.md`. Exact83874pair identity and3tests.
 Creatinine total-.07006:prior-.00474/increment-.06532;BUN-.05320:
 prior-.01364/increment-.03956. Not just population-center improvement.
 O2center improvesmorethanmodel;glucose excesserror shrinks but still losescenter.
@@ -2068,7 +2068,7 @@ Descriptive algebra, not causal attribution or gate. Fullpasses remain0;
 all39statuses/runtime unchanged. Different residual failure patterns established.
 
 Matched broad-source comparison COMPLETE:
-`RECONSTRUCTION_MATCHED_BROAD_RESULTS_20260917.md`. Three8epoch arms select5/2/1;
+`docs/research/results/RECONSTRUCTION_MATCHED_BROAD_RESULTS_20260917.md`. Three8epoch arms select5/2/1;
 83874identical pairs,28/33lower pooled MAE,macro1.365619->1.308580;0fullpasses.
 ALT/AST/calcium/platelets beat non-old controls but notold at corrected gate.
 Glucose improvesold but losespopulation/process/placebo. Cohort repair helps
@@ -2077,7 +2077,7 @@ fixed before scoring;oldMAEs reproduce. Retention/repetition/external pending.
 Runtime unchanged. Supersedes matched-training-pending entries below.
 
 Equal-patient broad source examples COMPLETE:
-`RECONSTRUCTION_MATCHED_BROAD_SAMPLES_20260917.md`.536fit/90encoder patients,
+`docs/research/notes/RECONSTRUCTION_MATCHED_BROAD_SAMPLES_20260917.md`.536fit/90encoder patients,
 same representative-site quotas via outcome-blind hashes;626shards,12441/2113
 pairs(all39). Two matchingtests pass. Target support differs(lipase encoder7,
 CPK12,trig14,troponin18,PTT27), preserve unsupportedstatuses. Counts/site quotas
@@ -2085,7 +2085,7 @@ not complete case-mix matching. Matched training pending; fullsource pool retain
 No runtime/interval/promotion change.
 
 Broad source event extraction COMPLETE:
-`RECONSTRUCTION_BROAD_SOURCE_EVENTS_20260917.md`. Treatment-independent extra
+`docs/research/notes/RECONSTRUCTION_BROAD_SOURCE_EVENTS_20260917.md`. Treatment-independent extra
 fit10201patients/5721709events;encoder3323/2487270events. Same rawlab/bedside
 contracts as expandedconfirmation,15private hospitalshards,14tests pass. COPY
 binding failure repaired before eventoutput; rerun complete. This repairs source
@@ -2093,7 +2093,7 @@ selection at extraction only; samples/training pending. Preserve equal-size
 comparison to separate composition from N. No runtime/interval/promotion change.
 
 Inherited cohort-selection mismatch VERIFIED:
-`RECONSTRUCTION_COHORT_SELECTION_20260917.md`. Original rawrate replay:all569fit
+`docs/research/notes/RECONSTRUCTION_COHORT_SELECTION_20260917.md`. Original rawrate replay:all569fit
 stays/536people and all93readoutstays/89people have qualifying insulin-rate changes.
 Expanded confirmation only125/4131stays,118/3433people. Old reconstruction lineage
 inherits insulin/potassium-selectedstay universe; expandedconfirmation doesnot.
@@ -2103,7 +2103,7 @@ source development (fit/encoderroles) under identical extraction, keep evaluated
 labels out of tuning. No newtraining/runtime/promotion yet.
 
 Expanded fixed-head confirmation SCORED:
-`RECONSTRUCTION_EXPANDED_CONFIRMATION_RESULTS_20260917.md`.83874pairs/33trained
+`docs/research/results/RECONSTRUCTION_EXPANDED_CONFIRMATION_RESULTS_20260917.md`.83874pairs/33trained
 targets,28fixednominees,all39statuses.0confirm unchanged39family patient/site gate.
 BUN0.97015->1.04924,bicarb0.95603->0.98252,WBC1.08922->1.13370:actualharm,
 not just smallsample nonsignificance. O2sat0.94262->0.85451 improves but site
@@ -2112,7 +2112,7 @@ differ from oldqueryselectedcohort. No uniquecause, new fitting or promotion.
 Sixhelpertests;exact sample coverage checked. Runtime unchanged.
 
 Expanded confirmation samples COMPLETE:
-`RECONSTRUCTION_EXPANDED_CONFIRMATION_SAMPLES_20260917.md`.3433patients,
+`docs/research/notes/RECONSTRUCTION_EXPANDED_CONFIRMATION_SAMPLES_20260917.md`.3433patients,
 88728proposed/88232acceptedpatient-targets;496rejected without redraw. All39
 targets represented,36>=3sites>=30patients;amylase/fibrinogen2sites,LDH1.
 Existing conflict/availability/48hhistory/blockmask rules,9tests pass. No model
@@ -2120,7 +2120,7 @@ scored or fit yet; existing nominees must stayfixed for confirmation. Original
 fithead support still applies. No runtime, intervals or promotion change.
 
 Expanded confirmation events EXTRACTED:
-`RECONSTRUCTION_EXPANDED_CONFIRMATION_EVENTS_20260917.md`.3433additionalpatients/
+`docs/research/notes/RECONSTRUCTION_EXPANDED_CONFIRMATION_EVENTS_20260917.md`.3433additionalpatients/
 4131stays,2154036canonical lab+nursing events in durable Gitignored cache.
 Five bedside targets nowincluded; invalid nursing observations quality-marked.
 14replay/bedside tests pass, input/code/cache hashes recorded. No target examples
@@ -2128,7 +2128,7 @@ or scoring yet: simultaneous conflicts, blockmask and independenthistory accepta
 pending. Confirmation source only, no evaluation/reserved fitting or promotion.
 
 Expanded source-lab support preflight COMPLETE:
-`RECONSTRUCTION_EXPANSION_LABS_20260917.md`. Additional role-contained patients,
+`docs/research/notes/RECONSTRUCTION_EXPANSION_LABS_20260917.md`. Additional role-contained patients,
 existing name/unit/bounds and<=1h conservative availability delay:31/39targets
 have>=3readoutsites with>=30screenedpatients;BUN/bicarb/phosphate6sites each.
 Amylase/fibrinogen/LDH2sites;5bedside targets unscanned, NOT failures. Per-site
@@ -2137,7 +2137,7 @@ still pending; no traininggain or promotion. Supports expanding confirmation
 from rawsource without reassigning existing evaluation patients. Runtime unchanged.
 
 Full raw patient inventory COMPLETE:
-`RECONSTRUCTION_EXPANSION_INVENTORY_20260917.md`. Same-role full-table histories,
+`docs/research/notes/RECONSTRUCTION_EXPANSION_INVENTORY_20260917.md`. Same-role full-table histories,
 excluding currentcohort/currentancestral people+sites, yield additional fit10201,
 encoder3323,readout3433,eval7178,reserved16372patients. Provenance-only upperbound,
 not labelqualification or untoucheddata.49currentpatients have additional outside
@@ -2146,7 +2146,7 @@ allrawstays. No evidence those admissions entered model; no leakage claim.
 Need explicit boundary and source-only event support before expansion. No runtime.
 
 Confirmation support correction COMPLETE:
-`RECONSTRUCTION_CONFIRMATION_SUPPORT_20260917.md`. Fixed nominees reproduce
+`docs/research/notes/RECONSTRUCTION_CONFIRMATION_SUPPORT_20260917.md`. Fixed nominees reproduce
 all28confirmation pooled scores1e-10. BUN site sizes1/6/9/11/14/16/32; phosphate
 andbicarb likewise only1site>=30. Equal-site sign reversal cannot establish
 true hospital heterogeneity versus sampling noise. Singleton bootstrap bounds
@@ -2155,7 +2155,7 @@ power; no causal failure attribution, threshold relaxation or promotion.
 Earlier cross-site-instability wording must be read as descriptive, not proved.
 
 Source-confirmed heads TESTED, no efficacy gain:
-`RECONSTRUCTION_CONFIRMED_HEAD_FINDINGS_20260917.md`. Fit-site5fold nomination,
+`docs/research/findings/RECONSTRUCTION_CONFIRMED_HEAD_FINDINGS_20260917.md`. Fit-site5fold nomination,
 independent readout-group confirmation vs original/population, patient/site
 tests with fixed39target Bonferroni:0accepted/28supported. Outputs unchanged,
 not accuracyrepair. BUN pooled advantage reverses under equal-site means;
@@ -2165,7 +2165,7 @@ power; no absence-of-signal claim.3tests, alloriginalscores reproduce. All39
 statuses, runtime and promotion unchanged. Source robustness remains unresolved.
 
 Nested training/head evaluation and margin diagnosis COMPLETE:
-`RECONSTRUCTION_NESTED_TRAINING_FINDINGS_20260917.md`. Three8epoch arms select
+`docs/research/findings/RECONSTRUCTION_NESTED_TRAINING_FINDINGS_20260917.md`. Three8epoch arms select
 identical8/4/1 weights; independent head selection28supported targets yields
 macro1.797586->1.785098. AST/bicarb/phosphate nominal gains; BUN/RR/WBC harms.
 22heads replaced,20selection bootstrap intervals crosszero, including all3harms.
@@ -2176,7 +2176,7 @@ preserved,6tests pass; no runtime/interval/promotion change. Earlier pending
 nested-training entries below are superseded by this completed outcome.
 
 Ancestry identity crosswalk RESOLVED for current source:
-`RECONSTRUCTION_ANCESTRY_IDENTITY_20260917.md`. Original eICUpatient table verifies
+`docs/research/notes/RECONSTRUCTION_ANCESTRY_IDENTITY_20260917.md`. Original eICUpatient table verifies
 all source/query patient,stay,hospital identities. Current ancestral4559stays/
 3291patients/12sites has ZERO patient/stay/site overlap with every reconstruction
 role. Earlier zero-string caveat replaced by verified mapping. Historical source
@@ -2185,7 +2185,7 @@ as failurecause or discard initializer. Nested warm-start development may procee
 with caveat; no runtime/promotion.
 
 Warm-start provenance audit COMPLETE, independence still UNCERTIFIED:
-`RECONSTRUCTION_WARM_START_20260917.md`. Release bytes match canonical5000
+`docs/research/notes/RECONSTRUCTION_WARM_START_20260917.md`. Release bytes match canonical5000
 checkpoint; historical563736rows/3286subjects vs current reconstructed561024/
 3287. Historical source hash/membership absent; current IDs not directly aligned,
 zero exact-string overlap NOT independence. Need verified ancestry exclusion or
@@ -2193,14 +2193,14 @@ source-fit-only initialization/scaler. No exact leakage/accuracy cause claim,
 no runtime/promotion. Nested fine-tune split alone does not solve provenance.
 
 Independent selection partition/support COMPLETE, retraining pending:
-`RECONSTRUCTION_NESTED_SELECTION_20260917.md`. Preserve fit536/eval178/reserved870;
+`docs/research/notes/RECONSTRUCTION_NESTED_SELECTION_20260917.md`. Preserve fit536/eval178/reserved870;
 split oldtune whole sites into encoder90/4sites and readout89/7sites.28/39targets
 >=30allfourroles; prior33 lose CPK/fibrinogen/lipase/triglycerides/troponin support.
 Oldweights used both groups, cannot relabel as independent.3tests plus full
 hash/support checks; no model efficacy, runtime or promotion. Keep all39scope.
 
 Source original/probe selection TESTED, broad repair failed:
-`RECONSTRUCTION_READOUT_SELECTION_FINDINGS_20260917.md`.33targets tune-only
+`docs/research/findings/RECONSTRUCTION_READOUT_SELECTION_FINDINGS_20260917.md`.33targets tune-only
 original/median/5ridge; choices frozen before score.9original6median18ridge.
 MacroMAE2.934232->2.966656; bicarb/phosphate gains, lipase median benefit;
 BUN/platelets/troponin harm. Triglycerides selects original yet loses median.
@@ -2208,7 +2208,7 @@ Tune already selected encoder, not independent head gate. Need genuinely
 separated selection training, not relabeling old data. No runtime/promotion.
 
 Matched raw-history/body readout contrast COMPLETE:
-`RECONSTRUCTION_RAW_STATE_FINDINGS_20260917.md`. Strict-site33targets same
+`docs/research/findings/RECONSTRUCTION_RAW_STATE_FINDINGS_20260917.md`. Strict-site33targets same
 masked rows, source-only ridge/median selection. Raw beats body0nominal targets.
 Body improves original bicarb/phosphate (nonconstant) and lipase/triglycerides
 (median fallback only); harms5other targets. Not universal readout repair or
@@ -2216,7 +2216,7 @@ encoder-information-loss proof; raw265/body64 dimensions differ. Reused data,
 nominal CIs, no future/interval/promotion/runtime change.
 
 Post-mask remaining support diagnostic COMPLETE:
-`RECONSTRUCTION_REMAINING_SUPPORT_20260917.md`.4637strict-site pairs matched,
+`docs/research/notes/RECONSTRUCTION_REMAINING_SUPPORT_20260917.md`.4637strict-site pairs matched,
 all33MAEs reproduce. Lipase61/62 and triglycerides29/30 have other events<=1h,
 yet numeric increment harms; all-input staleness is not sufficient explanation.
 Glucose>6h group17patients harms descriptively; no significance/source policy
@@ -2224,7 +2224,7 @@ validation, do not gate on this evaluated subgroup. Availability lag is not
 specimen age. No runtime/promotion or discarded patients.
 
 Source readout calibration repair TESTED, not established:
-`RECONSTRUCTION_READOUT_CALIBRATION_FINDINGS_20260917.md`. Six earlierV2 splits,
+`docs/research/findings/RECONSTRUCTION_READOUT_CALIBRATION_FINDINGS_20260917.md`. Six earlierV2 splits,
 tune-only offset/nonnegative affine L1, matched process control, sourceeval.
 No target6/6 improves original real under either method. Creatinine affine2gain/
 2harm despite lower median; triglyceride slopes zero2/6. Output calibration
@@ -2232,7 +2232,7 @@ alone not stable repair. Alltarget hashes/MAEs/role isolation checked,4tests.
 Reused development, nominal CIs, no promotion/runtime/interval changes.
 
 Source ranking localization COMPLETE:
-`RECONSTRUCTION_SOURCE_RANKING_20260917.md`. Earlier six V2source replays:
+`docs/research/notes/RECONSTRUCTION_SOURCE_RANKING_20260917.md`. Earlier six V2source replays:
 triglyceride median fit/tune Spearman0.662/0.088, lipase0.637/0.357. Ranking
 loss precedes external transfer, not stable negative mapping; no sign reversal.
 Only0-1supported tune sites for triglycerides,1lipase, so broad sitecause
@@ -2240,7 +2240,7 @@ unproven. All source MAEs reproduce; descriptive, overlapping fits and selected
 tune, not strict-site repetition. No runtime/promotion.
 
 Error-shape localization COMPLETE:
-`RECONSTRUCTION_SITE_ERROR_SHAPE_20260917.md`. All strict-site MAEs reproduce;
+`docs/research/notes/RECONSTRUCTION_SITE_ERROR_SHAPE_20260917.md`. All strict-site MAEs reproduce;
 33supported/6unsupported retained. Lipase/triglycerides harm affects majority
 and central patients, not tail-only; triglyceride Spearman-0.497 on30patients.
 Offset/positive shrink cannot fix ranking (may reduce MAE). Glucose/bilirubin
@@ -2248,7 +2248,7 @@ central mean harm coexists with tail gain; truth strata retrospective, not
 deployable selection. No fitting, new significance or runtime/promotion.
 
 Source objective/gradient diagnostic COMPLETE:
-`RECONSTRUCTION_SITE_OBJECTIVE_20260917.md`. Exact tune-score replay: AST/ALT
+`docs/research/notes/RECONSTRUCTION_SITE_OBJECTIVE_20260917.md`. Exact tune-score replay: AST/ALT
 57.27%net improvement, but other31 still improve0.050679;8targets regress versus
 initial median. Fit-MAD rescaling keeps aggregate ranking. At selected epoch8,
 8fit patients/target show persistent-layer raw mean descent locally harms only
@@ -2257,7 +2257,7 @@ endpoint/sample, not AdamW or encoder-wide proof. Common-score retention is
 absent but universal gradient-conflict cause unsupported. No runtime/promotion.
 
 Strict site comparison TRAINED/EVALUATED:
-`RECONSTRUCTION_SITE_TRAINING_FINDINGS_20260917.md`. Three8epoch arms141504updates
+`docs/research/findings/RECONSTRUCTION_SITE_TRAINING_FINDINGS_20260917.md`. Three8epoch arms141504updates
 each,33targets; real/process/placebo select8/4/1. Evaluation178patients4637pairs:
 12nominal all-reference gains; lipase/triglycerides harm allreferences. Bilirubin,
 O2/glucose process increment unestablished. Split correction preserves some
@@ -2265,7 +2265,7 @@ sharednumeric signal but not universalrepair. Single reused split, multiplicity,
 pretraining and convergence unresolved; no formalpromotion/runtime. Eighttests.
 
 Common strict development site partition FROZEN:
-`RECONSTRUCTION_SITE_PARTITION_20260917.md`. Patient-linked components, no label
+`docs/research/notes/RECONSTRUCTION_SITE_PARTITION_20260917.md`. Patient-linked components, no label
 values/errors/eligibility in assignment.536fit/179tune/178eval,11sites each;
 870reserved/21sites.33/39targets>=30allsource roles; remaining6explicit including
 aniongap3fit vs143tune (site concentration). Three tests and fullhash/support
@@ -2273,7 +2273,7 @@ build pass. Fine-tune split contract only; warm-start provenance stilluncertifie
 Matched joint numeric/process/placebo training pending; no runtime/promotion.
 
 Strict site support preflight found a boundary limitation:
-`RECONSTRUCTION_SITE_SUPPORT_20260917.md`. Original hospital-role patients touch
+`docs/research/notes/RECONSTRUCTION_SITE_SUPPORT_20260917.md`. Original hospital-role patients touch
 18cohort hospitals;3also source (646sourcepatients). Patient-disjoint is not strict
 all-history site-disjoint; NOT allselectedanchors or allrelease audits invalid.
 Patient-linked site components reserve oldhospital components, leaving893source
@@ -2282,7 +2282,7 @@ support; no common assignment/training yet. Future splits must enforce complete
 patient/site histories. No accuracyrepair/runtime/promotion claim.
 
 Source hospital increment audit COMPLETE:
-`RECONSTRUCTION_SOURCE_HOSPITALS_20260917.md`. Six V2fit source-only saved rows,
+`docs/research/notes/RECONSTRUCTION_SOURCE_HOSPITALS_20260917.md`. Six V2fit source-only saved rows,
 pooled scores reproduce. Bilirubin only1source site>=30targetpatients eachsplit;
 O2/glucose site signs mixed; creatinine single-site deletion keeps favorable
 mean6/6. Random patient replication not broad site invariance. Newdiagnostic
@@ -2291,7 +2291,7 @@ and in pooled errors. Exact selectedstay for8 remains unresolved. No promotion,
 training/runtime change. Source-site support preflight needed before robust fit.
 
 Target-level source fit/tune replay COMPLETE across six V2 seeds:
-`RECONSTRUCTION_SOURCE_FIT_FINDINGS_20260917.md`.207300pair evaluations (not
+`docs/research/findings/RECONSTRUCTION_SOURCE_FIT_FINDINGS_20260917.md`.207300pair evaluations (not
 independentpatients), original hashes and12selected tune scores reproduce.
 Triglycerides fitgain6/6->tunegain0/6; bilirubin fit/tune/sourceevalmean gain6/6
 but hospital0/6; creatinine mean gains6/6 allroles but nominaleval4/hospital3.
@@ -2301,7 +2301,7 @@ Ten focused tests, no new fitting/promotion/runtime. Unique causes still unprove
 next source-only hospital/support localization before a domain-robust repair.
 
 Fixed-hospital seven-fit stability diagnostic COMPLETE:
-`RECONSTRUCTION_FIT_STABILITY_20260917.md`. Saved prediction hashes and both-role
+`docs/research/notes/RECONSTRUCTION_FIT_STABILITY_20260917.md`. Saved prediction hashes and both-role
 MAEs reproduce; same patient keys/truths across available fits.35supported
 seven-fit targets: median between-fit share of MSE2.59%, descriptive mean-output
 MAE reduction2.40%. Most error remains common across fits, not explained by
@@ -2311,7 +2311,7 @@ Bilirubin/O2 mean numeric increment harms process7/7; creatinine improves mean
 not ensemble promotion. Five tests; all39catalog retained; runtime unchanged.
 
 Seven-split reconstruction COMPLETE:
-`RECONSTRUCTION_SEVEN_SPLIT_FINDINGS_20260917.md`. All7 matched eight-epoch
+`docs/research/findings/RECONSTRUCTION_SEVEN_SPLIT_FINDINGS_20260917.md`. All7 matched eight-epoch
 comparisons finished. Nominal combined gains: albumin AST totalprotein7/7,
 ALT6/7, bicarbonate/HR4/7, creatinine2/7. Full39target summary saved. Samehospital
 group, overlapping patients, multiplicity unresolved; NOT promotion/forecast.
@@ -2320,7 +2320,7 @@ keys/truths/fit medians checked. Root cause of variability still confounds patie
 split with optimization randomness; convergence not established. Runtime unchanged.
 
 Source loss REPAIRED and seed71 COMPLETE:
-`RECONSTRUCTION_REPLICATION71_RESULTS_20260916.md`. Both rebuilt upstream event
+`docs/research/results/RECONSTRUCTION_REPLICATION71_RESULTS_20260916.md`. Both rebuilt upstream event
 files byte-identical to historical hashes; no bypass. Three eight-epoch arms,
 287664updates each,14435heldout pairs. Six combined nominal gains; six-split
 intersection albumin AST totalprotein. Lipase hospital harms process. New weights
@@ -2328,20 +2328,20 @@ backed up durably; no runtime/promotion. Only seed83 remains in fixed protocol.
 
 Seed71 could not start: two upstream temporary event files missing during
 hash checks, not a training/accuracy failure. See
-`RECONSTRUCTION_SOURCE_RECOVERY_20260916.md`. Preserved2366 surviving files in
+`docs/research/notes/RECONSTRUCTION_SOURCE_RECOVERY_20260916.md`. Preserved2366 surviving files in
 Git-ignored durable data backup; all1763 original shard hashes verify. No binding
 checks bypassed. Extraction ancestry located; upstream reconstruction/hash
 recovery still required before seeds71/83. Completed five-split results unchanged.
 
 Seed59 V2 training/evaluation COMPLETE:
-`RECONSTRUCTION_REPLICATION59_RESULTS_20260916.md`. Allthree8epochs,289408updates
+`docs/research/results/RECONSTRUCTION_REPLICATION59_RESULTS_20260916.md`. Allthree8epochs,289408updates
 each;38source targets (anion gap tune26 unsupported),13806heldout pairs. Five
 combined nominal gains bothroles; five-split intersection albumin AST totalprotein.
 Both real/process selectepoch8, so convergence remains unproven. Samehospital
 group, nominal comparisons; no promotion/runtime changes. Seeds71/83 pending.
 
 Seed43 V2 training/evaluation COMPLETE:
-`RECONSTRUCTION_REPLICATION43_RESULTS_20260915.md`. Three eight-epoch arms,
+`docs/research/results/RECONSTRUCTION_REPLICATION43_RESULTS_20260915.md`. Three eight-epoch arms,
 285792updates each;39source targets,14530heldout pairs. Nine nominal combined
 gains bothroles, but intersection across7/19/31/43 falls to albumin AST totalprotein.
 Bicarbonate real/process incremental error is nearzero in this fit, not stable;
@@ -2349,7 +2349,7 @@ creatinine evaluation CI crosseszero. Same hospital patients, mixed split/init
 changes, unadjusted tests. Seeds59/71/83 pending. No runtime/promotion.
 
 Seed31 V2 training and heldout evaluation COMPLETE:
-`RECONSTRUCTION_REPLICATION31_RESULTS_20260915.md`. All three arms eight epochs,
+`docs/research/results/RECONSTRUCTION_REPLICATION31_RESULTS_20260915.md`. All three arms eight epochs,
 288192 updates each; hashes/checkpoints verified. Anion gap source-unsupported
 (tune26); 38 trained targets and14758 heldout pairs. Real beats process on ten
 targets in both roles; nine also beat population/placebo. Four common combined
@@ -2359,7 +2359,7 @@ hospital cohort, nominal comparisons, not promotion or future forecasting.
 Seeds43/59/71/83 remain pending. Runtime unchanged.
 
 Seed19 V2 COMPLETE eight epochs and heldout evaluation:
-`RECONSTRUCTION_REPLICATION19_RESULTS_20260914.md`. Three arms293904updates
+`docs/research/results/RECONSTRUCTION_REPLICATION19_RESULTS_20260914.md`. Three arms293904updates
 each, bindings verified. Real/process/placebo tune1.772240/1.873076/1.914907.
 Fresh role remapping and fit-only medians;14064heldout pairs. Real-over-process
 nominal9targets both roles;7also beat population/placebo both. Four overlap
@@ -2369,46 +2369,46 @@ Creatinine improves onlythissplit; MAP evaluation harms population. Remaining
 seeds pending; runtime unchanged. Supersedes first-epoch pending below.
 
 Seed19 replication V2 first epoch COMPLETE:
-`RECONSTRUCTION_REPLICATION19_PROGRESS_20260914.md`. Initialnewdriver process
+`docs/research/notes/RECONSTRUCTION_REPLICATION19_PROGRESS_20260914.md`. Initialnewdriver process
 fit failedtoneutralize whiletune did; invalidcontrol, not seed7issue. V2 shared
 viewhelper/tests,rera nallarms; real/placebo logs exact. Correctedtune real1.845440,
 process1.899023,placebo1.914907 vsinitial1.914917.26264pairs/36738updates.
 Use train_reconstruction_replication_v2; sevenepochsremain, heldoutuninspected.
 
 Repeated-split reconstruction support preflight COMPLETE:
-`NATIVE_RECONSTRUCTION_SPLIT_SUPPORT_20260914.md`.Same1763patients/all7disjoint
+`docs/research/notes/NATIVE_RECONSTRUCTION_SPLIT_SUPPORT_20260914.md`.Same1763patients/all7disjoint
 roles; SAME194hospitalpatients, not independent studies.38/39source-supported
 allseeds; aniongap tune26/26/28 in31/59/83,eval25 in19. Remapshardroles and
 refit eachsplit; no new training/promotion yet. Do not replace unsupportedseeds.
 
 Multiplicity sensitivity COMPLETE:
-`NATIVE_RECONSTRUCTION_MULTIPLICITY_20260914.md`.156sign-flip/Bonferroni tests;
+`docs/research/notes/NATIVE_RECONSTRUCTION_MULTIPLICITY_20260914.md`.156sign-flip/Bonferroni tests;
 onlytotalprotein point-estimatepasses, but MCintervals cross.05bothroles.
 Posthoc/exchangeability assumptions, not originalgate replacement or robust
 promotion. Need independent complete-target replication, not threshold tuning.
 
 Matched TRAINED process control COMPLETE8epochs:
-`NATIVE_RECONSTRUCTION_PROCESS_FINDINGS_20260914.md`.Process selects5/tune2.038137;
+`docs/research/findings/NATIVE_RECONSTRUCTION_PROCESS_FINDINGS_20260914.md`.Process selects5/tune2.038137;
 real1.921813. Real beatsprocess12evaluation9hospital,7overlap (albumin ALT AST
 bicarb HR platelets totalprotein), nominal only. Process beatspop15/9, so prior
 population/permutation gains not exclusively numeric physiology. No real-process
 significant harms; glucose/Hgb/creat incremental gains unestablished. No promotion.
 
 Expanded frozen numeric-path diagnostic COMPLETE:
-`NATIVE_RECONSTRUCTION_NUMERIC_PATH_20260914.md`.Neutralize numbers only;
+`docs/research/notes/NATIVE_RECONSTRUCTION_NUMERIC_PATH_20260914.md`.Neutralize numbers only;
 original predictions reproduce.22evaluation/17hospital nominal harms;12of14
 prior gain targets harmedboth. Not exclusively support-independent outputs,
 but OOD intervention != trained process control or physiology proof. MAP/creat
 NS; magnesium numerical dependence insufficientaccuracy. No runtime/promotion.
 
 Expanded frozen patient-alignment diagnostic COMPLETE:
-`NATIVE_RECONSTRUCTION_ALIGNMENT_20260914.md`.38/39perrole lower error under
+`docs/research/notes/NATIVE_RECONSTRUCTION_ALIGNMENT_20260914.md`.38/39perrole lower error under
 correct versus expected other-patient predictions; all14nominal gains aligned.
 Constants zero benefit, parent MAEs reproduced. No statistical/newpromotion;
 creatinine/MAP alignment != population improvement. Workflow stillconfounded.
 
 Expanded shared-body eight-epoch training AND evaluation COMPLETE:
-`NATIVE_RECONSTRUCTION_EXPANDED_FINDINGS_20260914.md`. Real selects7/tune1.921813
+`docs/research/findings/NATIVE_RECONSTRUCTION_EXPANDED_FINDINGS_20260914.md`. Real selects7/tune1.921813
 vsinitial2.085252; placebo selects0.14targets nominal paired gains vs population
 and selectedplacebo in bothroles. Not multiple-testing/seven-seed/promotion;
 current masked reconstruction only. BNP evaluation and magnesium hospital harm.
@@ -2416,7 +2416,7 @@ Sparse hospital3unsupported. All hashes verified; runtime unchanged. Supersedes
 first-epoch pending below. Need replication/process-controls, not empty-state claim.
 
 Expanded shared-body training FIRST EPOCH COMPLETE:
-`NATIVE_RECONSTRUCTION_EXPANDED_TRAINING_PROGRESS_20260913.md`.39targets,
+`docs/research/notes/NATIVE_RECONSTRUCTION_EXPANDED_TRAINING_PROGRESS_20260913.md`.39targets,
 25511fitpairs all consumed,35997updates each real/placebo. Source-tune
 2.085252->2.011559real; placebo2.086760 selects0. Preliminary only; seven
 epochs remain. Optimizer/RNG checkpoints saved; heldout errors uninspected.
@@ -2430,14 +2430,14 @@ after raw-anchor rejection; differs from old reservoir. Training still needed,
 not accuracy/promotion; runtime unchanged.
 
 Full existing-cohort raw support ceiling COMPLETE:
-`NATIVE_RECONSTRUCTION_SUPPORT_CEILING_20260913.md`.923/335/311/194patients;
+`docs/research/notes/NATIVE_RECONSTRUCTION_SUPPORT_CEILING_20260913.md`.923/335/311/194patients;
 36of53variables have potential >=30patients everyrole. Upperbounds ONLY:
 conflict-aware masked reconstruction eligibility not yet counted. Dense targets
 are not limited to16availablepatients;17slots belowminimum at leastonerole.
 MAP-derived qualified events, not all localdata; no training/runtime/promotion.
 
 Full-coverage shared-body training COMPLETE:
-`NATIVE_RECONSTRUCTION_FULL_COVERAGE_FINDINGS_20260913.md`. Two8960-update arms;
+`docs/research/findings/NATIVE_RECONSTRUCTION_FULL_COVERAGE_FINDINGS_20260913.md`. Two8960-update arms;
 balanced selects7,tune1.790593 vsinitial1.811102; eventweighted selects0.
 Heldout means1.761483->1.739840 and1.046497->1.029325 descriptive.
 ALL CIs unsupported: each role<=16patients, bootstrap requires30. Pilot cannot
@@ -2445,64 +2445,64 @@ statistically pass; not a demonstrated null. Need larger raw-event inventory,
 support preflight and controls, not a lower gate. Runtime unchanged.
 
 Multi-target training exposure localized:
-`NATIVE_RECONSTRUCTION_EXPOSURE_FINDINGS_20260913.md`. Selected event checkpoint
+`docs/research/findings/NATIVE_RECONSTRUCTION_EXPOSURE_FINDINGS_20260913.md`. Selected event checkpoint
 consumed124/879 fit pairs and omitted12 direct targets; balanced consumed115/879.
 Not adequate full-target optimization evidence. Matched full-coverage retraining
 completed under a fixed protocol; see full-coverage findings above. No promotion.
 
 Frozen body linear probe COMPLETE:
-`NATIVE_RECONSTRUCTION_LINEAR_FINDINGS_20260913.md`.2checkpoints35targets,
+`docs/research/findings/NATIVE_RECONSTRUCTION_LINEAR_FINDINGS_20260913.md`.2checkpoints35targets,
 source-selected ridge vs derangedplacebo; original MAEs reproduce. No supported
 gain vs population/original/placebo eitherrole. Smallpilot doesnot prove no
 latentinfo; no encoderupdate/runtime/promotion. Readout-only remedy unestablished.
 
 Selected multi-target numerical output variation diagnosed:
-`NATIVE_RECONSTRUCTION_PATIENT_SIGNAL_20260913.md`. All heldout MAEs reproduce;
+`docs/research/notes/NATIVE_RECONSTRUCTION_PATIENT_SIGNAL_20260913.md`. All heldout MAEs reproduce;
 patient-permutation shifts median .0039/.0052event and .0015/.0017balanced
 normalized units, small vs already-small median corrections. Output nearconstant,
 not proven bodylatent collapse. No training/runtime/promotion.
 
 Actual multi-target sampling training COMPLETE:
-`NATIVE_RECONSTRUCTION_SAMPLING_FINDINGS_20260913.md`.35targets32fit16eachother
+`docs/research/findings/NATIVE_RECONSTRUCTION_SAMPLING_FINDINGS_20260913.md`.35targets32fit16eachother
 patients, two512update shared-body arms. Eventweighted selects4,tune1.808488;
 balanced selects2,1.810791 vsinitial1.811102. Neither has supported heldout
 populationgain; balanced doesnotbeat eventweighted. Privateweights/cache saved,
 no runtime/promotion. Smallcurrent-reconstructionpilot, not wholebodyimpossibility.
 
 Multi-target initial gradient audit COMPLETE:
-`NATIVE_RECONSTRUCTION_GRADIENT_BALANCE_20260913.md`.232patient-target examples,
+`docs/research/notes/NATIVE_RECONSTRUCTION_GRADIENT_BALANCE_20260913.md`.232patient-target examples,
 38targets/8fitpatients. Dense4vitals comprise64.394% rows. Initial gradient
 cosines nearzero; negative48.65% not learnedconflict proof. Huberloss size not
 gradient domination. Patient/target balanced actualtraining still needed;
 no update/runtime/promotion.
 
 Query-safe raw-group memoization verified:
-`NATIVE_RECONSTRUCTION_CACHE_EQUIVALENCE_20260913.md`.64anchor byte-equivalence
+`docs/research/notes/NATIVE_RECONSTRUCTION_CACHE_EQUIVALENCE_20260913.md`.64anchor byte-equivalence
 against SHA-verified historicalbuilder;full1877anchor counts6249 reproduce,
 35.07s cached build.15tests. Semantic scopeunchanged, no efficacy/promotion.
 Representative gradient balance/fullcohort training remain pending.
 
 Multi-target original-event to shared-body update connected:
-`NATIVE_RECONSTRUCTION_JOINT_STEP_20260913.md`. Fixed missing6zero event channels
+`docs/research/notes/NATIVE_RECONSTRUCTION_JOINT_STEP_20260913.md`. Fixed missing6zero event channels
 using existing append_events;15tests pass. Four realtarget losses(CPK/INR/PTT/HR)
 give body gradients and one joint update. Inputpool8patients != consumedpatients;
 only4examples used. No efficacy/fulltraining/savedweights/runtime/promotion.
 
 Raw-event multi-target reconstruction builder verified:
-`NATIVE_RECONSTRUCTION_BUILDER_20260913.md`. As-of original-event scheduler,
+`docs/research/notes/NATIVE_RECONSTRUCTION_BUILDER_20260913.md`. As-of original-event scheduler,
 fresh anchor-arrival truth and full target/sibling masks.14tests pass;8fitpatient
 smoke1877anchors/6249examples inclrenal/metabolic/vitals. Not neuraltraining,
 independentpatientcount or promotion. Fullcohort cache/training remains needed.
 
 Multi-target event reuse constraint located:
-`NATIVE_MULTITARGET_CACHE_SCOPE_20260913.md`. Native histories are query-asof
+`docs/research/notes/NATIVE_MULTITARGET_CACHE_SCOPE_20260913.md`. Native histories are query-asof
 revision/conflict views, not unionable event ledger. Same-time token differences
 correctly stop new inventory; no training/support-count report produced.
 New target anchors require raw-event scheduler rebuild, not merging later
 queries. Existing single-query accuracy not invalidated by this finding.
 
 Feature-level support guard COMPLETE:
-`NATIVE_BODY_SUPPORTED_RANGE_FINDINGS_20260913.md`.212window-variable slots,
+`docs/research/findings/NATIVE_BODY_SUPPORTED_RANGE_FINDINGS_20260913.md`.212window-variable slots,
 88zero/36with1-19 repeat-patient support (includes intentionallymasked slots).
 Fixed20fitpatient numeric guard retains446/848 features; comparedrange-only
 MAE11.911->11.902 and14.099->14.095, bothNS. Population/placebo stillNS.
@@ -2510,110 +2510,110 @@ Do not infer sample adequacy from totalN or keep threshold-sweeping heldouts.
 No neural/runtime/promotion change.
 
 Sparse slope extrapolation localized/mitigated:
-`NATIVE_BODY_FIT_RANGE_FINDINGS_20260913.md`. CPK6h slope has2fit/0tune
+`docs/research/findings/NATIVE_BODY_FIT_RANGE_FINDINGS_20260913.md`. CPK6h slope has2fit/0tune
 patient supports; evaluation slope~675x fitmaximum. Uniform fit-only numeric
 range bounding reduces evaluation MAE17.293->11.911/maxerror1618.84->72.00;
 hospital14.139->14.099 NS. Still no population/placebo advantage or promotion.
 Local raw-probe failure explained, not allJEPA causes; runtimeunchanged.
 
 Multi-scale masked raw reconstruction COMPLETE:
-`NATIVE_BODY_MULTISCALE_FINDINGS_20260913.md`. Fixed1/6/24/allhistory probe
+`docs/research/findings/NATIVE_BODY_MULTISCALE_FINDINGS_20260913.md`. Fixed1/6/24/allhistory probe
 does not pass. Evaluation MAE17.293 vsincumbent12.268; one error contributes
 30.10% total, max1618.84mmHg. Tail attribution dominated byCPK6h slope.
 Exact retraining reproduces allresults. Source temporal-support inspection
 needed; not previousJEPA rootcause or permission to trimheldout. No runtimechange.
 
 Baseline-independent masked raw control COMPLETE:
-`NATIVE_BODY_UNRESTRICTED_FINDINGS_20260913.md`. Removed inherited nested
+`docs/research/findings/NATIVE_BODY_UNRESTRICTED_FINDINGS_20260913.md`. Removed inherited nested
 support/affine preprocessing; raw MAE12.2678/14.2745 versus population
 12.0032/14.3093, both differences NS. Support-only exactly reproduces.
 No demonstrated repair, neural retraining or promotion; raw-summary limits remain.
 
 Original-history time validation repaired:
-`NATIVE_BODY_TIME_VALIDATION_20260913.md`. Four masked-away invalid-time
+`docs/research/notes/NATIVE_BODY_TIME_VALIDATION_20260913.md`. Four masked-away invalid-time
 counterexamples now rejected; 14 tests pass. Full266872-query cache has zero
 invalid original streams, so this defect does not explain the MAP results.
 Source revision explicitly recorded; historical artifact hashes unchanged.
 No new training, accuracy claim or runtime change.
 
 Expanded current-only masked raw probe COMPLETE:
-`NATIVE_BODY_EXPANDED_FINDINGS_20260913.md`. Futurepair restriction removed,
+`docs/research/findings/NATIVE_BODY_EXPANDED_FINDINGS_20260913.md`. Futurepair restriction removed,
 onefreshanchor/patient. Heldout311/194patients raw/populationgain0bothroles;
 rawMAE12.2774/14.2426 vs12.0032/14.3093. No raw/support/placeboincrement.
 Not neural training/informationabsence/saturation proof; runtimeunchanged.
 
 Matched masked raw-history control COMPLETE:
-`NATIVE_BODY_RAW_CONTROL_FINDINGS_20260913.md`. Same53fit27tune50+50cohort.
+`docs/research/findings/NATIVE_BODY_RAW_CONTROL_FINDINGS_20260913.md`. Same53fit27tune50+50cohort.
 Rawridge12.4076/13.6418 vs population12.58/11.70; neither significantgain.
 Beats placebo onlynewsource, supportboth but supportharms hospital. No stable
 rawsignal loss attributable uniquely to encoder. No runtime/promotion.
 
 Native body masked training COMPLETE:
-`NATIVE_BODY_MASKED_FINDINGS_20260913.md`. Fresh mask support53fit27tune,
+`docs/research/findings/NATIVE_BODY_MASKED_FINDINGS_20260913.md`. Fresh mask support53fit27tune,
 50+50heldout. Real8epoch selects0,populationMAE12.58/11.70; placebo selects2,
 no significant difference. Legalbody supervision not sufficient MAPrecovery
 in smallpilot. Not forecast/wholebody impossibility, runtimeunchanged.
 
 Native body masked supervision integrated:
-`NATIVE_BODY_RECONSTRUCTION_20260913.md`. Same persistenttrajectory body
+`docs/research/notes/NATIVE_BODY_RECONSTRUCTION_20260913.md`. Same persistenttrajectory body
 readout; target+sibling fullhistory masking, emptyevent removal, missingreject.
 4tests pass; real freshMAP smoke-step bodyupdategrad.0382/dynamics.0772.
 Structural supervision repair only, no efficacy/savedweights/runtime/promotion.
 
 Native parameter update audit:
-`NATIVE_ORGAN_PARAMETER_UPDATES_20260913.md`. Organ gates/dynamics move8-9%
+`docs/research/notes/NATIVE_ORGAN_PARAMETER_UPDATES_20260913.md`. Organ gates/dynamics move8-9%
 L2 relative, body gates/dynamics exactlyunchanged. Confirms prior closedbody
 bypass scope: not complete body-state learning experiment. Not sole forecast
 cause; body supervision path required without unrestrictedforecastmixing.
 No new training/runtime/promotion.
 
 Owner event-mixture scope checked:
-`NATIVE_OWNER_EVENT_MIXTURE_20260913.md`. MAP owner blood_vessels (notheart).
+`docs/research/notes/NATIVE_OWNER_EVENT_MIXTURE_20260913.md`. MAP owner blood_vessels (notheart).
 Lactate-only events22/64fit12/32tune patients, zero afterlastMAP all96queries.
 FinalMAP overwrite not supported; earlier assimilation untested. No modelchange.
 
 Nested baseline/residual COMPLETE:
-`NATIVE_NESTED_RESIDUAL_FINDINGS_20260913.md`. Baseline32epochs excludes
+`docs/research/findings/NATIVE_NESTED_RESIDUAL_FINDINGS_20260913.md`. Baseline32epochs excludes
 residualfit/tune patients from optimization/selection; fullroles beatpersistence.
 Residual64fit32tune8epochs bothselect1; state increment-.01213source/+.00256
 hospital bothNS, no gain overanchor-only. Exposure correction insufficient
 in thispilot, not multi-foldcrossfit or solecause proof. No runtime/calibration.
 
 Native pretraining provenance checked:
-`NATIVE_PRETRAINING_OVERLAP_20260913.md`. Recorded-source currentfile3291subjects
+`docs/research/notes/NATIVE_PRETRAINING_OVERLAP_20260913.md`. Recorded-source currentfile3291subjects
 vsMAP1763, exactsubject/stay overlap0. No historicalinputhash/remapping proof;
 not an untouchedpretraining claim. Confirmed native fine-tune exposure remains.
 Nested excluded-patient baseline training pending, runtime unchanged.
 
 Residual training exposure verified:
-`NATIVE_RESIDUAL_TRAINING_EXPOSURE_20260913.md`. All64 residualfit patients
+`docs/research/notes/NATIVE_RESIDUAL_TRAINING_EXPOSURE_20260913.md`. All64 residualfit patients
 seen by baseline optimizer,22exactqueries; tune/eval/hospital0. Baseline tune
 used for epochselection. Fit residual/current slope-.168 vs tune+.089,
 descriptive only. In-sample vs unseen-error asymmetry, not proven solecause.
 Patient-excluded baseline/features needed for clean stacking test; no runtime.
 
 Native objective ablation COMPLETE:
-`NATIVE_ORGAN_OBJECTIVE_FINDINGS_20260913.md`. Fixedteacher/centeredteacher/
+`docs/research/findings/NATIVE_ORGAN_OBJECTIVE_FINDINGS_20260913.md`. Fixedteacher/centeredteacher/
 value-only three8epoch fits allselect0. Tune8.34714->8.41928/8.42284/8.42367.
 Latent shortcut not necessary for point failure; removingJEPA also fails.
 No solecause/repair/promotion. Smallpilot, runtime/calibrators unchanged.
 
 Native latent-objective shortcut diagnosed:
-`NATIVE_ORGAN_LATENT_OBJECTIVE_20260913.md`. Fixedteacher tune loss.005629 to
+`docs/research/notes/NATIVE_ORGAN_LATENT_OBJECTIVE_20260913.md`. Fixedteacher tune loss.005629 to
 .001140, but FIT-mean constant residual achieves.001168 (~99.36% of reduction).
 Bothnone/sparse. EMA drift exists but fixedteacher improvement persists.
 Most latentloss progress not patient-dynamics evidence in thispilot. Not an
 independently trained constant model or demonstrated forecast repair. No runtime.
 
 Conditional owner current+change pilot COMPLETE:
-`NATIVE_ORGAN_CONDITIONAL_FINDINGS_20260913.md`.Three same-shape head arms,
+`docs/research/findings/NATIVE_ORGAN_CONDITIONAL_FINDINGS_20260913.md`.Three same-shape head arms,
 64fit32tune8epochs. Conditional selects1, tune8.34492 vsbaseline8.34714;
 change/anchor-only select0. Selected heldoutdelta+.00251/+ .00711 bothNS.
 Current-state access alone not sufficient repair; four invarianttests pass.
 Smallpilot, no runtime/calibration/promotion; no full-body impossibility claim.
 
 Native state variation localized:
-`NATIVE_ORGAN_STATE_VARIATION_20260913.md`.64fit/32tune fixed-checkpoint probe:
+`docs/research/notes/NATIVE_ORGAN_STATE_VARIATION_20260913.md`.64fit/32tune fixed-checkpoint probe:
 current owner-state varies (tune centeredRMS.2614), but delta read by head
 RMS.00387 (1.48%); sparse1.87%. Initial no-edge4.03%. Mean delta grows while
 between-patient delta spread shrinks. Not information-loss percentage or
@@ -2621,7 +2621,7 @@ useful-state proof. Conditional current-state+change readout remains untested
 in this pilot; no new training/promotion/runtime changes.
 
 Native state-input training control COMPLETE:
-`NATIVE_ORGAN_STATE_INPUT_FINDINGS_20260913.md`. Fullstate eight epoch scores
+`docs/research/findings/NATIVE_ORGAN_STATE_INPUT_FINDINGS_20260913.md`. Fullstate eight epoch scores
 exactly reproduce pilot; anchor-only head control also worsens tune8.34714 to
 8.42216 versusfull8.41926. Both selectepoch0. Failure does not require state
 input; no demonstrated extra benefit, not equivalence or solecause proof.
@@ -2629,35 +2629,35 @@ Fixed-head shuffling changes outputs~0.001mmHg. Small64fit32tune diagnostic;
 no runtime/calibration/promotion. Direct bindings verified.
 
 Native replay exact learning trace COMPLETE:
-`NATIVE_ORGAN_REPLAY_TRACE_20260913.md`.All16pilot tune scores reproduced1e-8.
+`docs/research/notes/NATIVE_ORGAN_REPLAY_TRACE_20260913.md`.All16pilot tune scores reproduced1e-8.
 Fit7.42657->7.37558/7.37538 while tune8.34714->8.41926/8.41953. Learned
 correction fails tune, not disconnected gradient. Finalepoch8 heldoutdifferences
 NSbothroles, selectedepoch0 remains. Smallpilot, not solecause/convergence;
 no runtime/calibration/promotion. Finalweights now retained for diagnostics.
 
 Native anatomical replay paired learning pilot COMPLETE:
-`NATIVE_ORGAN_REPLAY_PILOT_FINDINGS_20260913.md`.64fit32tune patients,8epochs,
+`docs/research/findings/NATIVE_ORGAN_REPLAY_PILOT_FINDINGS_20260913.md`.64fit32tune patients,8epochs,
 none/sparse both selectepoch0. Tune8.34714->8.41926/8.41953, no increment.
 64patient heldout eachrole equalsbaseexact; persistence CIs cross0 on thispilot.
 Not fullcohort/7seed/no edgepromotion. Fitloss/finalweights notretained so no
 memorization or unique rootcause claim.9bindings verified, runtimeunchanged.
 
 Native organ future supervision integrated:
-`NATIVE_ORGAN_FUTURE_SUPERVISION_20260913.md`. One actualsourcefit MAP pair,
+`docs/research/notes/NATIVE_ORGAN_FUTURE_SUPERVISION_20260913.md`. One actualsourcefit MAP pair,
 two value+JEPA steps; zero-start exact, secondstep organupdategrad5.12e-5.
 Owner-local statechange heads, sameanatomicaltrajectory, closededges. Newanchor
 floatprecision bug repaired/tested. NOTaccuracy/fulltraining/promotion; body
 utility and matched scoped/unscoped training remain pending. No weightssaved.
 
 Native anatomical replay bridge smoke-tested on real source streams:
-`NATIVE_ORGAN_REPLAY_BRIDGE_20260913.md`. SameJEPA weights -> pre-mixer local
+`docs/research/notes/NATIVE_ORGAN_REPLAY_BRIDGE_20260913.md`. SameJEPA weights -> pre-mixer local
 organ proposals/sharedbody -> persistentreplay.8patients112events, finite
 backprop to JEPA/updategates.14canonicalslots; no unvalidatededges/treatment.
 State-norm smoke objective only, no futuretraining/MAE/promotion. Needs explicit
 future-change readout and matched training; releaseunchanged.
 
 Persistent chronological latent replay implemented:
-`PHYSIOLOGY_OBSERVATION_REPLAY_20260913.md`. advance owns time integration;
+`docs/research/notes/PHYSIOLOGY_OBSERVATION_REPLAY_20260913.md`. advance owns time integration;
 update correction no longer doublecounts elapsed. replay_observations runs
 one body/allorgans with scoped corrections and strict groupedtimestamps.
 25tests pass incl two-organ sequence and gradients. Component only, not yet
@@ -2665,7 +2665,7 @@ raw-event JEPA training/accuracy/promotion. Existing future rollout untouched;
 no weights/registry/calibrators changed. Not priorMAP failure attribution.
 
 Persistent observation-mask defect repaired:
-`PHYSIOLOGY_UPDATE_MASK_REPAIR_20260913.md`. All-organ-missing update changedbody
+`docs/research/notes/PHYSIOLOGY_UPDATE_MASK_REPAIR_20260913.md`. All-organ-missing update changedbody
 by98 in syntheticcounterexample; NaNs also pollutedorgans. Maskbeforeprojection,
 body-presence correction and validitychecks now pass21tests. NOTrecentMAPcause:
 nativefilter trials do not call thisupdate; inspected persistent/organexchange
@@ -2673,21 +2673,21 @@ forward paths initialize/rollout only. No weights/registry/calibrators changed;
 full-body online assimilation remains unintegrated, no accuracy/promotion claim.
 
 MAP predict-only event control verified:
-`MAP_PREDICT_ONLY_CONTROL_20260913.md`. Seven frozen factorial checkpoints,
+`docs/research/notes/MAP_PREDICT_ONLY_CONTROL_20260913.md`. Seven frozen factorial checkpoints,
 96sourcefit histories each;671matched endpoints maxforecastdiff7.63e-6 despite
 46-54extraevents. One later-event endpoint excluded by inputtime. Separates
 time decay from no-target-content innovation; structural bridge only, not
 full-body repair/new MAEgain/training/promotion. Three tests; runtimeunchanged.
 
 MAP projection-content control ALL7 COMPLETE:
-`MAP_PROJECTION_CONTROL_FINDINGS_20260913.md`.84directbindings verified.
+`docs/research/findings/MAP_PROJECTION_CONTROL_FINDINGS_20260913.md`.84directbindings verified.
 Projection-control/full gain0/harm0 bothroles; projection-own harm7/7both,
 gain0. Hospital projection10.60673/control10.61140/own10.21067. Metadata removal
 not sufficient repair; activation/clocks/query/optimization not isolated.
 Supersedes sixpending below. No runtime/calibration/promotion.
 
 MAP projection-content control seed7 COMPLETE32epochs:
-`MAP_PROJECTION_CONTROL_FINDINGS_20260913.md`. Target-only history projection
+`docs/research/findings/MAP_PROJECTION_CONTROL_FINDINGS_20260913.md`. Target-only history projection
 with original full activation/query: versus support control no significant
 change in either role; hospital10.54625->10.55518. Versus own significant harm
 both (+.29146source/+.34450hospital). Not a sufficient metadata repair in this
@@ -2695,50 +2695,50 @@ split; cadence/optimization still unresolved. Six fixed seeds pending, no
 runtime/calibration/promotion. Three focused tests include recurrence equality.
 
 MAP clock retraining ALL7 COMPLETE21fits:
-`MAP_UNCLIPPED_TRAINING_FINDINGS_20260913.md`.98directbindings verified.
+`docs/research/findings/MAP_UNCLIPPED_TRAINING_FINDINGS_20260913.md`.98directbindings verified.
 Corrected-old gains0allarms/roles; full-own harms7source5hospital,gains0.
 Hospital full10.57510->10.60183,own10.21067->10.26613. Clock correction not
 sufficient repair under fixedpolicy. No runtime/calibration/promotion;
 supersedes sixpending below. Remaining history mechanism not uniquely proven.
 
 MAP unclipped-clock retraining seed7 COMPLETE3fits:
-`MAP_UNCLIPPED_TRAINING_FINDINGS_20260913.md`. No significant improvement;
+`docs/research/findings/MAP_UNCLIPPED_TRAINING_FINDINGS_20260913.md`. No significant improvement;
 hospital own+0.16659/full+0.08959 significant harm,controlNS. Corrected full
 still worseownboth. Oneof7 only, remaining6pending; not sufficient repair or
 timing-irrelevance proof. No runtime/calibration/promotion.
 
 MAP unbounded history clocks RECOVERED60shards:
-`MAP_UNCLIPPED_CLOCK_20260913.md`.266872queries exactlyonce625722tokens,
+`docs/research/notes/MAP_UNCLIPPED_CLOCK_20260913.md`.266872queries exactlyonce625722tokens,
 234666clockchanges. Everyoldtoken/treatment/schedule exact, nonclock unchanged;
 182directbindings verified. Newprivatecache only, matched training pending;
 not accuracyrepair/runtime/promotion. Supersedes rawtime-recovery pending.
 
-MAP clock scope: `MAP_NATIVE_CLOCK_SCOPE_20260913.md`. CurrentMAP shards still
+MAP clock scope: `docs/research/notes/MAP_NATIVE_CLOCK_SCOPE_20260913.md`. CurrentMAP shards still
 clip historyhours0..168; previousKclockrepair not applied. Seed7 patient-equal
 zero-clock-delta24.71%newsource18.35%hospital; fullysaturated11.57%/8.30%.
 All7partitions audited. Not accuracycause proof; rawtime recovery/MAP matched
 retraining pending. No runtime/calibration/promotion; priorKnegative retained.
 
-MAP latest-observation carry probe: `MAP_NATIVE_CARRY_20260913.md`.
+MAP latest-observation carry probe: `docs/research/notes/MAP_NATIVE_CARRY_20260913.md`.
 96sourcefit patients/seed, own/full/control, predictions reproduced. Median
 post-lastMAP updates0 and direct(1-gate)carry1 allarms/seeds. Not routine
 latestMAP overwrite; earlier-history/innovation/optimization remain open.
 Two tests. No training/runtime/promotion or total-memory-retention claim.
 
 MAP training-matched path factorial COMPLETE14fits:
-`MAP_CONTROL_FACTORIAL_FINDINGS_20260913.md`. Controlhistory/ownquery harms
+`docs/research/findings/MAP_CONTROL_FACTORIAL_FINDINGS_20260913.md`. Controlhistory/ownquery harms
 own7/7bothroles. Ownhistory/controlquery no significant gain/harm vsown;
 improves control7/7source6/7hospital.31bindings verified. Gap follows expanded
 history path in support control, not necessarily currentquery. Masks/ages/
 cadence still combined; no unique rootcause, fullnumeric repair or promotion.
 
-MAP support-control path replay: `MAP_CONTROL_PATHS_20260912.md`.
+MAP support-control path replay: `docs/research/notes/MAP_CONTROL_PATHS_20260912.md`.
 Seven source-tune frozen checkpoints exact originals. Own-query replacement
 harm7/7(+.46694 median); own-history harm3/7(+.07694); neither improves.
 Current query support matters too, not just update count. Off-distribution
 input replay cannot assign training cause; no fitting/runtime/promotion.
 
-MAP numeric control ALL7 trained: `MAP_NATIVE_NUMERIC_CONTROL_FINDINGS_20260912.md`.
+MAP numeric control ALL7 trained: `docs/research/findings/MAP_NATIVE_NUMERIC_CONTROL_FINDINGS_20260912.md`.
 Matched full support/cadence but removes non-MAP/event numbers. Control-own
 gain0/harm7 bothroles; control-full gain0 both,harm1source0hospital. Hospital
 MAE control10.61140/full10.57510/own10.21067.18direct bindings verified.
@@ -2751,261 +2751,261 @@ normalized numbers in history/query but keeps support/time/activation. Seven
 unit tests pass. Not yet trained or accuracy-evaluated; runner/full-data checks
 pending. No runtime/promotion. Do not report preparation as a successful repair.
 
-New MAP active-update counts: `MAP_NATIVE_UPDATE_COUNTS_20260912.md`.
+New MAP active-update counts: `docs/research/notes/MAP_NATIVE_UPDATE_COUNTS_20260912.md`.
 Same history indices do not mean same state updates. Seed7 patient-equal
 own/full counts26.08/75.22 newsource,16.69/54.19hospital. All7 input-only
 partitions audited; padding inactive, full preserves own updates. Quantifies
 known content/cadence confound, not causal accuracy attribution or repair;
 old inference-only scope replay already failed. No runtime/promotion.
 
-MAP matched refinement ALL7 complete: `MAP_NATIVE_QUERY_REFINE_FINDINGS_20260912.md`.
+MAP matched refinement ALL7 complete: `docs/research/findings/MAP_NATIVE_QUERY_REFINE_FINDINGS_20260912.md`.
 14 additional fits, direct dependency hashes verified. Full-oldfull source
 gain4/7,hospital0/7; full-own gain0 both,harm7/7source6/7hospital. Median
 hospital full10.57510->10.55747,own10.21067->10.15199. Partial source improvement
 not stable whole-context repair. Fresh AdamW, not uninterrupted64epochs or
 convergence proof. No runtime/calibration/promotion; supersedes pending below.
 
-New MAP matched refinement seed7: `MAP_NATIVE_QUERY_REFINE_FINDINGS_20260912.md`.
+New MAP matched refinement seed7: `docs/research/findings/MAP_NATIVE_QUERY_REFINE_FINDINGS_20260912.md`.
 FreshAdamW32moreepochs: full-oldfull sourcegain-.09255,hospital-.01187NS;
 full-own stillharmboth. Ownalsoimproves source. Oneof7 only, no stable repair
 or uninterrupted-training claim; remainingseeds pending, runtimeunchanged.
 
-New MAP shared-gradient probes: `MAP_NATIVE_QUERY_GRADIENTS_20260912.md`.
+New MAP shared-gradient probes: `docs/research/notes/MAP_NATIVE_QUERY_GRADIENTS_20260912.md`.
 42sourcefit probes, predictions reproduced. FullJEPA/value normmedian.01517,
 opposed9/21 but rawvalue-descentfactor>=.9949. No dominantopposition at selected
 blocks; not Adam/earlypath/lossablation proof. No runtime/promotion.
 
-New MAP value-objective check: `MAP_NATIVE_QUERY_OBJECTIVE_20260912.md`.
+New MAP value-objective check: `docs/research/notes/MAP_NATIVE_QUERY_OBJECTIVE_20260912.md`.
 Exact normalizedSmoothL1 fullworse7/7 everyrole inclbothseen(.008631median).
 Not MAE-only gap. Descriptive selected value loss, excludeslatentloss/optimizer;
 no newfit/solecause/runtime/promotion.
 
-New MAP sampled exposure: `MAP_NATIVE_QUERY_EXPOSURE_20260912.md`.
+New MAP sampled exposure: `docs/research/notes/MAP_NATIVE_QUERY_EXPOSURE_20260912.md`.
 Exactsampler replay:32epoch10.07-10.77%fitquerycoverage. Both-seen full-own
 harm6/7(+.22127),neither7/7(+.29949),gain0. Not only unvisitedquery issue;
 MAE/selectedcheckpoint not totaltrainloss/convergence. No fit/runtime/promotion.
 
-New MAP nativequery neural14fits COMPLETE: `MAP_NATIVE_QUERY_TRAINING_FINDINGS_20260912.md`.
+New MAP nativequery neural14fits COMPLETE: `docs/research/findings/MAP_NATIVE_QUERY_TRAINING_FINDINGS_20260912.md`.
 Full-own harm7/7 newsource ANDhospital; bothpersistencegain7/7. MedianMAE
 own8.84140/10.21067,full9.22298/10.57510. Fitpopulationalsoharm7/7(+.23255),
 tune+.25346; selected predictions reproduce exact. Fit contains unsampledqueries,
 so not actual-sampled fitting proof. Timingalone insufficient; no solecause,
 calibration/runtime/promotion. Supersedes seed7-only/pending entries.
 
-New MAP nativequery neural seed7 COMPLETE: `MAP_NATIVE_QUERY_TRAINING_FINDINGS_20260912.md`.
+New MAP nativequery neural seed7 COMPLETE: `docs/research/findings/MAP_NATIVE_QUERY_TRAINING_FINDINGS_20260912.md`.
 Own/full32epochs, selected25/23. Newpatient MAE8.80806/9.16712,hospital
 10.21067/10.56384; full-own significantlyworseboth, bothbeatpersistence.
 Only1/7split;9bindings7tests. Newtiming not sufficient in thissplit, not sole
 cause/noinformation proof. Sixseeds pending; no runtime/calibration/promotion.
 
-New MAP source transforms ready: `MAP_NATIVE_TRAINING_TRANSFORMS_20260912.md`.
+New MAP source transforms ready: `docs/research/notes/MAP_NATIVE_TRAINING_TRANSFORMS_20260912.md`.
 All7seeds fit-only centers/scales/support/eventtransforms;46supportedvars each,
 fit/otherpatient overlaps0. Compact own/full batches exact versusdense including
 padding/events;3tests. Neuraltraining stillpending, no efficacy/runtime/promotion.
 
-New MAP neural batch exercised: `MAP_NATIVE_TRAINING_BATCH_20260912.md`.
+New MAP neural batch exercised: `docs/research/notes/MAP_NATIVE_TRAINING_BATCH_20260912.md`.
 Ragged loader all266872queries625722tokens,max388; no truncation. Six tests,
 real four-source-query AdamW/EMA step finite, historygradient1.19594/update
 .011265. Integration only, no savedmodel/efficacy/promotion; matched training
 and source transforms remain required. Runtime unchanged.
 
-MAP newquery nativehistory COMPLETE: `MAP_NATIVE_QUERY_HISTORY_20260912.md`.
+MAP newquery nativehistory COMPLETE: `docs/research/notes/MAP_NATIVE_QUERY_HISTORY_20260912.md`.
 All60shards266872queries205723eligiblepairs; everyquery exactlyonce, all7461
 oldcommonhistories exact. Full hash/assembly verification includes treatment
 sequences and querycontexts. Newtask neuraltraining stillpending; no efficacy,
 calibration/runtime/promotion. Supersedes shard0-only preparation below.
 
-New MAP query nativehistory bridge: `MAP_NATIVE_QUERY_HISTORY_20260912.md`.
+New MAP query nativehistory bridge: `docs/research/notes/MAP_NATIVE_QUERY_HISTORY_20260912.md`.
 Shard0/60 built:1885queries4464groups, all19commonhistories exact including
 treatmentvalues. Existing native_arrays reproduces all1885sequences and query
 contexts; finite inputs. Four tests pass. Other59shards and matched neural
 training remain pending; no accuracy/calibration/runtime/promotion claim.
 
-MAP neural task scope: `MAP_NEURAL_TASK_SCOPE_20260912.md`. Oldnative33477 vs
+MAP neural task scope: `docs/research/notes/MAP_NEURAL_TASK_SCOPE_20260912.md`. Oldnative33477 vs
 newMAP205723eligible anchors overlap3905(1.898%). Recent tree fixes are not
 JEPA retraining on nativeMAP task. New ragged histories/paired neural trial
 remain needed; no accuracy/runtime/promotion claim.
 
-MAP missing fitgap: `MAP_MISSING_FIT_GAP_20260912.md`. Full-own fit7/7gain,
+MAP missing fitgap: `docs/research/notes/MAP_MISSING_FIT_GAP_20260912.md`. Full-own fit7/7gain,
 full-support4/7; both0/7tune/newsource/hospital. Original scores/comparisons
 exact. Numerical fit remains, not totalcapacityabsence; no solecause/runtime.
 
-MAP derivedgap supported strata: `MAP_DERIVED_GAP_STRATA_20260912.md`.
+MAP derivedgap supported strata: `docs/research/notes/MAP_DERIVED_GAP_STRATA_20260912.md`.
 Current-supported hospital147patients, derived-own/full/no-gap0/7gain;
 full delta+.02617. No hidden complete-case stablebenefit. Preanchor masks only,
 pooledexact; no fitting/routing/runtime/promotion.
 
-MAP explicitgap21fits: `MAP_DERIVED_GAP_TRAINING_20260912.md`.
+MAP explicitgap21fits: `docs/research/notes/MAP_DERIVED_GAP_TRAINING_20260912.md`.
 Derived-full/own0/7gainboth; no-gap/support1/7source0hospital. Hospital
 full10.31455->derived10.25123, no-gap10.24189, own10.21838. Conventionconcern
 not established principalcause/repair. Three tests; no runtime/calibration/promotion.
 
-Derived anion stream ready: `MAP_DERIVED_ANION_SUPPORT_20260912.md`.
+Derived anion stream ready: `docs/research/notes/MAP_DERIVED_ANION_SUPPORT_20260912.md`.
 Explicit withoutK same-time/known-time components, invalidversions blockold;
 48372versions27410valid. Fit40.02%hospital38.66%patient-equal current support.
 No observedgap overwrite, no trained efficacy yet; two tests, runtimeunchanged.
 
-MAP anion convention audit: `MAP_ANION_CONTRACT_20260912.md`. All5262rawvalues/
+MAP anion convention audit: `docs/research/notes/MAP_ANION_CONTRACT_20260912.md`. All5262rawvalues/
 times exact. Same-time panels fit118/1798 matchwithK vs hospital228/848;
 majoritywithoutKboth. Mixedconvention evidence, not specimen/method proof or
 MAPerror cause. No recoding/training/runtime; explicitderived contract needed.
 
-MAP fitted usage: `MAP_FEATURE_USAGE_20260912.md`. All7fullmodels rare<30fitpatient
+MAP fitted usage: `docs/research/notes/MAP_FEATURE_USAGE_20260912.md`. All7fullmodels rare<30fitpatient
 variables zero splitgain. MAP45.85%,aniongap7.00%median gain; numbers82%includes
 NaNrouting, not purephysiology. Veryrare dominance unsupported; combinations/
 domain shifts unresolved. No training/runtime/promotion.
 
-MAP native-missing support7fits: `MAP_MISSING_SUPPORT_20260912.md`.
+MAP native-missing support7fits: `docs/research/notes/MAP_MISSING_SUPPORT_20260912.md`.
 Matched full-support0/7gain/harmboth; hospital10.31455vs10.31205,own10.21838.
 Partial missingrepair not numerical-coupling evidence. Two tests, oldscoresexact;
 no runtime/calibration/promotion or information-absence claim.
 
-MAP native missing14fits: `MAP_NATIVE_MISSING_TRAINING_20260912.md`.
+MAP native missing14fits: `docs/research/notes/MAP_NATIVE_MISSING_TRAINING_20260912.md`.
 Maskednumbers NaN, masks/ages retained; observedzero preserved. Full-oldfull
 gain0source2hospital; full-own0both. Hospital10.31455vsown10.21838. Partial
 representation benefit, not exact oldcollision/solecause/promotion; runtimeunchanged.
 
-MAP ordered increment diagnosis: `MAP_NATIVE_INCREMENT_DECOMPOSITION_20260912.md`.
+MAP ordered increment diagnosis: `docs/research/notes/MAP_NATIVE_INCREMENT_DECOMPOSITION_20260912.md`.
 Fit total-.29150, support-.24724, additionalnumbers-.03148; direct paired
 support-vs-number magnitude difference7/7. Both lose heldoutgain. Much fitting
 advantage exists withoutothernumbers; not causal attribution/workflow-only
 proof. Original stats exact, no training/runtime/promotion.
 
-MAP event-equal training21fits: `MAP_NATIVE_EVENT_WEIGHT_TRAINING_20260912.md`.
+MAP event-equal training21fits: `docs/research/notes/MAP_NATIVE_EVENT_WEIGHT_TRAINING_20260912.md`.
 Only fitting weights changed, original held-out scores exact. Full-oldfull
 gain0/7both, full-own0/7both; hospital10.37609 vs own10.23905. Repeatedfuture
 fit weighting not sufficient repair. Eighttests; no runtime/calibration/promotion.
 
-MAP-native partition recheck: `MAP_NATIVE_PARTITION_CHECK_20260912.md`.
+MAP-native partition recheck: `docs/research/notes/MAP_NATIVE_PARTITION_CHECK_20260912.md`.
 All7roles patient/futureevent overlap0; duplicatequery0, positivehorizons.
 Isolation confirmed, not remaining rootcause or upstream/pretraining proof.
 
-MAP shrink support control: `MAP_NATIVE_SHRINK_SUPPORT_20260912.md`.
+MAP shrink support control: `docs/research/notes/MAP_NATIVE_SHRINK_SUPPORT_20260912.md`.
 Same tune grid full/support; originalfull exact. Shrunkfull-shrunksupport
 gain1/7source0hospital; hospital10.28760vs10.28528,own10.24211. Partialblend
 gain not stable numerical attribution; no runtime/promotion.
 
-MAP-native shrink partial repair: `MAP_NATIVE_INCREMENT_SHRINK_20260912.md`.
+MAP-native shrink partial repair: `docs/research/notes/MAP_NATIVE_INCREMENT_SHRINK_20260912.md`.
 Source-tune alpha.1-.9; selected-own gain4/7source0hospital, selected-full
 3/7source5/7hospital. Hospital10.37322->10.28760 still own10.24211better.
 No complete externalincrement/calibration/runtime/promotion. Not solecauseproof.
 
-MAP leaf patient support: `MAP_NATIVE_LEAF_PATIENTS_20260912.md`.
+MAP leaf patient support: `docs/research/notes/MAP_NATIVE_LEAF_PATIENTS_20260912.md`.
 Seed7all200trees eacharm, nodecounts/predictions verified. Full only1/3000
 leaf<5patients, tinyassignmentmass; no widespread near-single-patient-leaf
 explanation. Not ensemble memorization exclusion or trained repair/promotion.
 
-MAP sampling-gap accuracy: `MAP_NATIVE_SAMPLING_GAP_20260912.md`.
+MAP sampling-gap accuracy: `docs/research/notes/MAP_NATIVE_SAMPLING_GAP_20260912.md`.
 Preanchor repeateddraw-gap strata, full-own0/7gain with/without bothroles;
 hospital no-gap harm remains. Not sole second-draw omission explanation,
 not complete event-retention audit or retrained repair. Runtimeunchanged.
 
-MAP-native raw/snapshot density: `MAP_NATIVE_RAW_DENSITY_20260912.md`.
+MAP-native raw/snapshot density: `docs/research/notes/MAP_NATIVE_RAW_DENSITY_20260912.md`.
 Seed7 raw repeated6h creat6.72%vs snapshot6.60%,MAP93.27%vs85.41%fit.
 Sparse labs mostly sparse in qualifiedcache; vitals lose some grid support.
 No accuracy attribution/full-download inventory; six tests, runtimeunchanged.
 
-MAP-native input density: `MAP_NATIVE_HISTORY_DENSITY_20260912.md` (V2).
+MAP-native input density: `docs/research/notes/MAP_NATIVE_HISTORY_DENSITY_20260912.md` (V2).
 Seed7 recent>=2draw proxies fit HR88.34%/MAP85.41%,creat6.60%,lactate1.60%.
 Not fullraw event counts; recent lag != recentdraw corrected in auditV2.
 Five tests; no accuracy causation, training or runtime/promotion.
 
-MAP-native outcome/support audit: `MAP_NATIVE_OUTCOME_WEIGHTS_20260912.md`.
+MAP-native outcome/support audit: `docs/research/notes/MAP_NATIVE_OUTCOME_WEIGHTS_20260912.md`.
 Event-then-patient weighting full-own0/7gain newpatients/hospitals; fit7/7.
 Support-own fit7/7 also loses newpatient gain. Not numerical-only fit evidence
 or repeated-outcome scoring repair; no workflow-only/causal/promotion claim.
 
-MAP-native tree gap/stopping: `MAP_NATIVE_TREE_FIT_GAP_20260912.md`.
+MAP-native tree gap/stopping: `docs/research/notes/MAP_NATIVE_TREE_FIT_GAP_20260912.md`.
 Full-own fit7/7gain becomes0/7tune/newsource/hospital. Source-only staged
 selection0..200 full chooses200sixseeds; earlier stopping0/7repairbothroles.
 Not external-only or proven overtraining/convergence; no runtime/promotion.
 
-MAP-native raw-history21fits complete: `MAP_NATIVE_ANCHOR_TREE_20260912.md`.
+MAP-native raw-history21fits complete: `docs/research/notes/MAP_NATIVE_ANCHOR_TREE_20260912.md`.
 Fixed15leaf HGB own/full/support, same newtask. Full-own0/7gain1/7harm both;
 full-support0/0; persistence7/7both. Hospital185patients, full10.37322own10.24211.
 41bindings verified. MAP-native timing not sufficient repair; not JEPA training,
 information absence, old/new paired benefit, calibration or runtime/promotion.
 
-MAP-native inputs completed: `MAP_NATIVE_ANCHOR_SUPPORT_20260912.md`.
+MAP-native inputs completed: `docs/research/notes/MAP_NATIVE_ANCHOR_SUPPORT_20260912.md`.
 266872queries/60private shards,205723eligiblepairs. All7461commonanchors AND
 fixed-lag histories bitexact acrosssixfields; labelcurrent agrees. No fitting
 yet, no accuracy/runtime/promotion. Supersedes input-pending note below.
 
-MAP-native support: `MAP_NATIVE_ANCHOR_SUPPORT_20260912.md`. Queries were
+MAP-native support: `docs/research/notes/MAP_NATIVE_ANCHOR_SUPPORT_20260912.md`. Queries were
 insulin-rate-triggered. Same-stay MAP availability anchors yield205723pairs/
 1702patients vs33477/1505; medianage10min vs60min. Old labels exactly reproduce.
 146725distinct future events,22755overlap; changedtask, not accuracy gain.
 Private labels/roles ready; matched inputs/training pending, no runtime/promotion.
 
-MAP recordedchange strata: `MAP_HISTORY_CHANGE_SUBGROUPS_20260912.md`.
+MAP recordedchange strata: `docs/research/notes/MAP_HISTORY_CHANGE_SUBGROUPS_20260912.md`.
 Historyrate-currentrate0/7gain/harm in preanchorchange group bothroles,
 hospital38patients; mean signs mixed. SmallN not equivalence. No fitting,
 routing, runtime or promotion; futureMAP not used for grouping.
 
-MAP recorded history trial complete: `MAP_PRESSOR_HISTORY_TRAINING_20260912.md`.
+MAP recorded history trial complete: `docs/research/notes/MAP_PRESSOR_HISTORY_TRAINING_20260912.md`.
 Seven current-rate controls exact. History-rate vs current0/7gain allscopes;
 oldsource/hospital1/7harm. Hospitalall10.14075->10.14504. Fixed1/3h snapshots
 not full eventhistory; no stable repair/JEPA/calibration/runtime/promotion.
 
-MAP recorded pressor history built: `MAP_PRESSOR_HISTORY_20260912.md`.
+MAP recorded pressor history built: `docs/research/notes/MAP_PRESSOR_HISTORY_20260912.md`.
 Past1/3hcutoffs, currentcache exact. Norepi changes2687queries/494patients1h,
 4100/531at3h. Eighttests; same-record carry excluded. Recordedtimeonly, not
 complete administrations or efficacy. Training pending; runtimeunchanged.
 
-MAP pressor sourcevariation: `MAP_PRESSOR_VARIATION_20260912.md`. Eightobserved
+MAP pressor sourcevariation: `docs/research/notes/MAP_PRESSOR_VARIATION_20260912.md`. Eightobserved
 channels presentall7fits; norepi209-227patients/91-102rates(weightnormalized),
 vasopressin119-144patients/12-21rates. Not empty/constant principalchannels;
 some otherchannels lowN. No fit, gating, runtime or promotion changes.
 
-MAP pressor strata: `MAP_PRESSOR_SUBGROUPS_20260912.md`. Fixedprediction,
+MAP pressor strata: `docs/research/notes/MAP_PRESSOR_SUBGROUPS_20260912.md`. Fixedprediction,
 recordedpreanchor rate support; rate-baseline/support0/7gainbothroles with
 support. Hospital45patients limits precision; not pooleddilution proof or
 equivalence. No training/routing/runtime/promotion.
 
-MAP recorded pressor training: `MAP_RECORDED_PRESSOR_TRAINING_20260912.md`.
+MAP recorded pressor training: `docs/research/notes/MAP_RECORDED_PRESSOR_TRAINING_20260912.md`.
 Seven treebaseline/support/rate arms, baseline exactall7. Rate-baseline0/7gain
 allscopes; hospitalall MAE10.21392->10.14075, rate-support1/7gain. Not stable
 repair; snapshotonly/retrospectivetiming, no JEPA/conformal/runtime/promotion.
 
-Recorded MAP pressors built: `MAP_RECORDED_PRESSORS_20260912.md`. All55468
+Recorded MAP pressors built: `docs/research/notes/MAP_RECORDED_PRESSORS_20260912.md`. All55468
 queries,145510matchedrows; invalidlatest and conflictinglatest blockoldrates.
 MAP norepi8125/vasopressin2082supported querycells. Eighttests; onlineeligible
 false (recordedtimeonly). No fitting/accuracy/runtime/promotion.
 
-MAP pressor capture: `MAP_PRESSOR_CAPTURE_20260912.md`. Currentnative excludes
+MAP pressor capture: `docs/research/notes/MAP_PRESSOR_CAPTURE_20260912.md`. Currentnative excludes
 pressors. Located units/min parser omission; exact60x aliases repaired,13tests.
 Vasopressin compatible rows82->13922,6hqueries10->2101/231patients. No independent
 infusion availability; inventory not efficacy or MAPgapcause. Parserchanged,
 existing weights/caches/registry/calibrators unchanged; no promotion.
 
-MAP update-scope replay: `MAP_UPDATE_SCOPE_20260912.md`. Seven expanded full
+MAP update-scope replay: `docs/research/notes/MAP_UPDATE_SCOPE_20260912.md`. Seven expanded full
 controls exact; MAP-only activeupdates retain fullquery. Versusoriginal gain1/7
 source0hospital; versusown0both. No stable repair, content/cadence confounded,
 not trainmatched or evidence skipping safe. One invariant test; runtimeunchanged.
 
-MAP loss-gradient check: `MAP_LOSS_GRADIENTS_20260912.md`.42selected source-fit
+MAP loss-gradient check: `docs/research/notes/MAP_LOSS_GRADIENTS_20260912.md`.42selected source-fit
 probes; full13/21negativecosine, medianJEPA/value norm.0153. Rawcombined
 value descent factor>=.9917; no dominant opposing gradient at inspected blocks.
 Not Adam/update trajectory or loss-ablation proof. No runtime/promotion.
 
-MAP value objective check: `MAP_VALUE_OBJECTIVE_20260912.md`. Same selected
+MAP value objective check: `docs/research/notes/MAP_VALUE_OBJECTIVE_20260912.md`. Same selected
 predictions, exact normalizedSmoothL1: full worseown5/7fit,7/7tune numerically.
 Not MAE-only failure; excludeslatentloss/gradients, not loss-ablation proof.
 Three tests pass including formula equivalence; no runtime/promotion.
 
-Expanded MAP fit-gap replay: `MAP_EXPANDED_FIT_GAP_20260912.md`.14selected
+Expanded MAP fit-gap replay: `docs/research/notes/MAP_EXPANDED_FIT_GAP_20260912.md`.14selected
 checkpoints reproduce oldpredictions/tune. Full-own fitgain2harm3, tunegain0harm2;
 actually sampled-both rowsgain1harm3, sampled-neither gain0harm5. Not external-
 shift-only or universally successful fit signal. Selectedepochs differ, unseen
 rows may share outcomes, not full optimization diagnosis. No runtime/promotion.
 
-Expanded MAP sampler/curve audit: `MAP_EXPANDED_EXPOSURE_20260912.md`.
+Expanded MAP sampler/curve audit: `docs/research/notes/MAP_EXPANDED_EXPOSURE_20260912.md`.
 Exact replay: epoch32 allpatients but36.9-39.3%rows; selectedfull20.6-35.4%rows.
 Bestfull tune worseown7/7; latehalf best improves3/7full. Not universal late
 improvement or proof undertraining; selected fit errors still unmeasured.
 No model/runtime/promotion change.
 
-Expanded native MAP14fits completed: `MAP_EXPANDED_NATIVE_20260912.md`.
+Expanded native MAP14fits completed: `docs/research/notes/MAP_EXPANDED_NATIVE_20260912.md`.
 Same old tune/scoring, expanded fitting only. Full-oldfull gain0/7source and
 hospital; full-own gain0/7both, sourceharm4/7. Hospital median MAE full
 10.43047->10.39056, own10.25143->10.03774; own expansion gain1/7hospital.
@@ -3022,7 +3022,7 @@ Expanded MAP native history complete: map_all_native_tokens_20260912 artifact.
 sequences exact. No truncation, samecontract. Readyforneuraltraining, not yet
 trained/promoted; supersedes native-expansion pending. See MAP_LABEL_SELECTION.
 
-MAP selection repair trained: `MAP_SELECTION_TRAINING_20260912.md`. Oldtune
+MAP selection repair trained: `docs/research/notes/MAP_SELECTION_TRAINING_20260912.md`. Oldtune
 fixed, oldcontrols exact7/7. Expandedfull improvesoldfull4/7source1/7hospital
 on oldrows,5/7source1/7hospital allrows; full-own0/7both. Partial scope repair,
 not solecause/neural/coupling proof. No calibration/runtime/promotion.
@@ -3032,105 +3032,105 @@ All55468queries,33477eligibleMAPpairs; oldquery AND history arrays exact.
 No neural/native-event expansion or training yet. See MAP_LABEL_SELECTION.
 
 MAP label selection scope repaired in new private cache:
-`MAP_LABEL_SELECTION_20260912.md`. Old MAP queries required unrelated Kfuture
+`docs/research/notes/MAP_LABEL_SELECTION_20260912.md`. Old MAP queries required unrelated Kfuture
 pair. Removing prerequisite restores33477pairs1505patients vs3925/1303;
 oldlabels/IDs exact. Originalcohort stillrestricted, no MAP-native anchorclaim.
 Expanded inputs/retraining pending; not accuracy or solecause proof/promotion.
 
-MAP freshness: `MAP_FRESHNESS_20260912.md`. Currentmedianage1h, measuredgap7h.
+MAP freshness: `docs/research/notes/MAP_FRESHNESS_20260912.md`. Currentmedianage1h, measuredgap7h.
 Full-own gain0/7fresh/older bothroles; sourceharm4/3. Not stale-only explanation
 or fresh-only retraining. No runtime/promotion, patients overlapstrata.
 
-MAP cross-model comparison: `MAP_CROSS_MODEL_20260912.md`. Saved matchedlabels,
+MAP cross-model comparison: `docs/research/notes/MAP_CROSS_MODEL_20260912.md`. Saved matchedlabels,
 common20kCI. Treefullsummary vs ownJEPA0/7gainboth(sourceharm1). Hospital
 medianpaired -.11373; not significant. Summaryrepair beatsoldtree partly,
 not established betterJEPA. Inputs/capacity differ; no training/runtime/promotion.
 
-MAP summary components: `MAP_SUMMARY_COMPONENTS_20260912.md`. Identicalfull
+MAP summary components: `docs/research/notes/MAP_SUMMARY_COMPONENTS_20260912.md`. Identicalfull
 lag inputs, samewidth summaries; ownsummary gains3/7source/hospital overlag.
 Other support thennumeric increments0/7both; fullcontrols exact7/7. Partial
 repair includesownhistory, not proven crossorgan benefit. Sequential contrasts,
 not equivalence/factorial; no neural/calibration/runtime/promotion.
 
-MAP summary attribution: `MAP_SUMMARY_ATTRIBUTION_20260912.md`. Existing
+MAP summary attribution: `docs/research/notes/MAP_SUMMARY_ATTRIBUTION_20260912.md`. Existing
 support-vs-lagfull predictions gain2source4hospital, noharm; support-own0/0.
 Prior summary improvement cannot be assigned to other numeric excursions;
 own numerical summaries/other support/removal remain confounded. No fitting,
 runtime or promotion; not workflow-only proof.
 
-MAP event summaries tested: `MAP_EVENT_HISTORY_20260912.md`. Lagcontrols exact
+MAP event summaries tested: `docs/research/notes/MAP_EVENT_HISTORY_20260912.md`. Lagcontrols exact
 7/7. Full vs lagfull gain2source4hospital, harm0; hospitalMAE10.59785->10.13827.
 Full-own/support remains0/7gainboth; persistence7/7both. Partial history-
 representation improvement, not cross-organ efficacy, JEPA retrain or promotion.
 Quality-aware6/24h summaries, source-only selection; runtime unchanged.
 
-Event summary quality repair: `EVENT_SUMMARY_QUALITY_20260912.md`. Invalid
+Event summary quality repair: `docs/research/notes/EVENT_SUMMARY_QUALITY_20260912.md`. Invalid
 finite spikes previously entered summaries; reproduced900vs70 then corrected.
 Latest-known quality respected, validzero/prefix/invalidrevision tested.
 Not cause of prior MAP trials (neither calls helper); no efficacy/promotion.
 Rebuild summary caches before new use; historical hashes remain historical.
 
-MAP non-neural raw control: `NATIVE_MAP_RAW_HISTORY_20260912.md`. Same roles/
+MAP non-neural raw control: `docs/research/notes/NATIVE_MAP_RAW_HISTORY_20260912.md`. Same roles/
 labels, fixed-lag tree; full-own source0gain3harm,hospital0/0, full-support
 source0gain2harm. Own median8.9998/10.3964 vs full9.4291/10.5978. Not solely
 recurrent JEPA failure; not native-event equivalence or information absence.
 No calibration/runtime/promotion, no separate insulin context in tree input.
 
-Native MAP21fits completed: `NATIVE_MAP_FINDINGS_20260912.md`. Common20kdraws
+Native MAP21fits completed: `docs/research/findings/NATIVE_MAP_FINDINGS_20260912.md`. Common20kdraws
 x3streams: full-own source0gain5harm, hospital0/0; full-support0/0both.
 Own persistence7/7source5/7hospital; full7/7source3/7hospital. Full worse
 source-tune7/7. Same-method MAP subset retains sourceharm5/7; switching113/3925
 not sufficient explanation. No intervals/external/runtime/promotion. Supersedes
 MAP training pending; native diagnostic is not full anatomical architecture.
 
-Bedside future labels: `BEDSIDE_FUTURE_LABELS_20260912.md`. Same5526anchors;
+Bedside future labels: `docs/research/notes/BEDSIDE_FUTURE_LABELS_20260912.md`. Same5526anchors;
 MAP3925pairs1303patients, HR5095/O24873/RR4814/temp3521. Future helper now
 rejects nearest quality-invalid truth rather than skip;12tests. Not prior
 glucose cause, no training/promotion. MAP own/full is now supported for testing.
 
-Bedside history-support split: `BEDSIDE_HISTORY_SUPPORT_20260912.md`. Five
+Bedside history-support split: `docs/research/notes/BEDSIDE_HISTORY_SUPPORT_20260912.md`. Five
 observations each of five vitals, pre-anchor definition; real-support0/7gain
 both rich/poor groups and roles. Hospital rich70patients, not proof adequate
 power or all-support failure. No trained routing/runtime/promotion.
 
-Bedside CI numerical stability: `BEDSIDE_BOOTSTRAP_STABILITY_20260912.md`.
+Bedside CI numerical stability: `docs/research/notes/BEDSIDE_BOOTSTRAP_STABILITY_20260912.md`.
 Common patientdraws20k x3streams all agree; real-support hospital0gain1harm,
 supportlab1gain0harm. Names no longer alter draws in new comparison helper;
 no gate weakening, model repair or promotion. Bound v2 report authoritative.
 
-Bedside fit gap: `NATIVE_BEDSIDE_FIT_GAP_20260912.md`. Real-support gain3/7fit,
+Bedside fit gap: `docs/research/notes/NATIVE_BEDSIDE_FIT_GAP_20260912.md`. Real-support gain3/7fit,
 0tune,1newsource,0hospital; inconsistent numeric fit gain fails transfer already
 inside source. New bootstrap salt flips one near-zero support-lab CI at1000
 draws, same predictions; no ability change or promotion. No training/runtime.
 
-Bedside revision check: `NATIVE_BEDSIDE_REVISION_CHECK_20260912.md`. Qualified
+Bedside revision check: `docs/research/notes/NATIVE_BEDSIDE_REVISION_CHECK_20260912.md`. Qualified
 cache has zero duplicate source identities; invalid-revision synthetic test
 preserves prior query and blocks stale restoration. Not observed failure cause,
 no production repair/training/promotion.
 
-Bedside raw-history tree: `NATIVE_BEDSIDE_RAW_HISTORY_20260911.md`. Same queries/
+Bedside raw-history tree: `docs/research/notes/NATIVE_BEDSIDE_RAW_HISTORY_20260911.md`. Same queries/
 labels/roles, fixed-lag instead of nativeevents. Real-support0/7gainboth;
 real-lab1source2hosp, persistence7both. Weak increment not exclusive to JEPA;
 not no-information proof or promotion. Prior memory gradient already nonzero.
 
-Bedside support14fits: `NATIVE_BEDSIDE_SUPPORT_20260911.md`. Same cadence,
+Bedside support14fits: `docs/research/notes/NATIVE_BEDSIDE_SUPPORT_20260911.md`. Same cadence,
 numbers removed in train/test; controls exact7/7. Support-lab gain1source2hosp,
 real-support gain1source0hosp(harm1hosp). Hospital MAE support41.658 vs
 real42.328/lab42.080. No stable increment, not purely harmful cadence or proof
 workflow-only physiology. No runtime/promotion.
 
-Bedside fixed components: `NATIVE_BEDSIDE_COMPONENTS_20260911.md`. Original
+Bedside fixed components: `docs/research/notes/NATIVE_BEDSIDE_COMPONENTS_20260911.md`. Original
 replay exact7/7 after preserving float32 transforms. Neutralnumbers gain0/1
 source/hospital; removal gain0/1 and sourceharm5/7. Context dependence differs
 across roles; no universally helpful deletion or isolated cadence-cause proof.
 No training/runtime/promotion.
 
-Bedside rescale14fits: `NATIVE_BEDSIDE_RESCALE_20260911.md`. Source-only five
+Bedside rescale14fits: `docs/research/notes/NATIVE_BEDSIDE_RESCALE_20260911.md`. Source-only five
 new coordinates, same cadence; controls exact7/7,44bindings. Rescaled vs lab
 sourcegain1/harm0,hospital0/1; median34.618/42.328. Persistence7/7both.
 Not stable increment; scale alone insufficient. No runtime/promotion.
 
-Bedside14fits completed: `NATIVE_BEDSIDE_TRAINING_20260911.md`. Lab controls
+Bedside14fits completed: `docs/research/notes/NATIVE_BEDSIDE_TRAINING_20260911.md`. Lab controls
 bit-exact7/7 to previouscleanfull,44bindings verified. Bedside-lab sourcegain0/
 harm0,hospitalgain1/harm3; median34.884->34.251source,42.080->42.881hospital.
 Both persistence7/7. Added vitals not sufficient repair; cadence/numbers
@@ -3153,302 +3153,302 @@ Raw-to-token synthetic test verifies legal arrival and age. See bedside events
 finding. No new neural cache/training/accuracy/promotion yet; historical code
 hashes remain historical, not retroactively certified.
 
-Bedside canonical events: `NATIVE_BEDSIDE_EVENTS_20260911.md`.1,347,546time-valid
+Bedside canonical events: `docs/research/notes/NATIVE_BEDSIDE_EVENTS_20260911.md`.1,347,546time-valid
 events; same5526queries support HR5366/O25247/RR5233/MAP4507/temp4803 within6h.
 11tests pass; zeros preserved, earlyentry rejected, MAP conflicts missing.
 Non-temperature units are label conventions; rangequalification and native
 training integration pending. No accuracy/runtime/promotion. Supersedes
 canonical/anchor-support pending inventory entry below.
 
-Bedside local inventory: `NATIVE_BEDSIDE_INVENTORY_20260911.md`.1916same
+Bedside local inventory: `docs/research/notes/NATIVE_BEDSIDE_INVENTORY_20260911.md`.1916same
 stays,3.536Mnumeric nursing rows private. HR/O2/RR/MAP/temp substantial; entry
 time distinct (median5-12min), some entrybeforemeasurement. Canonicalunits,
 legalanchor support and training pending. No accuracy/runtime/promotion.
 
-Native scope verified: `NATIVE_INPUT_SCOPE_20260911.md`.41/53pooled lab slots
+Native scope verified: `docs/research/notes/NATIVE_INPUT_SCOPE_20260911.md`.41/53pooled lab slots
 observed; MAP/HR/O2/RR/temp/urine absent. Only insulinrecord context, not full
 administration/bedside stream. Known scope confirmed, not new rootcause or
 proof additionhelps. No runtime/promotion.
 
-Clean whole-state support: `CLEAN_STATE_SUPPORT_20260911.md`. Source-only
+Clean whole-state support: `docs/research/notes/CLEAN_STATE_SUPPORT_20260911.md`. Source-only
 prototype distance near0/7full-owngainboth; farharm2source3hospital. Farrows
 have extra harm but removing them not stable repair; geometry not physiology
 equivalence. No trained routing/runtime/promotion.
 
-Clean change-size audit: `CLEAN_GLUCOSE_CHANGE_20260911.md`. Larger-delta
+Clean change-size audit: `docs/research/notes/CLEAN_GLUCOSE_CHANGE_20260911.md`. Larger-delta
 full-own fitgain7/7 becomes1/7newsource0/7hospital. Smaller cases also harm.
 Not solely stable dominance; no prospective regime claim or globalamplify
 repair. Futuredefined descriptive groups only; no runtime/promotion.
 
-Conflict actual update scope: `NATIVE_CONFLICT_UPDATE_SCOPE_20260911.md`.
+Conflict actual update scope: `docs/research/notes/NATIVE_CONFLICT_UPDATE_SCOPE_20260911.md`.
 All7clean checkpoints update history/mixers/state/sharedfuture/value head;
 no frozen-context explanation or duplicateoptimizer parameters. Magnitude is
 not causal efficacy; no runtime/promotion.
 
-Clean future-event weighting: `CLEAN_FUTURE_EVENT_WEIGHTS_20260911.md`.
+Clean future-event weighting: `docs/research/notes/CLEAN_FUTURE_EVENT_WEIGHTS_20260911.md`.
 Hospital501queries490outcomes; equalizeevent thenpatient still cleanfull-own
 0/7gainboth; persistence7/7. Repeatedoutcome weighting not sole explanation.
 No gate replacement, training/runtime/promotion.
 
-Clean context complementarity: `CLEAN_CONTEXT_COMPLEMENTARITY_20260911.md`.
+Clean context complementarity: `docs/research/notes/CLEAN_CONTEXT_COMPLEMENTARITY_20260911.md`.
 Patientmean signederror correlation.952/.966; fullbetter~47%. Equalblend
 gain0/7source1/7hospital, no stable repair. Outcomeoracle not deployable;
 replicates prior portfolio pattern on corrected inputs. No runtime/promotion.
 
-Native teacher semantics: `NATIVE_TEACHER_CONTRACT_20260911.md`. Existing
+Native teacher semantics: `docs/research/notes/NATIVE_TEACHER_CONTRACT_20260911.md`. Existing
 single-target equivalence extended to nonzeroanchors/translation/stopgradient;
 5tests pass. No absolute-vs-delta mismatch in helper, not efficacy proof.
 No training/runtime/promotion.
 
-Conflict initial gradients: `NATIVE_CONFLICT_INITIAL_GRADIENTS_20260911.md`.
+Conflict initial gradients: `docs/research/notes/NATIVE_CONFLICT_INITIAL_GRADIENTS_20260911.md`.
 21sameinitial source probes, medianrelativechange.01333/cosine.99995. No typical
 large initial gradient reversal found. Later optimization remains unmeasured;
 not a proof of instability or accuracy repair. No runtime/promotion.
 
-Conflict selection audit: `NATIVE_CONFLICT_SELECTION_20260911.md`.4/7full
+Conflict selection audit: `docs/research/notes/NATIVE_CONFLICT_SELECTION_20260911.md`.4/7full
 old/clean select sameepoch; both hospitalharm cases inside those4. Allselected
 indices match tune minima. Wrongepoch alone cannot explain; trainingpath
 effect still unlocalized, no fit/runtime/promotion.
 
-Conflict cross isolation: `NATIVE_CONFLICT_CROSS_20260911.md`.14diagonal
+Conflict cross isolation: `docs/research/notes/NATIVE_CONFLICT_CROSS_20260911.md`.14diagonal
 predictions exact. Fixed-input/preprocessing cleanweights hospital+.2903,
 harm2/7; fixedweights replay effect~.002 no significanthospital gain/harm,
 scale effect~2.4e-7. This repair regression follows trained/selected weights;
 training trajectory versus selection still unresolved. No runtime/promotion.
 
-Conflict exposure stratification: `NATIVE_CONFLICT_SUBGROUPS_20260911.md`.
+Conflict exposure stratification: `docs/research/notes/NATIVE_CONFLICT_SUBGROUPS_20260911.md`.
 Hospital149patients without changed scored inputs still cleanfull-oldfull
 harm4/7(gain1), median+.926; changed40patients0/0. Harm not only edited
 histories. Weights/selection/fitted event transforms remain confounded; fixed
 cross-evaluation needed. No fitting/runtime/promotion or sole-cause claim.
 
-Native conflict28fits complete: `NATIVE_CONFLICT_TRAINING_20260911.md`.
+Native conflict28fits complete: `docs/research/notes/NATIVE_CONFLICT_TRAINING_20260911.md`.
 Same clean labels across old/clean own/full. Clean-full vs old-full gain0/7both,
 harm1source2hospital; clean-full vs clean-own gain0/7both. Both persistence7/7.
 54bindings verified. Correct replay not sufficient accuracy repair; no runtime,
 calibration or promotion. Supersedes token/training-pending entries below.
 
-Query replay repair implemented: `NATIVE_CONFLICT_REPLAY_20260911.md`.
+Query replay repair implemented: `docs/research/notes/NATIVE_CONFLICT_REPLAY_20260911.md`.
 5526private schedules rebuilt,817queries344patients change,3435obsolete/conflict
 event occurrences removed. Prefix/resolution/zero/remeasurement tests pass.
 Canonical table exact; no new query events. Tokens and matched neural training
 still pending, no runtime/accuracy/promotion claim. Supersedes unimplemented below.
 
-Actual native exposure: `NATIVE_SCHEDULE_CONFLICTS_20260911.md`. Hash-matched
+Actual native exposure: `docs/research/notes/NATIVE_SCHEDULE_CONFLICTS_20260911.md`. Hash-matched
 schedule/tokens contain514/5526queries (238patients) with unmasked known-source
 disagreement; glucose265,bicarb187,Mg1. This is input exposure, not error
 attribution or final source-mask exposure. Legal invalidation/replay still
 unimplemented; no training/runtime/promotion. Supersedes raw-only scope below.
 
-Later native disagreement quantified: `NATIVE_CONFLICT_ARRIVALS_20260911.md`.
+Later native disagreement quantified: `docs/research/notes/NATIVE_CONFLICT_ARRIVALS_20260911.md`.
 1551rawgroups have eligible-age single-valued later arrivals conflicting with
 known prior sources. Per-arrival encoder cannot detect prior disagreement.
 Not exact schedule exposure/error; requires legal invalidation/replay, cannot
 delete earlier observations using future knowledge. No native/runtime repair yet.
 
-Event variable identity checked: `EVENT_VARIABLE_IDENTITY_20260911.md`.
+Event variable identity checked: `docs/research/notes/EVENT_VARIABLE_IDENTITY_20260911.md`.
 646120cache rows no collisions; silent same-ID variable change now rejected.
 26tests. Ingestion validation, not observed forecast cause or accuracy repair.
 
-Event summary conflict policy repaired: `EVENT_SUMMARY_CONFLICTS_20260911.md`.
+Event summary conflict policy repaired: `docs/research/notes/EVENT_SUMMARY_CONFLICTS_20260911.md`.
 As-of disagreeing events excluded from summaries; 274/648queries affected in
 6/24h (Mg1).25tests pass. No accuracy or native-stream consistency claim;
 old summary features need rebuilding for new training, runtime unchanged.
 
-Joint conflict labels and accuracy: `GLUCOSE_CONFLICT_REPAIR_20260911.md`.
+Joint conflict labels and accuracy: `docs/research/notes/GLUCOSE_CONFLICT_REPAIR_20260911.md`.
 Input/label masks exact; total glucose92/bicarb118pairs rejected. Sameclean-test
 tree refit: full-oldfull0/7gainboth, own-oldown1/7hospital; full-own0/7hospital.
 Contract repaired, accuracy not stably repaired; not native JEPA retraining.
 No runtime/promotion. Use combined label cache, not future-only intermediate.
 
-Snapshot conflicts repaired: `SNAPSHOT_CONFLICTS_20260911.md`. As-of latest
+Snapshot conflicts repaired: `docs/research/notes/SNAPSHOT_CONFLICTS_20260911.md`. As-of latest
 source versions must agree at latest measured time; otherwise missing, no old
 substitution. New cache retained values exact, bicarb210/glucose144 histories
 affected, Mg1.22tests; no accuracy/promotion. Rebuild label current eligibility
 before training; native event/summary paths not claimed fully harmonized.
 
-Future-label conflict defect repaired: `FUTURE_LABEL_CONFLICTS_20260911.md`.
+Future-label conflict defect repaired: `docs/research/notes/FUTURE_LABEL_CONFLICTS_20260911.md`.
 Same-time disagreeing sources no longer chosen by ID; nearest conflict rejected,
 not skipped. New private cache glucose70/bicarb78 pairs removed, Mg0. Retained
 truth/input exact;4tests pass. No retraining/accuracy claim/runtime/promotion.
 Old helper hashes are historical; current snapshot conflict policy unresolved.
 
-Mg loss-aligned offsets: `MAGNESIUM_LOSS_CALIBRATION_20260911.md`. Source-tune
+Mg loss-aligned offsets: `docs/research/notes/MAGNESIUM_LOSS_CALIBRATION_20260911.md`. Source-tune
 L1/Huber, own/full matched; full-L1own-L1 gain0/7both. Hospital partialoffset
 gain not stable repair; not end-to-end loss test. No runtime/promotion.
 
-Mg actual auxiliary gradients: `MAGNESIUM_AUXILIARY_GRADIENT_20260911.md`.
+Mg actual auxiliary gradients: `docs/research/notes/MAGNESIUM_AUXILIARY_GRADIENT_20260911.md`.
 21source-fit probes, weighted norm~.177primary, cosine~.011, opposed10/21;
 not absent supervision nor evidence scaling repairs. Local selectedcheckpoint
 geometry, not sole cause or optimizer repair. No runtime/promotion.
 
-Mg auxiliary exposure: `MAGNESIUM_AUXILIARY_EXPOSURE_20260911.md`. Actual
+Mg auxiliary exposure: `docs/research/notes/MAGNESIUM_AUXILIARY_EXPOSURE_20260911.md`. Actual
 sampler coefficients ~.009-.011/aux vs1primary, some sparse patient coverage
 82-89%. Not gradient magnitude or Mg gap cause. Mg-primary run is not balanced
 alltarget training; no runtime/promotion or reversal of earlier experiments.
 
-Mg event-weight training: `MAGNESIUM_EVENT_WEIGHT_20260911.md`. Patient then
+Mg event-weight training: `docs/research/notes/MAGNESIUM_EVENT_WEIGHT_20260911.md`. Patient then
 future-event equal weights, same query evaluation; old controls reproduce.
 Full-oldfull0/7gainboth, full-own0/7gain1/7harmboth. Not a stable weighting
 repair or neural-sampler test; no runtime/promotion.
 
-Mg anchor overlap: `MAGNESIUM_ANCHOR_OVERLAP_20260911.md`. Common hospital
+Mg anchor overlap: `docs/research/notes/MAGNESIUM_ANCHOR_OVERLAP_20260911.md`. Common hospital
 81events/49patients; new full-own and increment-change gain0/7bothroles. Broad
 hospital mean sign survives leaveoneout6/7, not universal benefit. Timing repair
 not established; smaller support and different training remain. No runtime.
 
-Mg own-availability anchors: `MAGNESIUM_NATIVE_ANCHOR_20260911.md`.2510pairs,
+Mg own-availability anchors: `docs/research/notes/MAGNESIUM_NATIVE_ANCHOR_20260911.md`.2510pairs,
 809patients, current medianage0 vs3.167; future ID overlap636 only. Same original
 patient roles. Tree full-own gain0/7source1/7hospital; full-persistence7/7both.
 Not stable repair; composition/time confounded, no JEPA retrain/runtime/promotion.
 
-Mg event summaries: `MAGNESIUM_EVENT_HISTORY_20260911.md`. Same roles plus
+Mg event summaries: `docs/research/notes/MAGNESIUM_EVENT_HISTORY_20260911.md`. Same roles plus
 6/24h legal event summaries; lag baselines reproduce. Full-own gain0/7 both,
 full-lagfull gain0/7 both. Both persistence7/7. These summaries do not repair
 increment; not information impossibility or all event-encoder failure. No runtime.
 
-Mg nonlinear raw tree: `MAGNESIUM_TREE_HISTORY_20260911.md`. Full-own0/7gain,
+Mg nonlinear raw tree: `docs/research/notes/MAGNESIUM_TREE_HISTORY_20260911.md`. Full-own0/7gain,
 harm1/7source2/7hospital; both persistence7/7. Raw linear limitation alone not
 repair; fixed-lag scope, no information-impossibility/runtime/promotion claim.
 
-Mg raw ridge diagnostic: `MAGNESIUM_RAW_HISTORY_20260911.md`. Same roles,
+Mg raw ridge diagnostic: `docs/research/notes/MAGNESIUM_RAW_HISTORY_20260911.md`. Same roles,
 fixed-lag raw no latent: full-own0/7gain,harm7/7source5/7hospital. Bypassing
 JEPA compression not repair; not no-information proof/native-stream equivalent.
 No runtime/promotion.
 
-Mg rate-number ablation7fits: `MAGNESIUM_RATE_SUPPORT_FINDINGS_20260911.md`.
+Mg rate-number ablation7fits: `docs/research/findings/MAGNESIUM_RATE_SUPPORT_FINDINGS_20260911.md`.
 Full lab/presence retained; numeric removed. Vs own/numeric0/7gainboth,
 hospitalharm1vsnumeric. Not rate-number removal repair; no runtime/promotion.
 
-Mg fixed-partition14fits: `MAGNESIUM_SAMPLER_ORDER_FINDINGS_20260911.md`.
+Mg fixed-partition14fits: `docs/research/findings/MAGNESIUM_SAMPLER_ORDER_FINDINGS_20260911.md`.
 Seed7 predictions exact. Whole-own0/7gainboth; hospital variance ratio1.15x
 vs mixed2.80x. Partition-linked component suggested, not variance attribution
 or repair. No runtime/promotion; optimization repeats not seven patient splits.
 
-Mg initialization correction: `MAGNESIUM_INITIAL_STATE_20260911.md`.
+Mg initialization correction: `docs/research/notes/MAGNESIUM_INITIAL_STATE_20260911.md`.
 All2285initial tensors exact across7seeds. Ensemble variance is not random
 initialization; partitions/sampling/source stats/selection remain confounded.
 No fitting/runtime/promotion.
 
-Mg ensemble variance: `MAGNESIUM_ENSEMBLE_VARIANCE_20260911.md`. Common103
+Mg ensemble variance: `docs/research/notes/MAGNESIUM_ENSEMBLE_VARIANCE_20260911.md`. Common103
 hospitalpatients, whole prediction variance2.80xown. Averaging MSE improves,
 MAEwhole .182428 vs own .181701 CIcross0. Variance part, not fullrepair/runtime.
 
-Mg unit exposure resolved: `MAGNESIUM_UNIT_EXPOSURE_20260911.md`. Conflict
+Mg unit exposure resolved: `docs/research/notes/MAGNESIUM_UNIT_EXPOSURE_20260911.md`. Conflict
 union1window/1patient, hospital0all7. Fit4seeds affected; indirect effect not
 measured. Not sufficient universal gap explanation; no conversion/runtime change.
 
-Mg raw unit audit: `MAGNESIUM_RAW_UNITS_20260911.md`.20906values exactraw;
+Mg raw unit audit: `docs/research/notes/MAGNESIUM_RAW_UNITS_20260911.md`.20906values exactraw;
 13system/interface unit conflicts (1.5-1.9),1future/1current pair touched.
 Real ambiguity, not proven conversion error; history/accuracy impact pending.
 No guessed conversion or runtime change.
 
-Mg future IDs checked: `MAGNESIUM_LABEL_IDENTITY_20260911.md`.2366future
+Mg future IDs checked: `docs/research/notes/MAGNESIUM_LABEL_IDENTITY_20260911.md`.2366future
 values/times match raw;18%equal values, draw spacing median9.017h vs anchor
 horizon6.033h. No timestamp-reuse defect established or repair; age supplied.
 
-Mg context dropout7fits: `MAGNESIUM_CONTEXT_DROPOUT_FINDINGS_20260911.md`.
+Mg context dropout7fits: `docs/research/findings/MAGNESIUM_CONTEXT_DROPOUT_FINDINGS_20260911.md`.
 Fixed50%own-only batches, inferencefull; source .216822,hospital .183796.
 Vs matchedwhole/own0/7gain0/7harmboth. No stable repair/runtime/promotion.
 
-Mg history depth: `MAGNESIUM_HISTORY_DEPTH_20260911.md`. Median3events,
+Mg history depth: `docs/research/notes/MAGNESIUM_HISTORY_DEPTH_20260911.md`. Median3events,
 31.95%<=2; fixed1-2/3-4/5+ bins all0/7whole-own gain bothroles. No supported
 shallow-history rescue/routing claim; no fit/runtime/promotion.
 
-Mg native support contract: `MAGNESIUM_SUPPORT_CONTRACT_20260911.md`.
+Mg native support contract: `docs/research/notes/MAGNESIUM_SUPPORT_CONTRACT_20260911.md`.
 41observed variables,35with30fitpatients; native and snapshot >0 masks exact
 all7. No erroneous channel exclusion found. No training/runtime/promotion.
 
-Mg patient influence: `MAGNESIUM_PATIENT_INFLUENCE_20260911.md`. Whole benefit
+Mg patient influence: `docs/research/notes/MAGNESIUM_PATIENT_INFLUENCE_20260911.md`. Whole benefit
 ~44-54%patients, shrunk hospital~51-57%; some mean signs single-patient fragile.
 Not universal benefit masked solely by outliers. Descriptive, no exclusions,
 new gate, runtime or promotion.
 
-Mg increment shrink: `MAGNESIUM_INCREMENT_SHRINK_20260911.md`. Source-tune
+Mg increment shrink: `docs/research/notes/MAGNESIUM_INCREMENT_SHRINK_20260911.md`. Source-tune
 alpha.1-.8; blend vs own0/7gainboth, vs whole2/7source0/7hospital.
 Partial attenuation benefit, not stable extra-context repair. No runtime/promotion.
 
-Own event isolation checked: `NATIVE_OWN_EVENT_ISOLATION_20260911.md`.
+Own event isolation checked: `docs/research/notes/NATIVE_OWN_EVENT_ISOLATION_20260911.md`.
 Inactive nonzero events/timestamps leave state and uncertainty exactly unchanged;
 mask wiring verified,2tests pass. No cadence contamination at this filter path.
 Not cohort-independence/forecast repair; no training/runtime changes.
 
-Mg auxiliary14fits: `MAGNESIUM_AUXILIARY_FINDINGS_20260911.md`.
+Mg auxiliary14fits: `docs/research/findings/MAGNESIUM_AUXILIARY_FINDINGS_20260911.md`.
 Fixed.25real auxiliary vs primary-only gain0/7source/hospital; versus shuffled
 source1gain1harm, hospital0/0. Mg-primary auxiliary is not stable repair.
 No runtime/calibration/promotion; other-target retention not measured here.
 
-Mg sampler audited: `MAGNESIUM_EXPOSURE_20260911.md`. Fit437-453patients;
+Mg sampler audited: `docs/research/notes/MAGNESIUM_EXPOSURE_20260911.md`. Fit437-453patients;
 whole selected99.3-100%patient exposure, epoch32~99%rows/events. No broad
 sampler-omission explanation; independent diversity/subgroup support unresolved.
 No fit/runtime/promotion; glucose2250experiment not identical Mg cohort.
 
-Mg matched gap localized: `MAGNESIUM_MATCHED_GAP_20260911.md`.
+Mg matched gap localized: `docs/research/notes/MAGNESIUM_MATCHED_GAP_20260911.md`.
 Whole-own fit gain6/7 (.17924 vs .20035), tune/evaluation/hospital0/7.
 Scores and patient independence verified. Extra-context advantage disappears
 already on new source patients, not only cross-hospital. No sole-cause proof,
 refitting, runtime, calibration or promotion.
 
-Matched magnesium-primary7fits: `NATIVE_MAGNESIUM_MATCHED_FINDINGS_20260911.md`.
+Matched magnesium-primary7fits: `docs/research/findings/NATIVE_MAGNESIUM_MATCHED_FINDINGS_20260911.md`.
 Same objective/selection as own; whole .218283/.184960 vs own .217013/.182700.
 Whole-own gain0/7harm0/7 both; both persistence7/7. Task-priority mismatch is
 not sufficient explanation. No equivalence/no-information claim, runtime or
 promotion. Incremental extra-context generalization remains unresolved.
 
-Magnesium own7fits: `NATIVE_MAGNESIUM_OWN_FINDINGS_20260911.md`.
+Magnesium own7fits: `docs/research/findings/NATIVE_MAGNESIUM_OWN_FINDINGS_20260911.md`.
 Whole-own gain0/7source/hospital, source harm2/7; both persistence7/7.
 Own .2170/.1827 vs whole .2234/.1814. Different task-loss/selection explicit;
 supervision repair not proven extra-context gain. No runtime/promotion.
 
-Native auxiliary constant control: `NATIVE_AUXILIARY_CONSTANT_20260911.md`.
+Native auxiliary constant control: `docs/research/notes/NATIVE_AUXILIARY_CONSTANT_20260911.md`.
 Glucose/Mg/K beat source-fit constant delta7/7source/hospital. BUN0/7source,
 6/7hospital; creat0/7both. Beyond fixed drift, not yet own-history incremental
 coupling. No neural training/runtime/calibration/promotion.
 
-Native truth auxiliary14fits: `NATIVE_TRUTH_AUXILIARY_FINDINGS_20260911.md`.
+Native truth auxiliary14fits: `docs/research/findings/NATIVE_TRUTH_AUXILIARY_FINDINGS_20260911.md`.
 Other-target actual supervision improves glucose-only heads7/7 for listed labs;
 hospital Mg/K persistence7/7, shuffled5/7,6/7; BUN6/7,5/7 respectively.
 Glucose shuffled0/7, several other targets still fail. Partial supervised repair,
 not established cross-organ increment or promotion; no runtime/calibration.
 
-Source-tune curve replay: `NATIVE_RETENTION_CURVE_20260911.md`.
+Source-tune curve replay: `docs/research/notes/NATIVE_RETENTION_CURVE_20260911.md`.
 Seven32epoch trajectories reproduce primary logs exactly. No positive epoch
 numerically preserves all17-20supported targets; not a statistical harm claim.
 Selection-only strict repair unsupported; no runtime/calibration/promotion.
 
-Selection-scope diagnostic: `NATIVE_SELECTION_SCOPE_20260911.md`.
+Selection-scope diagnostic: `docs/research/notes/NATIVE_SELECTION_SCOPE_20260911.md`.
 Glucose-only source-tune improves primary but target-equal scaled score worsens
 5/7; selected retention4/7, uniform1/7. Descriptive17-20targets, not clinical
 gate. Per-epoch other-target curves missing, so better epoch unproved. No runtime.
 
-Frozen sharedfuture14fits: `NATIVE_FROZEN_FUTURE_FINDINGS_20260911.md`.
+Frozen sharedfuture14fits: `docs/research/findings/NATIVE_FROZEN_FUTURE_FINDINGS_20260911.md`.
 Whole source34.8408->33.9582 but hospital42.4007->42.7113; no stable matched
 own gain. Other-target effects mixed. Rollback sensitivity did not predict
 trained repair; shared weights exact, encoder adapted. No runtime/promotion.
 
-Update block localization: `NATIVE_UPDATE_BLOCKS_20260911.md`.
+Update block localization: `docs/research/notes/NATIVE_UPDATE_BLOCKS_20260911.md`.
 Source-only seven saved checkpoints; sharedfuture restoration Mg/Ca gain7/7,
 phosphate6/7, glucose0gain/0harm but BUN harm6/7. Not solely encoder drift;
 coadapted-weight sensitivity, not trained repair. No runtime/promotion.
 
-Private update14fits: `NATIVE_PRIVATE_UPDATE_FINDINGS_20260911.md`.
+Private update14fits: `docs/research/findings/NATIVE_PRIVATE_UPDATE_FINDINGS_20260911.md`.
 All52nonprimary outputs exact initial, but whole beats originalown0/7both;
 privateown hospital harms4/7. Whole-privateown hospital2/7 partly worsened
 comparator. Isolation works, generalization not repaired.105bindings verified;
 no runtime, calibration or promotion. Frozen event projection caveat explicit.
 
-Same-weight retention control: `RETENTION_SAME_WEIGHT_20260911.md`.
+Same-weight retention control: `docs/research/notes/RETENTION_SAME_WEIGHT_20260911.md`.
 Changing only mask reduces opposition12->9/21 at uniform weights and8->6/21
 at selected weights.42old probes reproduce exactly. Reference selection changes
 local conflict but is not a demonstrated generalization repair; no runtime.
 
-Retention gradient diagnosis: `RETENTION_CONFLICT_DIAGNOSIS_20260911.md`.
+Retention gradient diagnosis: `docs/research/notes/RETENTION_CONFLICT_DIAGNOSIS_20260911.md`.
 Source-fit42 probes: uniform opposing12/21, selected6/21; median cosine
 -.1878/+.2070. Local conflict exists but reduced conflict did not fix the
 prior whole-own accuracy gap. Separates primary-only multi-target retention
 failure from unresolved source generalization. No training/runtime/promotion.
 
-Selected retention7fits: `NATIVE_SELECTED_RETENTION_FINDINGS_20260911.md`.
+Selected retention7fits: `docs/research/findings/NATIVE_SELECTED_RETENTION_FINDINGS_20260911.md`.
 Source-qualified references improve BUN/creatinine versus uniform7/7hospital,
 but remain worse than glucose-only partly; calcium/phosphate lose preservation.
 Glucose whole-own still unstable.82bindings verified; no universalrepair,
@@ -3459,30 +3459,30 @@ Source-tune only pairedCI versus persistence selects bicarbonate/K7/7, Mg6/7;
 no BUN/creatinine. Fixed policy, not hospital-picked exclusion. Selected-retention
 retraining remains pending; no runtime/promotion or accuracy-repair claim.
 
-Retention repair7fits: `NATIVE_RETENTION_REPAIR_FINDINGS_20260911.md`.
+Retention repair7fits: `docs/research/findings/NATIVE_RETENTION_REPAIR_FINDINGS_20260911.md`.
 Source-only fixed output retention reverses hospital Mg/phosphate harm7/7,
 Hct6/7, glucose gain1/7no significantharm; BUN/creatinine harm7/7 by preserving
 poor initial outputs. Real interference-control benefit but not universalrepair
 or stable whole-own gain.63bindings verified; no runtime/promotion.
 
-Native other-target retention: `NATIVE_GLUCOSE_RETENTION_20260911.md`.
+Native other-target retention: `docs/research/notes/NATIVE_GLUCOSE_RETENTION_20260911.md`.
 Glucose-only shared updates leave208other value-head tensors exactlyunchanged,
 but hospital Mg/phosphate harm7/7, Ca/Hct6/7. BUN/creat improve yet remain above
 persistence. Candidate multi-target retention failure, NOT proof of glucose
 incremental root cause or release regression. V2scores reproduce; no runtime.
 
-Initial-versus-final native glucose: `NATIVE_GLUCOSE_INITIALIZATION_20260911.md`.
+Initial-versus-final native glucose: `docs/research/notes/NATIVE_GLUCOSE_INITIALIZATION_20260911.md`.
 Initialwhole beats initialown hospital7/7, but not source. Both fine-tuned
 models improve hospital (whole6/7, own7/7); relative ordering reverses as own
 improves more. Not simple absolute training damage or universally good initial
 context. Fit-gap remains, no from-scratch/causal/runtime/promotion claim.
 
-Student training-mode14fits complete: `NATIVE_GLUCOSE_MODE_FINDINGS_20260911.md`.
+Student training-mode14fits complete: `docs/research/findings/NATIVE_GLUCOSE_MODE_FINDINGS_20260911.md`.
 Existing dropout0.1 restored online, EMA eval retained. Whole-old gain1/7both
 roles, hospital harm1/7; whole-own0/7both(newsource harm3/7).68bindings and
 original predictions verified. Not a sufficient regularization repair; no runtime.
 
-Source-aware history28fits complete: `NATIVE_GLUCOSE_SOURCE_TRAIN_FINDINGS_20260911.md`.
+Source-aware history28fits complete: `docs/research/findings/NATIVE_GLUCOSE_SOURCE_TRAIN_FINDINGS_20260911.md`.
 Whole source vs zero gain1/7source,2/7hospital with harm1/7each; versus matched
 own0/7both. Hospital42.8721->42.6263, ownsource42.1301.86bindings verified.
 Source-name preservation alone does not repair context generalization; no
@@ -3494,59 +3494,59 @@ or future labels. Six unittest checks pass. Source-aware training is NOT yet
 completed; current-source offset failure does not test this representation.
 No runtime/calibration/promotion change.
 
-Initialization provenance checked: `NATIVE_PRETRAINING_PROVENANCE_20260911.md`.
+Initialization provenance checked: `docs/research/notes/NATIVE_PRETRAINING_PROVENANCE_20260911.md`.
 Checkpoint-referenced CURRENT file patient/stay/hospital overlap0, native
 identity mapping verified. Current580980/3291 vs metadata563736/3286 lacks
 historical hash, so actual pretraining membership still uncertified, not proven
 leakage. Reused evaluation remains separate. No runtime/promotion change.
 
-Delayed-arrival accuracy stratified: `NATIVE_OUT_OF_SEQUENCE_ACCURACY_20260911.md`.
+Delayed-arrival accuracy stratified: `docs/research/notes/NATIVE_OUT_OF_SEQUENCE_ACCURACY_20260911.md`.
 Whole-own gain0/7 both groups/roles. Hospital delayed numerical benefit6/7;
 no-delayed harm5/7. Failure not concentrated in suspected delayed group, so no
 principal-cause/deletion rationale. Association only, no runtime/promotion.
 
-Delayed-measurement regime quantified: `NATIVE_OUT_OF_SEQUENCE_FINDINGS_20260911.md`.
+Delayed-measurement regime quantified: `docs/research/findings/NATIVE_OUT_OF_SEQUENCE_FINDINGS_20260911.md`.
 Window-exact V2:2,392/5,526histories any older arrival;2,032glucose. Legitimate
 delayed evidence, not duplicate/error proof. Encoder has age but same update
 mechanism; prediction effect untested. No reordering/deletion/runtime change.
 
-Known-source offset accuracy tested: `GLUCOSE_SOURCE_OFFSET_FINDINGS_20260911.md`.
+Known-source offset accuracy tested: `docs/research/findings/GLUCOSE_SOURCE_OFFSET_FINDINGS_20260911.md`.
 Current-source-only median residual correction vs constant/shuffled0/7source
 and hospital. Whole hospital42.4007->42.5476, matchedown41.3413. No global
 source-bias repair, source-aware history remains distinct. No runtime change.
 
-Glucose source provenance audited: `GLUCOSE_SOURCE_SWITCH_FINDINGS_20260911.md`.
+Glucose source provenance audited: `docs/research/findings/GLUCOSE_SOURCE_SWITCH_FINDINGS_20260911.md`.
 1,798/5,438pairs switch bedside glucose/glucose labels. Hospital switch-group
 whole-own numerical harm7/7(significant1), same-source gain0/7; source same
 also harm3/7, so not solecause. Future eICU extractor retains source_test_name;
 no input/cache/weight overwrite, no future-source routing or promotion.
 
-Native glucose source-support strata: `GLUCOSE_NATIVE_SUPPORT_FINDINGS_20260911.md`.
+Native glucose source-support strata: `docs/research/findings/GLUCOSE_NATIVE_SUPPORT_FINDINGS_20260911.md`.
 Source-defined current/age/recorded-rate joint bins, >=30 distinctfitpatients:
 whole-own gain0/7source/hospital even in supported bins. Rare combinations of
 these3features alone do not explain failure; high-dimensional support unresolved.
 Not a routing rule, delivered-treatment claim or runtime/promotion change.
 
-Native projection scale diagnostic: `NATIVE_PROJECTION_COMPONENTS_FINDINGS_20260911.md`.
+Native projection scale diagnostic: `docs/research/findings/NATIVE_PROJECTION_COMPONENTS_FINDINGS_20260911.md`.
 Source-fit first-linear lab centered RMS1.547 vs missing-age.326; missing-age
 uncentered2.833 mostly constant. No panel-dependent scalar normalization or
 proof of numerical drowning. Descriptive, no forecast/causal/runtime repair.
 
-Native glucose update sensitivity: `GLUCOSE_NATIVE_CADENCE_FINDINGS_20260911.md`.
+Native glucose update sensitivity: `docs/research/findings/GLUCOSE_NATIVE_CADENCE_FINDINGS_20260911.md`.
 Frozen whole checkpoints, only observed-glucose groups update state; final
 context unchanged. Original predictions reproduced. Skip-vs-original gain0/7
 all roles; new-source MAE34.8408->36.0343,hospital42.4007->42.7597.
 Not a repair; removes event content as well as cadence, so no isolated cadence
 cause or train-matched conclusion. No runtime/calibration/promotion change.
 
-Native glucose scale repair tested: `GLUCOSE_NATIVE_CALIBRATION_FINDINGS_20260911.md`.
+Native glucose scale repair tested: `docs/research/findings/GLUCOSE_NATIVE_CALIBRATION_FINDINGS_20260911.md`.
 Source-tune patient-weighted offset and affine delta calibration, both own/whole.
 Whole versus equivalently corrected own gain0/7source/hospital for both methods.
 Whole hospital MAE42.4007->42.5011offset/42.5062affine. Whole mean bias is already
 smaller than own despite worse MAE; no uniform bias/scale explanation or repair.
 Original bindings/scores reproduced. No neural/runtime/interval/promotion change.
 
-Native glucose failure localized: `GLUCOSE_NATIVE_FIT_GAP_FINDINGS_20260911.md`.
+Native glucose failure localized: `docs/research/findings/GLUCOSE_NATIVE_FIT_GAP_FINDINGS_20260911.md`.
 Frozen 21-fit predictions: whole-own fit gain6/7, new-source numerical harm7/7
 (significant2/7), hospital gain0/7. All45 original bindings and held-out/tune
 scores verified; roles patient-disjoint. Extra treatment numbers fail stable
@@ -3554,60 +3554,60 @@ increment even in fit (gain1/harm2). Earliest measured failure is source
 generalization, not solely external shift. This is not a unique biological
 root-cause proof. No new training, runtime, intervals or promotion.
 
-Glucose native21fits complete: `RATE_GLUCOSE_FINDINGS_20260911.md`.
+Glucose native21fits complete: `docs/research/findings/RATE_GLUCOSE_FINDINGS_20260911.md`.
 5,438pairs/1,740patients; hospital own41.4025 vs whole-events42.4007 vs
 persistence77.3038. Real-support gain0/7source1/7hospital; real-own0/7both,
 source harm2/7. Both persistence7/7; no stable incremental repair.45bindings
 verified. No runtime/calibration/promotion; not solely potassium evidence now.
 
 Additional real outcomes at fixed rate queries built:
-`RATE_MULTITARGET_SUPPORT_20260911.md`. Glucose5,438pairs/1,740patients,
+`docs/research/notes/RATE_MULTITARGET_SUPPORT_20260911.md`. Glucose5,438pairs/1,740patients,
 bicarbonate4,539/1,483; old potassium labels reproduce. No new training yet;
 enables target comparison rather than extrapolating K-only failure to allbody.
 Same potassium-selected queries/roles; no runtime/promotion.
 
-Native rate scaler audit: `NATIVE_RATE_SCALE_FINDINGS_20260911.md`. Normalized
+Native rate scaler audit: `docs/research/findings/NATIVE_RATE_SCALE_FINDINGS_20260911.md`. Normalized
 IQR .60-.85fit/.86-1.15hospital, not nearzero numeric collapse. Hospital >5sigma
 tails .86-3.00% vs .32-.66%fit; shift exists but no error-causation proof.
 No fitting/runtime change or posthoc clipping adopted.
 
-Real-label projection14fits complete: `NATIVE_REAL_PROJECTION_FINDINGS_20260911.md`.
+Real-label projection14fits complete: `docs/research/findings/NATIVE_REAL_PROJECTION_FINDINGS_20260911.md`.
 Fast projection vs original native gain0/7allgroups; harm3/7source both and
 1/7hospital bracket. Hospital .389022->.394157. Real-support increment still
 unstable. Synthetic success did not transfer to real accuracy; do not deploy
 fast LR as a repair.48bindings verified, original scores reproduce. No runtime.
 
-Known-signal optimization repair: `NATIVE_PROJECTION_FINDINGS_20260911.md`.
+Known-signal optimization repair: `docs/research/findings/NATIVE_PROJECTION_FINDINGS_20260911.md`.
 Observation projection lr1e-3 vs rest1e-4; synthetic real-support/whole/persistence
 gain7/7all source/hospital groups, hospital MAE .402314vs support.580522.
 34bindings verified. Demonstrates synthetic-path learnability and optimization
 contribution, NOT real treatment accuracy. Real-label matched refit remains
 next; no runtime/calibration/promotion changes.
 
-Synthetic latent probes complete: `SYNTHETIC_LATENT_FINDINGS_20260911.md`.
+Synthetic latent probes complete: `docs/research/findings/SYNTHETIC_LATENT_FINDINGS_20260911.md`.
 Source-fit fixed Ridge probes: new-source sign correlation .1606belief/.0100
 context/-.0229future. Weak linear recovery already in state/fusion, not only
 value head; no information-absence proof. No neural/runtime update or promotion.
 
-Same-path synthetic14fits complete: `NATIVE_SYNTHETIC_FINDINGS_20260911.md`.
+Same-path synthetic14fits complete: `docs/research/findings/NATIVE_SYNTHETIC_FINDINGS_20260911.md`.
 Known0.5event increment real-support gain3/7source,4/7hospital all, tiny median
 MAE .580313vs.581786hospital; no gain over frozen whole0/7.33bindings verified.
 Known-signal uptake itself limited, so cannot blame real signal absence alone.
 Not biological accuracy/promotion; runtime unchanged. Optimization/path cause
 not yet uniquely localized. Supersedes positive-control-pending notes below.
 
-Native treatment fit-gap: `NATIVE_FIT_GAP_FINDINGS_20260911.md`. Six/seven
+Native treatment fit-gap: `docs/research/findings/NATIVE_FIT_GAP_FINDINGS_20260911.md`. Six/seven
 fit paired real-support effects <.0001absolute; selected real/support fit MAE
 .373898/.373873. Not purely hospital transport failure; pathway learnability
 versus weak conditional information unresolved. Old scores reproduced, no fit
 or runtime change. Same-native-JEPA injected-signal control remains untested.
 
-Native memory gradient probe complete: `NATIVE_MEMORY_GRADIENT_FINDINGS_20260911.md`.
+Native memory gradient probe complete: `docs/research/findings/NATIVE_MEMORY_GRADIENT_FINDINGS_20260911.md`.
 32source-fit patients/seed; older>=10active updates contribute nonzero observed
 gradients (K48.9-75.9%, insulin17.9-43.8% total). Not literal old-history erasure,
 not proof of useful memory or causal sensitivity. No training/runtime change.
 
-Clock14-fit accuracy completed: `NATIVE_CLOCK_TRAIN_FINDINGS_20260911.md`.
+Clock14-fit accuracy completed: `docs/research/findings/NATIVE_CLOCK_TRAIN_FINDINGS_20260911.md`.
 Corrected real vs original native hospital gain0/7both groups; MAE .389022->
 .387887all/.426119->.425551bracket. Source gain1/7 with all-group harm1/7.
 No stable repair; time collision alone not principal-cause evidence.50bindings
@@ -3616,16 +3616,16 @@ Runtime/calibration/promotion unchanged.
 
 Clock-corrected native cache built:36,192/128,236tokens change only two clock
 columns; signed pre-ICU offsets retained, three tests pass. Original cache
-unchanged. `NATIVE_CLOCK_FINDINGS_20260911.md`. Both lower/upper clipping matter;
+unchanged. `docs/research/findings/NATIVE_CLOCK_FINDINGS_20260911.md`. Both lower/upper clipping matter;
 prior aggregate collision count is not exclusively post168h. Retraining pending.
 
-Native clock collision quantified: `NATIVE_CLOCK_FINDINGS_20260911.md`.
+Native clock collision quantified: `docs/research/findings/NATIVE_CLOCK_FINDINGS_20260911.md`.
 69,164/263,668 active transitions lose positive elapsed time in encoded clock;
 3,824/5,526queries affected.12h late-event collision reproduced. This is a
 representation limit, not established error cause; matched unbounded-time
 retraining pending. No runtime/calibration/promotion change.
 
-Native14-fit accuracy complete: `NATIVE_RATE_JEPA_TRAIN_FINDINGS_20260911.md`.
+Native14-fit accuracy complete: `docs/research/findings/NATIVE_RATE_JEPA_TRAIN_FINDINGS_20260911.md`.
 Native-real improves snapshot whole0/7everygroup; hospital bracket harm1/7.
 Hospital MAE .389022 vs snapshot .386973; treatment-number versus support
 gain0/7allgroups. Both retain persistence benefit7/7, no full repair.32bindings
@@ -3638,198 +3638,198 @@ patient roles and labels; real/support numbers; separate private output paths.
 Seven focused tests and CLI import pass. Training not yet launched; next action
 is the full14-fit contrast. No accuracy claim or runtime change.
 
-Native encoder integration ready: `NATIVE_RATE_JEPA_ENCODER_READY_20260911.md`.
+Native encoder integration ready: `docs/research/notes/NATIVE_RATE_JEPA_ENCODER_READY_20260911.md`.
 Same filter activates rate-only events; padding inert, query context exact.
 Seven focused tests; eight-query real forward finite, max165steps/178features.
 Not accuracy validation; native training still pending, runtime unchanged.
 
-Native event tokens built: `NATIVE_RATE_JEPA_TOKENS_FINDINGS_20260911.md`.
+Native event tokens built: `docs/research/findings/NATIVE_RATE_JEPA_TOKENS_FINDINGS_20260911.md`.
 128,236unique groups,75,552lab,54,198rate,52,402rate-only,282inactive. New-event
 masks, not LOCF repeats; six focused tests pass. Native neural training pending;
 must allow rate-only steps explicitly, no runtime/calibration/promotion yet.
 
 Native schedule V2 materialized and round-trip verified: private event table
 retains units/measured timestamps, ragged group indices saved and hash-bound.
-Counts unchanged; `NATIVE_RATE_JEPA_SCHEDULE_FINDINGS_20260911.md`. No trained
+Counts unchanged; `docs/research/findings/NATIVE_RATE_JEPA_SCHEDULE_FINDINGS_20260911.md`. No trained
 native sequence yet. Rate record time remains distinct from availability.
 
 Native rate-query schedule built/tested:
-`NATIVE_RATE_JEPA_SCHEDULE_FINDINGS_20260911.md`. Median42native event groups
+`docs/research/findings/NATIVE_RATE_JEPA_SCHEDULE_FINDINGS_20260911.md`. Median42native event groups
 per48h history,p9090,max165;5,296/5,526queries exceed10groups. Four contract
 tests pass, no training yet. Extra events not automatically extra predictive
 information; lab availability and insulin record-time provenance differ.
 
-Event-only step-mask preflight: `RATE_JEPA_EVENT_MASK_SUPPORT_20260911.md`.
+Event-only step-mask preflight: `docs/research/notes/RATE_JEPA_EVENT_MASK_SUPPORT_20260911.md`.
 220/38,431known-rate history positions skipped;133queries, only7hospital
 patients/10queries. Not sufficient for subgroup efficacy. This is fixed-grid
 mask support, not native event replay. No training/mask/runtime/promotion.
 
-Frozen event-stage localization: `RATE_JEPA_EVENT_STAGES_FINDINGS_20260911.md`.
+Frozen event-stage localization: `docs/research/findings/RATE_JEPA_EVENT_STAGES_FINDINGS_20260911.md`.
 Numerical-event removal relative RMS shift hospital belief .0124,context .0075,
 future latent .0071. Already small at belief, not a large state signal lost only
 at final decoder. Descriptive coordinates, no biological information fraction,
 no demonstrated repair/runtime/promotion.
 
-Frozen event-path check complete: `RATE_JEPA_EVENT_PATH_FINDINGS_20260911.md`.
+Frozen event-path check complete: `docs/research/findings/RATE_JEPA_EVENT_PATH_FINDINGS_20260911.md`.
 New event weight norms .028-.133 (not frozen); numbers-off hospital forecast
 shift ~.001, all-off ~.0022. Exact baseline MAE reproduction. Weak end-to-end
 use located, not proof of bottleneck cause or irrelevant treatment. No fitting,
 runtime/calibration/promotion. Do not blindly amplify event weights.
 
 Recorded event-history JEPA14fits completed:
-`RATE_JEPA_EVENTS_FINDINGS_20260911.md`. Real vs original gain1/7source,0/7
+`docs/research/findings/RATE_JEPA_EVENTS_FINDINGS_20260911.md`. Real vs original gain1/7source,0/7
 hospital; real vs support0/7all and hospital harm1/7. MAEs nearly unchanged.
 Same lab-supported update times, no treatment-only steps or complete dose
 semantics. Event path utility unresolved, no runtime/calibration/promotion.
 
 Separate rate-JEPA event history built:
-`RATE_JEPA_EVENT_HISTORY_FINDINGS_20260911.md`.46,657exact history snapshots,
+`docs/research/findings/RATE_JEPA_EVENT_HISTORY_FINDINGS_20260911.md`.46,657exact history snapshots,
 30,993rate-supported including1,939zeros;5,525/5,526query support. Labs unchanged,
 rate/count/age remain separate. Not yet encoder training; infusion availability
 unverified, no runtime/calibration/promotion. Private hash-bound event cache.
 
-Fixed rate-JEPA seven-seed mean tested: `RATE_JEPA_ENSEMBLE_FINDINGS_20260911.md`.
+Fixed rate-JEPA seven-seed mean tested: `docs/research/findings/RATE_JEPA_ENSEMBLE_FINDINGS_20260911.md`.
 Common hospital-only evaluation avoids source cross-seed leakage. Whole MAE
 .381275all/.409151bracket vs own .399965/.434379; whole-own CI upper .002784/
 .000706, both cross0. Persistence beaten, no full incremental repair or
 runtime/calibration/promotion. Do not redefine the gate around near misses.
 
 Current rate-query comparison input integrity verified:
-`RATE_JEPA_INPUT_INTEGRITY_20260911.md`. Body/query/label/seven partition hashes
+`docs/research/notes/RATE_JEPA_INPUT_INTEGRITY_20260911.md`. Body/query/label/seven partition hashes
 match; current role patient overlap zero, duplicate paired queries zero.
 Inherited checkpoint pretraining independence remains uncertified. No repair
 of forecast error, fitting, runtime, or promotion is implied.
 
-Rate-query source sampling replay: `RATE_JEPA_SAMPLING_FINDINGS_20260911.md`.
+Rate-query source sampling replay: `docs/research/findings/RATE_JEPA_SAMPLING_FINDINGS_20260911.md`.
 Rows86.95-90.47%, future events90.52-92.30% seen at32epochs; whole selected
 epochs4-29, none32. Not a convergence proof, but no low-coverage/late-boundary
 pattern warranting automatic budget extension. No fitting/runtime/promotion.
 
-Rate-JEPA fit-gap diagnosis complete: `RATE_JEPA_FIT_GAP_FINDINGS_20260911.md`.
+Rate-JEPA fit-gap diagnosis complete: `docs/research/findings/RATE_JEPA_FIT_GAP_FINDINGS_20260911.md`.
 Whole-vs-support gain5/7fit (harm1/7),1/7new source,2/7hospital. Numerical
 increment attenuates already within source, but no wholesale median reversal.
 Support-only hospital gain0/7 remains a separate transport limitation.
 Exact evaluation reproduction; no fitting/runtime/calibration/promotion.
 
 Train-matched rate-JEPA support control7fits complete:
-`RATE_ANCHOR_JEPA_SUPPORT_FINDINGS_20260911.md`. Support-only beats own5/7source,
+`docs/research/findings/RATE_ANCHOR_JEPA_SUPPORT_FINDINGS_20260911.md`. Support-only beats own5/7source,
 0/7hospital; whole beats support1/7source,2/7hospital all,0/7hospital bracket.
 Whole/support hospital MAE .386973/.400350. Source shared gain is not uniquely
 numerical physiology; frozen sensitivity does not establish trained increment.
 No information-absence claim, runtime/calibration/promotion change.
 
 Frozen rate-JEPA component diagnosis completed:
-`RATE_JEPA_COMPONENT_FINDINGS_20260911.md`. Neutralizing other lab numbers
+`docs/research/findings/RATE_JEPA_COMPONENT_FINDINGS_20260911.md`. Neutralizing other lab numbers
 harms5/7source and3/7hospital; exact-age standardization has tiny effects.
 Whole hospital MAE .386973 becomes .407274 without numerical context. This
 is off-manifold sensitivity, not train-matched proof or causal physiology.
 Source incremental gain versus cross-hospital consistency remains the gap;
 no runtime, calibration, training or promotion change.
 
-Frozen neural hospital audit: `RATE_JEPA_HOSPITAL_FINDINGS_20260911.md`.
+Frozen neural hospital audit: `docs/research/findings/RATE_JEPA_HOSPITAL_FINDINGS_20260911.md`.
 193patients/15hospitals, only1site>=30patients. Whole-own mean gain7/7 but
 single-hospital removal reverses2/7. Unsupported sites not efficacy failures.
 No fitting/promotion; source increment versus broad transport still unresolved.
 
 Rate-anchor JEPA14end-to-end fits complete:
-`RATE_ANCHOR_JEPA_FINDINGS_20260911.md`. Whole-vs-own source gain5/7all,6/7bracket;
+`docs/research/findings/RATE_ANCHOR_JEPA_FINDINGS_20260911.md`. Whole-vs-own source gain5/7all,6/7bracket;
 hospital1/7both, no harm. Whole hospital .386973all/.413968bracket; persistence
 7/7both arms allgroups. Shared-lab source increment, transfer incomplete;
 no treatment input, runtime/calibration/promotion change.
 
 Shared encoder inputs at rate queries rebuilt:
-`RATE_ANCHOR_BODY_INPUTS_20260911.md`. Same5526pairs/1763patients,40supported
+`docs/research/notes/RATE_ANCHOR_BODY_INPUTS_20260911.md`. Same5526pairs/1763patients,40supported
 current lab variables in53-slot schema; potassium labels reproduce. No neural
 training yet; treatment separate, bedside missing. No runtime/promotion.
 
-Snapshot repair accuracy21refits complete: `SNAPSHOT_REPAIR_ACCURACY_20260911.md`.
+Snapshot repair accuracy21refits complete: `docs/research/notes/SNAPSHOT_REPAIR_ACCURACY_20260911.md`.
 Old/own controls reproduce; significant gain/harm0/7 every group. Hospital
 bracket MAE .406434->.407396. Keep correctness repair, not main accuracy cause.
 No runtime or promotion change.
 
-Simultaneous snapshot defect repaired: `SIMULTANEOUS_RATE_FINDINGS_20260911.md`.
+Simultaneous snapshot defect repaired: `docs/research/findings/SIMULTANEOUS_RATE_FINDINGS_20260911.md`.
 Conflicting equal-time rates no longer picked by source_id; now unknown.
 Only1/5526native-rate query windows affected, so not presumed principal cause.
 Candidate extractor changes require fresh fit; runtime unchanged.
 
-Frozen rate-anchor influence: `RATE_ANCHORED_INFLUENCE_20260911.md`.
+Frozen rate-anchor influence: `docs/research/notes/RATE_ANCHORED_INFLUENCE_20260911.md`.
 Hospital bracket-after mean benefit7/7,51.4-59.6%patients benefit, no single
 patient can reverse mean. Prior significance2/7 unchanged. Not sole outlier,
 still heterogeneous small increment; no fitting/runtime/promotion.
 
 Record-anchor prediction21fits complete:
-`RATE_ANCHORED_PREDICTION_FINDINGS_20260911.md`. Hospital bracket-after146patients,
+`docs/research/findings/RATE_ANCHORED_PREDICTION_FINDINGS_20260911.md`. Hospital bracket-after146patients,
 real MAE .406434vsown .422643; gain2/7own,1/7support,7/7persistence. Source
 gain1/7own. Partial increment not stable repair, no JEPA/runtime promotion.
 
-Rate-triggered labels rebuilt: `RATE_ANCHORED_SUPPORT_20260911.md`.
+Rate-triggered labels rebuilt: `docs/research/notes/RATE_ANCHORED_SUPPORT_20260911.md`.
 5526paired/1763patients;4516bracket-after/1526patients. Hospital strict146patients
 versus9 lab-query group. Same patient roles, new query/label task. No accuracy
 test yet; retrospective record timing not verified knowledge-time. Runtime unchanged.
 
-Rate-change timing ambiguity located: `RATE_CHANGE_BRACKET_FINDINGS_20260911.md`.
+Rate-change timing ambiguity located: `docs/research/findings/RATE_CHANGE_BRACKET_FINDINGS_20260911.md`.
 439/554post-draw recorded differences straddle current draw; only115windows/
 98patients have unequal pairs entirely after draw. Hospital10windows/9patients.
 Prior40patient group is record-based, not verified new intervention. No training,
 runtime change or efficacy conclusion; explicit bracket classification tested.
 
-Frozen post-draw subgroup: `POSTDRAW_RATE_FINDINGS_20260911.md`.
+Frozen post-draw subgroup: `docs/research/findings/POSTDRAW_RATE_FINDINGS_20260911.md`.
 40hospital patients/43rows, source62-85patients. Real vs own numerical hospital
 gain6/7 but significant0/7; original0/7; support1/7. Hospital MAE .450256real,
 .463533own,.535persistence. No fitting/promotion; timing dilution unproved.
 
-Timing support audit: `RATE_MEASUREMENT_ORDER_FINDINGS_20260911.md`.
+Timing support audit: `docs/research/findings/RATE_MEASUREMENT_ORDER_FINDINGS_20260911.md`.
 Only554/3373sequence windows have observed rate change after current potassium
 draw; hospital43/358. Most tested context is historical, not a new intervention
 after latest draw. Not proof of absorption/causality; subgroup patient support
 not yet counted. No training/runtime change.
 
-Positive sensitivity control14fits: `INCREMENT_SENSITIVITY_FINDINGS_20260911.md`.
+Positive sensitivity control14fits: `docs/research/findings/INCREMENT_SENSITIVITY_FINDINGS_20260911.md`.
 Artificial +/-0.5 increment detected7/7source/hospital versus nuisance. Only
 current/age base, not full-history/JEPA or small-effect power. Gross learning
 and scoring work; no real accuracy repair or runtime promotion.
 
 Exact treatment support control completed7fits:
-`INSULIN_SUPPORT_CONTROL_FINDINGS_20260911.md`. Numeric vs same-mask control
+`docs/research/findings/INSULIN_SUPPORT_CONTROL_FINDINGS_20260911.md`. Numeric vs same-mask control
 gain0/7source/hospital all/sequence; hospital harm1/7. Sequence hospital
 MAE .343361numeric/.337547support/.336886own. Not donor-mismatch explanation
 alone, not equivalence or no-information proof. No runtime change.
 
-Transition accuracy completed14fits: `TRANSITION_ACCURACY_FINDINGS_20260911.md`.
+Transition accuracy completed14fits: `docs/research/findings/TRANSITION_ACCURACY_FINDINGS_20260911.md`.
 Frozen scores reproduce; adding observed changes/reversals/last-change timing
 improves original0/7 all role/groups. Hospital sequence .341000->.343361.
 Representation collision real but repair not predictive gain. No runtime change.
 
-Rate-summary collision verified: `RATE_TRANSITION_COLLISION_20260911.md`.
+Rate-summary collision verified: `docs/research/notes/RATE_TRANSITION_COLLISION_20260911.md`.
 Identical old snapshot/range/change/span can hide different internal reversals
 and last-change age. Added transition features and synthetic regression; not
 yet outcome-tested, not established as principal cause. No runtime change.
 
 Expanded sequence diagnostic completed21fits:
-`EXPANDED_INSULIN_POTASSIUM_FINDINGS_20260911.md`. Patient/hospital sequence
+`docs/research/findings/EXPANDED_INSULIN_POTASSIUM_FINDINGS_20260911.md`. Patient/hospital sequence
 support269-281/184. Real-vs-own/source gain1/7; hospital0/7, sequence numerical
 harm7/7. Hospital sequence MAE .336886own/.341000real/.400376persistence.
 Support-only explanation not sufficient; no shared-JEPA or runtime promotion.
 Fixed roles and private models preserved, no new external lockbox.
 
-Expanded pair support built: `INSULIN_POTASSIUM_PAIR_SUPPORT_20260911.md`.
+Expanded pair support built: `docs/research/notes/INSULIN_POTASSIUM_PAIR_SUPPORT_20260911.md`.
 3373pairs/1562patients/54hospitals have prior insulin sequence plus potassium
 5-7h future/current pair;12354pairs total in rate-recorded stays. Source roles
 not yet assigned, no training or promotion. Treatment availability remains
 unverified; private caches retain identity for later patient-disjoint splitting.
 
 Full eICU sequence inventory:5152patients with insulin rate sequences,
-4909with changes,67/66hospitals. `EICU_INSULIN_SEQUENCE_INVENTORY_20260911.md`.
+4909with changes,67/66hospitals. `docs/research/notes/EICU_INSULIN_SEQUENCE_INVENTORY_20260911.md`.
 Existing diagnostic stays121patients have sequences somewhere in stay, not
 necessarily at scored queries. Label-aligned expansion remains unverified;
 this is not a database-wide scarcity ceiling or new lockbox. No training/runtime.
 
-Frozen rate subgroup audit: `POTASSIUM_RATE_SUBGROUP_FINDINGS_20260911.md`.
+Frozen rate subgroup audit: `docs/research/findings/POTASSIUM_RATE_SUBGROUP_FINDINGS_20260911.md`.
 Insulin sequence evaluation support only1-10patients/seed, all paired CIs
 unsupported despite341pooled windows. Rate inputs vary and own trees use them
 7/7. Not dead path, not a valid subgroup no-effect conclusion. No fitting/runtime.
 
-Rate history follow-up completed28fits: `POTASSIUM_RATE_HISTORY_FINDINGS_20260911.md`.
+Rate history follow-up completed28fits: `docs/research/findings/POTASSIUM_RATE_HISTORY_FINDINGS_20260911.md`.
 341insulin/16diuretic sequences; own gain1/7vsbaseline and1/7vsplacebo,
 full0/7both. Own .369221, full .369971. No stable repair, dose integration,
 external evaluation or runtime changes. Other drug-rate sequences unsupported.
@@ -3837,54 +3837,54 @@ external evaluation or runtime changes. Other drug-rate sequences unsupported.
 All-action support V2: only insulin/diuretic exposure can form pure tree leaves
 in7/7; bicarbonate/Mg/K/RRT0/7. Fit exposed patients insulin110-129,diuretics10-14,
 K2-5,Mg1-2. Training report now records row/patient support and empty evaluation
-separately. `TREATMENT_LEAF_SUPPORT_FINDINGS_20260911.md`. No prediction change.
+separately. `docs/research/findings/TREATMENT_LEAF_SUPPORT_FINDINGS_20260911.md`. No prediction change.
 
-Rare infusion testability defect located: `TREATMENT_LEAF_SUPPORT_FINDINGS_20260911.md`.
+Rare infusion testability defect located: `docs/research/findings/TREATMENT_LEAF_SUPPORT_FINDINGS_20260911.md`.
 Potassium fit8-19windows < minleaf30 all7; evalzero2/7. Synthetic perfect rare
 signal blocked at30, recovered at10. No-split does not falsify potassium signal.
 Pooled negative result stands; this is comparator support, not universal cause.
 No real training/runtime/promotion change; rare-action claims need preflight.
 
-Order issuance context now tested: `POTASSIUM_ORDER_CONTEXT_FINDINGS_20260911.md`.
+Order issuance context now tested: `docs/research/findings/POTASSIUM_ORDER_CONTEXT_FINDINGS_20260911.md`.
 28source fits; real vs original/placebo0/7gain and0/7harm own/full. Own MAE
 .373470->.370643,full .369971->.370717. No final cancellation/dose/start/stop
 inputs; eventually canceled orders retained. Retrospective order-time only,
 not execution/availability evidence. No external/runtime/calibration changes.
 
-Potassium medication scope audit: `POTASSIUM_MEDICATION_COVERAGE_FINDINGS_20260911.md`.
+Potassium medication scope audit: `docs/research/findings/POTASSIUM_MEDICATION_COVERAGE_FINDINGS_20260911.md`.
 Two brand aliases repaired140 missed medication orders, recognized windows727
 to739. Infusion remains65events/20windows: aliases do not explain prior negative
 infusion fit. Orders are not administrations; cancellation finalization and
 available-time semantics remain unresolved. No training/runtime changes.
 
 Latest treatment-context accuracy test completed28 source fits:
-`POTASSIUM_TREATMENT_CONTEXT_FINDINGS_20260911.md`. Real vs baseline own1/7gain
+`docs/research/findings/POTASSIUM_TREATMENT_CONTEXT_FINDINGS_20260911.md`. Real vs baseline own1/7gain
 and1/7harm, full0/7; vs shuffled0/7both. Full median .369971 unchanged;
 three full trees never split on treatment, others use few insulin features.
 Snapshot append does not repair incremental context. Retrospective event-time,
 not independently known-time; no external/runtime/calibration/promotion change.
 
 Treatment coverage V2 distinguishes solution flow from drug rate:
-`POTASSIUM_TREATMENT_SUPPORT_FINDINGS_20260911.md`. Explicit mL/h recovered
+`docs/research/findings/POTASSIUM_TREATMENT_SUPPORT_FINDINGS_20260911.md`. Explicit mL/h recovered
 for potassium20,bicarbonate36,magnesium13 query windows, without asserting
 drug delivery. Prior rate parser worked; drug-dimension restriction discarded
 volume from the audit. Separate rate_channels now retains both meanings.
 No concentration/availability inference, model training or runtime promotion.
 
-Latest treatment coverage: `POTASSIUM_TREATMENT_SUPPORT_FINDINGS_20260911.md`.
+Latest treatment coverage: `docs/research/findings/POTASSIUM_TREATMENT_SUPPORT_FINDINGS_20260911.md`.
 Exact6174queries/1309patients infusion audit: insulin event/rate windows1081/497,
 potassium20/0,bicarbonate36/0. Current lab-only contrasts do not test complete
 treatment state. AKI/glucose helpers are action-scoped; infusionoffset lacks
 independent availability time. Counts are retrospective support, not known-time
 guarantees or absent-treatment proof. No training/runtime/promotion changes.
 
-Latest scalar amplitude diagnostic: `POTASSIUM_EVENT_GAIN_FINDINGS_20260911.md`.
+Latest scalar amplitude diagnostic: `docs/research/findings/POTASSIUM_EVENT_GAIN_FINDINGS_20260911.md`.
 Frozen event-window trees; patient-equal nonnegative LAD gain fit on tune only,
 with amplification allowed. Full gain>1 in6/7 but scaled-vs-original improvement
 0/7 all arms; full MAE .369971->.370997. Large-change attenuation does not
 justify global amplification. No external reads, interval/runtime/promotion.
 
-Latest frozen change decomposition: `POTASSIUM_EVENT_CHANGE_FINDINGS_20260911.md`.
+Latest frozen change decomposition: `docs/research/findings/POTASSIUM_EVENT_CHANGE_FINDINGS_20260911.md`.
 V2 fixes float boundary ties without changing pooled predictions/scores.
 Large-change full MAE .717920 vs persistence1.090041, direction .906;
 predicted movement .400635 vs actual1.090041. Full-own gain0/7 large,
@@ -3892,33 +3892,33 @@ predicted movement .400635 vs actual1.090041. Full-own gain0/7 large,
 cannot establish prospective routing or clinical stability. Not a sole root
 cause or forecast repair. No new fitting/external/runtime/promotion changes.
 
-Latest within-window history: `POTASSIUM_EVENT_WINDOWS_FINDINGS_20260911.md`.
+Latest within-window history: `docs/research/findings/POTASSIUM_EVENT_WINDOWS_FINDINGS_20260911.md`.
 21source-only fits with pre-anchor event summaries on unchanged6174pairs.
 Lag extrema omit about4.31%/20.63% supported6h/24h entries after float tolerance.
 Augmented full improves original1/7, own3/7, support5/7. Partial numeric evidence,
 not stable repair or principal-cause proof. No external/runtime/promotion changes.
 
-Latest native potassium anchors: `POTASSIUM_NATIVE_ANCHOR_FINDINGS_20260911.md`.
+Latest native potassium anchors: `docs/research/findings/POTASSIUM_NATIVE_ANCHOR_FINDINGS_20260911.md`.
 21fixed-capacity source refits; same patient roles, potassium availability queries.
 Native full-own4/7source but0/7hospital/MIMIC. Same-native-row full refit-vs-old
 gain0/7all roles; own source harm2/7. Not a repair or proof glucose query gating
 was the principal cause. Support shrinks source/hospital; no runtime promotion.
 
-Latest frozen nonlinear transfer: `POTASSIUM_TREE_TRANSFER_FINDINGS_20260911.md`.
+Latest frozen nonlinear transfer: `docs/research/findings/POTASSIUM_TREE_TRANSFER_FINDINGS_20260911.md`.
 21selected source refits reproduce exactly. Full vs own0/7gain in both207patient
 hospital and859patient MIMIC; both persistence7/7. Source partial tree gain does
 not establish external increment; not uniquely a JEPA-compression failure.
-See `ROOT_CAUSE_EVIDENCE_20260911.md` for verified contributors versus unresolved
+See `docs/research/notes/ROOT_CAUSE_EVIDENCE_20260911.md` for verified contributors versus unresolved
 causes. No calibration, runtime or promotion changes.
 
-Latest nonlinear raw history: `POTASSIUM_TREE_HISTORY_FINDINGS_20260911.md`.
+Latest nonlinear raw history: `docs/research/findings/POTASSIUM_TREE_HISTORY_FINDINGS_20260911.md`.
 63source-only histogram-tree fits. Full vs own3/7gain0/7harm; support2/7gain;
 JEPA2/7gain. Full MAE .370529, own .377185; persistence7/7both. Unlike ridge,
 partial nonlinear incremental context recovered. Not universal information
 absence or a unique encoder defect; no all-seed/external/calibration promotion.
 Runtime unchanged; preserve partial positive evidence without selecting on it.
 
-Latest matched raw history: `POTASSIUM_RAW_HISTORY_FINDINGS_20260911.md`.
+Latest matched raw history: `docs/research/findings/POTASSIUM_RAW_HISTORY_FINDINGS_20260911.md`.
 105source-only ridge fits, same three-way rows; float64 authoritative (float32
 solver warnings repaired before interpretation). Full vs own0/7gain3/7harm;
 vs support0/7gain2/7harm; vs JEPA0/7gain2/7harm. Own/full MAE .376129/.392061.
@@ -3926,14 +3926,14 @@ Bypassing encoder with this linear readout does not recover stable context gain.
 Not absence-of-information proof; boundary alpha4/7, finite model/grid. No
 external/calibration/runtime/promotion change.
 
-Latest train-matched support-only control: `POTASSIUM_SUPPORT_ONLY_FINDINGS_20260911.md`.
+Latest train-matched support-only control: `docs/research/findings/POTASSIUM_SUPPORT_ONLY_FINDINGS_20260911.md`.
 14fits complete; own controls exact. Support-only vs full-numeric gain0/7,harm0/7;
 vs own gain0/7,harm1/7; persistence7/7. Median .380441 vs full .374244.
 Not equivalence or proof workflow-only; removing numbers does not repair context
 gain. No external/calibration/runtime promotion. Both support and numeric
 increment remain unestablished beyond own history under this trained contract.
 
-Latest potassium component diagnosis: `POTASSIUM_COMPONENT_FINDINGS_20260911.md`.
+Latest potassium component diagnosis: `docs/research/findings/POTASSIUM_COMPONENT_FINDINGS_20260911.md`.
 Seven frozen three-way weights reproduce. Non-target block removal harms5/7;
 numeric neutralization harms1/7, exact age prediction shift median .000633.
 No intervention improves full/own stably. Used pathway is not proof numerical
@@ -3941,14 +3941,14 @@ context adds transferable physiology; support/value interaction remains.
 Need train-matched support-only control to distinguish off-manifold dependence.
 No runtime, calibration, external read or promotion change.
 
-Latest independent source partition: `POTASSIUM_THREE_WAY_FINDINGS_20260911.md`.
+Latest independent source partition: `docs/research/findings/POTASSIUM_THREE_WAY_FINDINGS_20260911.md`.
 14fits complete; per seed785fit/262tune/262evaluation patients across whole source.
 Evaluation never selects checkpoints. Both persistence7/7; whole-own gain1/7,
 harm1/7, numerical gain4/7. Median own/whole/persistence .377129/.374244/.437907.
 Source incremental-context instability persists after diagnostic split repair.
 Not a new lockbox or sole-cause proof; no external/calibration/runtime promotion.
 
-Latest patient-influence diagnosis: `POTASSIUM_PATIENT_INFLUENCE_FINDINGS_20260911.md`.
+Latest patient-influence diagnosis: `docs/research/findings/POTASSIUM_PATIENT_INFLUENCE_FINDINGS_20260911.md`.
 All21 comparisons/42 MAEs reproduce. No single-patient mean-sign reversal;
 original whole benefits50-59%patients. Seven tune splits have500appearances but
 194unique patients, all from original cohort; expansions fit-only. Metrics are
@@ -3956,26 +3956,26 @@ patient-equal, not row-weight mismatch. Next source diagnostic should independen
 partition the whole source cohort into fit/tune/evaluation, without selecting
 on evaluation. No new external read, unique cause, runtime or promotion claim.
 
-Latest sampling intervention: `POTASSIUM_EVENT_BALANCED_FINDINGS_20260911.md`.
+Latest sampling intervention: `docs/research/findings/POTASSIUM_EVENT_BALANCED_FINDINGS_20260911.md`.
 All14 matched64epoch fits complete. Uniform patient/event/query sampling retains
 all labels. Significant gain over original0/7own,0/7whole; whole-own0/7.
 Whole-persistence7/7 does not establish improvement over original6/7. Median
 own/whole MAE .364404/.355709. Repeated outcome weights are not established as
 the principal cause. No external reads, calibration, runtime or promotion.
 
-Latest label provenance repair: `AUXILIARY_EVENT_REUSE_FINDINGS_20260911.md`.
+Latest label provenance repair: `docs/research/findings/AUXILIARY_EVENT_REUSE_FINDINGS_20260911.md`.
 Future source IDs retained; all53 old numerical label columns exactly reproduce.
 K6174pairs/4660outcomes (24.52% excess); glucose13.97%. Legitimate different
 anchors can share truth, not leakage or effective independent N. Event-balanced
 sampling has now been tested above. No future ID inputs/runtime/calibration change.
 
-Latest controlled loss repair: `POTASSIUM_MAE_FINDINGS_20260911.md`.
+Latest controlled loss repair: `docs/research/findings/POTASSIUM_MAE_FINDINGS_20260911.md`.
 14matched64epoch L1 fits vs prior SmoothL1. Same JEPA/inputs/sampling. Significant
 gain0/7own,0/7whole; harm0/7both. Whole-own remains0/7, persistence6/7both.
 Numerical MAE alignment alone is not a demonstrated fix. No external sweep,
 runtime/calibration/promotion change; retain this negative result.
 
-Latest loss diagnosis: `OBJECTIVE_ALIGNMENT_FINDINGS_20260911.md`.
+Latest loss diagnosis: `docs/research/findings/OBJECTIVE_ALIGNMENT_FINDINGS_20260911.md`.
 63 real-source local gradient probes across21 selected checkpoints. JEPA/value
 gradient norm median .0114glucosewhole/.0245Kown/.0206Kwhole; combined direction
 cosine>.9998 medians. Some opposing gradients but no strong immediate total
@@ -3983,19 +3983,19 @@ cancellation. Teacher delta contract matches native encoder. Not a training
 trajectory/Adam analysis or proof upweighting fixes anything; prior balancing
 already failed full glucose repair. No runtime/calibration/promotion changes.
 
-Latest freshness localization: `POTASSIUM_FRESHNESS_FINDINGS_20260911.md`.
+Latest freshness localization: `docs/research/findings/POTASSIUM_FRESHNESS_FINDINGS_20260911.md`.
 Fixed14weights, pooled reproduction exact. All3 pre-anchor age bins whole-own
 0/7both domains. MIMIC3-6h old values persistence0/7, fresher bins7/7. Observation
 age differs across units, but fresh-only does not repair incremental context
 gain. No posthoc cutoff, weights, intervals or runtime promotion changed.
 
-Latest frozen potassium transfer: `POTASSIUM_EXTERNAL_FINDINGS_20260911.md`.
+Latest frozen potassium transfer: `docs/research/findings/POTASSIUM_EXTERNAL_FINDINGS_20260911.md`.
 207hospital/859MIMIC patients, same measured contract. Whole persistence7/7
 both, whole-own0/7both; MIMIC harm2/7. MAE whole/own .42972/.43031hospital,
 .38250/.37945MIMIC. CVICU incremental5/7 but MICU persistence0/7. Tune advantage
 does not transfer generally. No posthoc unit routing, calibration or promotion.
 
-Latest equal-capacity diagnosis: `POTASSIUM_MATCHED_ENCODER_FINDINGS_20260911.md`.
+Latest equal-capacity diagnosis: `docs/research/findings/POTASSIUM_MATCHED_ENCODER_FINDINGS_20260911.md`.
 14 completed64epoch own/whole potassium-supervised JEPA fits. Same capacity,
 same pairs, potassium-selected checkpoints. Whole numerical gain7/7 but
 significant0/7; both persistence6/7. Not the glucose directional reversal;
@@ -4003,14 +4003,14 @@ do not claim all whole-context learning harms. Source-tune only63-78patients,
 overlapping seeds, selection bias; no external/calibration/promotion. This
 narrows target heterogeneity, not sole root cause or complete repair.
 
-Latest own-history diagnostic: `AUXILIARY_OWN_HISTORY_FINDINGS_20260911.md`.
+Latest own-history diagnostic: `docs/research/findings/AUXILIARY_OWN_HISTORY_FINDINGS_20260911.md`.
 Fixed auxiliary checkpoints vs target-only ridge on identical source pairs:
 potassium significant1/7 (versus persistence6/7), glucose0/7, creatinine2/7;
 no target7/7. This narrows incremental whole-body evidence, not proof that all
 cross-variable information is absent. Different model capacities; glucose-tune
 checkpoint selection, no final external test. No runtime/calibration/promotion.
 
-Latest dynamics diagnosis: `AUXILIARY_DYNAMICS_FINDINGS_20260911.md`.
+Latest dynamics diagnosis: `docs/research/findings/AUXILIARY_DYNAMICS_FINDINGS_20260911.md`.
 Source-only constant-change control: potassium beats6/7, while bicarbonate/BUN/
 calcium/hematocrit beat0/7 despite7/7 improvement over unused glucose-only heads.
 Potassium retrospective large-change MAE0.647 vs persistence1.010; remaining
@@ -4018,7 +4018,7 @@ Potassium retrospective large-change MAE0.647 vs persistence1.010; remaining
 routing. Some conditional signal exists, not cross-organ attribution or a unique
 root cause. No runtime, weights, calibration or promotion change.
 
-Latest longer supervision result: `AUXILIARY_ENCODER_BUDGET_FINDINGS_20260911.md`.
+Latest longer supervision result: `docs/research/findings/AUXILIARY_ENCODER_BUDGET_FINDINGS_20260911.md`.
 All21 seven-seed64epoch source-only fits completed with exact baseline/pilot
 log reproduction. Auxiliary improves primary glucose single-target0/7 and
 shuffled0/7; seed31 worse than shuffled. Other targets do learn: potassium
@@ -4027,7 +4027,7 @@ Local shared-context gradient probes oppose5/21 times, weighted norm ratio
 median0.2544, not universal gradient conflict. Auxiliary learning is not stable
 transfer to glucose. No persistent organ-state, calibration or runtime change.
 
-Latest source-only supervision test: `AUXILIARY_ENCODER_FINDINGS_20260910.md`.
+Latest source-only supervision test: `docs/research/findings/AUXILIARY_ENCODER_FINDINGS_20260910.md`.
 Fourteen auxiliary variables have measured current/future support at unchanged
 glucose queries (49,823rows/2386development patients;2250fit/136tune per seed).
 Nine matched8epoch fits: real multi-target loss improves glucose-only0/3 and
@@ -4036,7 +4036,7 @@ prior2250/64first8logs. Selected primary/real checkpoints all at epoch8, so
 this is not convergence or a full rejection of joint supervision. No external
 evaluation, runtime/calibration/promotion change.309tests pass.
 
-Latest structural diagnosis: `ENCODER_PATH_DIAGNOSIS_20260910.md`.
+Latest structural diagnosis: `docs/research/notes/ENCODER_PATH_DIAGNOSIS_20260910.md`.
 All14 actual-time identity checkpoints have active value/JEPA gradients through
 cross-variable inputs and context mixers on synthetic probes. The loaded class
 is the base world-model predictor, not a persistent organ-state subclass:
@@ -4163,7 +4163,7 @@ over current state: they worsen eICU patient MAE and fail the MIMIC temporal
 placebo comparison. Care-unit gains remain heterogeneous. This is partial
 readout evidence, not a promoted cross-organ mechanism; latent includes own
 target history, so cross-organ attribution still requires own-target ablation.
-See `ANCHOR_ALIGNED_SIGNAL_CORRECTED_FINDINGS_20260908.md`.
+See `docs/research/findings/ANCHOR_ALIGNED_SIGNAL_CORRECTED_FINDINGS_20260908.md`.
 
 The follow-up measurement-anchor diagnostic used fixed patient support and
 actual creatinine measurement anchors, then compared equal-capacity target-only
@@ -4175,7 +4175,7 @@ seven eICU fresh patient resamples and only directionally, not significantly,
 better in MIMIC, where it still lost to persistence. The first isolated failure
 is therefore conditional cross-database instability of the non-target latent
 correction, not stale timing alone. See
-`MEASUREMENT_ANCHOR_ENCODER_FINDINGS_20260909.md`.
+`docs/research/findings/MEASUREMENT_ANCHOR_ENCODER_FINDINGS_20260909.md`.
 
 Stale anchors, target-only state and non-target state have now been separated on
 fixed patient support. Another readout sweep on the same frozen latent is not
@@ -4200,7 +4200,7 @@ short/long and uniform replay reduced that harm and improved the frozen adapter
 on all seven patient orders. Neither replay method beat persistence, and both
 still caused significant MIMIC harm under some arrival orders. This establishes
 a source-side adaptation signal and the value of replay, not a deployable
-self-learning model. See `CONTINUAL_SELF_LEARNING_FINDINGS_20260909.md`.
+self-learning model. See `docs/research/findings/CONTINUAL_SELF_LEARNING_FINDINGS_20260909.md`.
 
 A stronger prequential test then used the already validated `glucose@6h`
 release source. The frozen source beat persistence on the complete strict eICU
@@ -4213,7 +4213,7 @@ the global 311-feature adapter all worsened the stream and caused significant
 retention, hospital and MIMIC harm in all seven orders. Corrections were too
 large rather than merely clipped. Current evidence supports low-dimensional
 patient-state updates with frozen population weights, not global online
-retraining. See `CONTINUAL_VALIDATED_CELL_FINDINGS_20260909.md`.
+retraining. See `docs/research/findings/CONTINUAL_VALIDATED_CELL_FINDINGS_20260909.md`.
 
 That patient-state hypothesis has now been replayed independently inside every
 eligible MIMIC patient with a stricter primary definition: at least one earlier
@@ -4228,7 +4228,7 @@ MIMIC interval by 25.75 mg/dL versus the frozen interval, but row/patient
 coverage of 0.933/0.934 narrowly exceeded the allowed upper bound and point
 forecast failed. Personal error history currently supports uncertainty
 conditioning more strongly than transferable trajectory correction. See
-`PATIENT_STATE_EXTERNAL_FINDINGS_20260909.md`.
+`docs/research/findings/PATIENT_STATE_EXTERNAL_FINDINGS_20260909.md`.
 
 A corrected failure-localization audit supersedes that experiment's placebo
 interpretation. The original report mixed full-role and personalized-only donor
@@ -4244,7 +4244,7 @@ over target history across eICU hospital-heldout and MIMIC. The next repair is
 not another unconditional trajectory extrapolator: it is an anchor-known gate
 for whether a previously estimated personal bias remains valid, evaluated
 separately from fixed-point uncertainty calibration. See
-`PATIENT_STATE_DIAGNOSTIC_FINDINGS_20260909.md`.
+`docs/research/findings/PATIENT_STATE_DIAGNOSTIC_FINDINGS_20260909.md`.
 
 The prespecified follow-up kept the same frozen `glucose@6h` JEPA source and
 compared no personal update, unconditional resolved-error state, and an
@@ -4272,7 +4272,7 @@ harm in MIMIC. Reset-state and shuffled-event recurrent controls remained
 competitive, and treatment-transition direction did not improve. The present
 summary contract did not identify a transferable signed state update.
 No runtime point, interval or selector
-changed. See `RECURRENT_EVENT_STATE_LOOP_FINDINGS_20260909.md`.
+changed. See `docs/research/findings/RECURRENT_EVENT_STATE_LOOP_FINDINGS_20260909.md`.
 
 The 2026-09-10 CodeGraph audit corrects the earlier claim of complete event-loop
 validation. Update streams depend on future-label eligibility; input centering
@@ -4281,7 +4281,7 @@ measurements; presence/count treatment encoding loses rate-only changes.
 Three synthetic input counterexamples were reproduced. Feedback is frozen-model
 error, not candidate-output error. Their contribution to MAE remains unmeasured.
 Repair the event contract before another architecture sweep; see
-`EVENT_STATE_CONTRACT_DIAGNOSIS_20260910.md`. Runtime is unchanged.
+`docs/research/notes/EVENT_STATE_CONTRACT_DIAGNOSIS_20260910.md`. Runtime is unchanged.
 
 The repair has now been implemented and tested: source-frozen centering,
 unclipped float64 measurement age, repeat-event detection, unit-safe treatment
@@ -4293,7 +4293,7 @@ for own-error feedback, versus 28.944 frozen; scored-only repaired replay is
 30.239/30.190. Software invariants are repaired, but transferable signed updates
 are not established. Full raw-event/available-time replay remains unfinished;
 the cache is not every bedside event. No runtime change. Final evidence is
-`EVENT_STATE_REPAIR_FINDINGS_20260910.md`; intermediate repair runs are not the
+`docs/research/findings/EVENT_STATE_REPAIR_FINDINGS_20260910.md`; intermediate repair runs are not the
 current code's validation.
 
 The fixed-weight update-invariance diagnostic is complete. Re-consuming the
@@ -4306,7 +4306,7 @@ benefit in any seed. Newly arriving old errors are not supported as the principa
 immediate cause; accumulated hidden-state effects remain possible. Next verify
 raw event identities/availability and separate re-documentation from true new
 measurements. Do not repeat a blanket error-removal experiment as an untested
-solution. See `UPDATE_INVARIANCE_FINDINGS_20260910.md`. Runtime unchanged.
+solution. See `docs/research/findings/UPDATE_INVARIANCE_FINDINGS_20260910.md`. Runtime unchanged.
 
 The raw-event follow-up found an earlier availability-contract failure in the
 glucose@6h cache. Every old scored current/future value matched native lab
@@ -4320,7 +4320,7 @@ implemented and structurally tested, not trained or promoted. Next rebuild
 availability-time anchors AND all input/label times, not just deduplicate or
 shift old labels. Old retrospective scores on this slice do not establish
 availability-safe online performance; this is not a blanket rejection of all
-JEPA evidence. See `RAW_LAB_IDENTITY_FINDINGS_20260910.md`. Runtime unchanged.
+JEPA evidence. See `docs/research/findings/RAW_LAB_IDENTITY_FINDINGS_20260910.md`. Runtime unchanged.
 
 ## Data Roles
 
@@ -4346,7 +4346,7 @@ JEPA evidence. See `RAW_LAB_IDENTITY_FINDINGS_20260910.md`. Runtime unchanged.
 See `EXPERIMENT_INDEX.md` for completed experiments and negative results.
 # Availability-Anchored Glucose Update (2026-09-10)
 
-See `AVAILABILITY_ANCHOR_FINDINGS_20260910.md`. Rebuilt glucose queries at raw
+See `docs/research/findings/AVAILABILITY_ANCHOR_FINDINGS_20260910.md`. Rebuilt glucose queries at raw
 result availability and rebuilt both history and 5-7h future labels; old feature
 vectors/predictions were discarded. MIMIC support restored to6,616 pairs/889
 patients. Seven source fit/tune seeds: history ridge beats persistence7/7 on
@@ -4358,7 +4358,7 @@ unfinished; old and new task MAEs cannot be compared as a paired repair benefit.
 
 ## Availability-Safe JEPA Input Follow-up
 
-`AVAILABILITY_JEPA_FINDINGS_20260910.md`: full53-slot JEPA schema now rebuilt
+`docs/research/findings/AVAILABILITY_JEPA_FINDINGS_20260910.md`: full53-slot JEPA schema now rebuilt
 from42 eICU/40 MIMIC time/unit-qualified laboratory variables. Bedside/treatment
 channels without verified availability remain missing, not fully reconstructed.
 Same new glucose anchors: frozen full-lab truthful-mask head MAE41.611/34.926
@@ -4374,7 +4374,7 @@ single root cause not established. V2 repaired unit aliases; v1 preserved.
 ## Availability Encoder Training Pilot
 
 The previously untested encoder step has now been tried, not merely proposed.
-See `AVAILABILITY_ENCODER_FINDINGS_20260910.md`. Three seeds x own/full inputs
+See `docs/research/findings/AVAILABILITY_ENCODER_FINDINGS_20260910.md`. Three seeds x own/full inputs
 x frozen/trainable context, same availability-safe glucose labels. Real EMA
 target-delta JEPA plus direct value loss; six end-to-end checkpoints each change
 77 context tensors. Whole end-to-end improves whole frozen significantly only
@@ -4386,7 +4386,7 @@ seven-seed promotion, other-target retention or runtime change.
 
 ## Direct Decoder Diagnosis
 
-`ENCODER_BOTTLENECK_FINDINGS_20260910.md` isolates a proven amplitude limit:
+`docs/research/findings/ENCODER_BOTTLENECK_FINDINGS_20260910.md` isolates a proven amplitude limit:
 direct glucose residual cannot exceed30.023mg/dL;35%-46% of validation labels
 exceed that range. This is not the external shared readout and not a universal
 release diagnosis. Whole MIMIC predictions also saturate more while correlating
@@ -4398,7 +4398,7 @@ the sole cause of all past failures. No runtime or promotion changed.
 
 ## Controlled Amplitude Repair
 
-`ENCODER_REPAIR_FINDINGS_20260910.md`:24 matched fits completed. Replacing tanh
+`docs/research/findings/ENCODER_REPAIR_FINDINGS_20260910.md`:24 matched fits completed. Replacing tanh
 with identity in candidates and retraining own-history JEPA improves glucose
 MAE42.112->38.273 hospital and34.536->32.070 MIMIC, paired improvement3/3 seeds
 in each. Whole unbounded improves hospital3/3 but MIMIC1/3. Gradient balancing
@@ -4410,7 +4410,7 @@ No seven-seed/interval/retention promotion.293 tests pass. Goal remains open.
 
 ## Source-Support Contract Repair
 
-`ENCODER_SOURCE_SUPPORT_FINDINGS_20260910.md`: source-only support masking with
+`docs/research/findings/ENCODER_SOURCE_SUPPORT_FINDINGS_20260910.md`: source-only support masking with
 fixed repaired weights isolates ionized_calcium. Source fits observe zero such
 events after mg/dL rejection; MIMIC mmol/L values enter an inherited median3.8,
 scale0.178 scaler (median z about-15). The source-seen intervention changes
@@ -4423,7 +4423,7 @@ complete repair; whole remains worse than own32.070. Runtime unchanged.
 
 ## Source Fit Gap (Latest)
 
-`ENCODER_FIT_GAP_FINDINGS_20260910.md`:14 selected original32-epoch identity
+`docs/research/findings/ENCODER_FIT_GAP_FINDINGS_20260910.md`:14 selected original32-epoch identity
 checkpoints reproduce source-tune scores. Whole beats own significantly6/7
 on fitting patients but loses numerically7/7 (significantly6/7) on source-tune
 patients. Each split is only250 fit/136tune patients. This directly locates
@@ -4455,7 +4455,7 @@ complete, as recorded below.
 
 ## Expanded-Cohort Budget (Latest)
 
-`ENCODER_EXPANDED_BUDGET_FINDINGS_20260910.md`: exact source sampler replay
+`docs/research/findings/ENCODER_EXPANDED_BUDGET_FINDINGS_20260910.md`: exact source sampler replay
 shows2250fit supervised-row coverage21.60%, future-event coverage24.07%,
 median7 draws/patient at32epochs. Late whole source-tune improves7/7, so a
 fixed64epoch experiment was run.28fits complete; first32logs identical.
@@ -4466,7 +4466,7 @@ claim. No runtime/calibration/promotion change.303tests pass.
 
 ## Requested Time Diagnostic
 
-`ENCODER_QUERY_TIME_FINDINGS_20260910.md`: builder nominal6h versus actual
+`docs/research/findings/ENCODER_QUERY_TIME_FINDINGS_20260910.md`: builder nominal6h versus actual
 5-7h label tolerance confirmed. Added explicit query horizon argument without
 changing default inputs. Four-time fixed-weight14checkpoint source-tune
 diagnostic reproduces nominal scores; actual-time query improves0/7own and
@@ -4475,7 +4475,7 @@ elapsed-time training remains untested. Retrospective measurement-time query
 is not prospective fixed6h forecasting. No runtime/promotion;303tests.
 
 The subsequent actual-time training is now complete:
-`ENCODER_ACTUAL_TIME_FINDINGS_20260910.md`.28matched2250/64fits, actual5-7h
+`docs/research/findings/ENCODER_ACTUAL_TIME_FINDINGS_20260910.md`.28matched2250/64fits, actual5-7h
 source supervision/tune selection; primary validation remains fixed6h query.
 Whole36.799hospital/32.067MIMIC versus36.796/32.037nominal-trained, paired
 improvement0/7both, harm1/7hospital5/7MIMIC. Whole-vs-own0/7both. Actual-time
@@ -4485,7 +4485,7 @@ calibration or promotion;303tests. Do not repeat as an untested timing repair.
 
 ## Empty History Mask
 
-`ENCODER_HISTORY_MASK_FINDINGS_20260910.md`: located omitted step-mask wiring
+`docs/research/findings/ENCODER_HISTORY_MASK_FINDINGS_20260910.md`: located omitted step-mask wiring
 at the belief filter call. Synthetic leading-empty state change3.75717 becomes
 exactly0 with its existing mask.28 matched32epoch fits completed; whole identity
 hospital38.202->38.070,MIMIC33.368->33.497. Whole-vs-own remains0/7. Own identity
@@ -4496,7 +4496,7 @@ observed_steps metadata. Repeated real events are not deduplicated by value.
 
 ## Context Dropout
 
-`ENCODER_CONTEXT_DROPOUT_FINDINGS_20260910.md`:28 matched32-epoch fits with
+`docs/research/findings/ENCODER_CONTEXT_DROPOUT_FINDINGS_20260910.md`:28 matched32-epoch fits with
 training-only non-target history block dropout. All own-control logs and
 predictions exact. Whole identity hospital38.202->37.479,MIMIC33.368->33.128;
 paired improvements3/7 both, MIMIC harm1/7. Whole-vs-own remains0/7. Thus this
@@ -4506,13 +4506,13 @@ or promotion changed. Do not repeat this as an untested dropout hypothesis.
 
 ## Source Numerical Rescale
 
-Teacher follow-up: `ENCODER_TEACHER_DIAGNOSTIC_20260910.md` tests14 budget
+Teacher follow-up: `docs/research/notes/ENCODER_TEACHER_DIAGNOSTIC_20260910.md` tests14 budget
 checkpoints on a fixed glucose delta grid. All teachers distinguish direction
 and amplitude. Literal constant future-target encoding is not supported;
 this does not rule out weak supervision on real data. Remaining context
 transfer failure has no experimentally established single root cause.
 
-`ENCODER_RESCALE_FINDINGS_20260910.md`:28 matched32-epoch fits with source-only
+`docs/research/findings/ENCODER_RESCALE_FINDINGS_20260910.md`:28 matched32-epoch fits with source-only
 non-target median/std normalization; all own-control logs/predictions exactly
 reproduce. Whole identity hospital38.202->37.708, MIMIC33.368->33.572;
 paired improve3/7 both, MIMIC harm1/7. Whole-vs-own remains0/7. Simple inherited
@@ -4523,7 +4523,7 @@ release input scaling without compatible weights and calibrators.
 
 ## Numeric Versus Age Localization
 
-`ENCODER_COMPONENT_FINDINGS_20260910.md`: fixed32-epoch whole weights, value
+`docs/research/findings/ENCODER_COMPONENT_FINDINGS_20260910.md`: fixed32-epoch whole weights, value
 neutralization retaining mask/age/presence improves MIMIC7/7 (MAE33.368->32.437),
 but not hospital (38.202->38.485, no significant change). Exact-age neutralization
 has tiny effect. Prior heme block harm does NOT prove heme numbers help: heme
@@ -4535,7 +4535,7 @@ repair remains to be tested without external feature selection.
 
 ## Context Group Localization
 
-`ENCODER_GROUP_FINDINGS_20260910.md`: seven32-epoch whole identity weights,
+`docs/research/findings/ENCODER_GROUP_FINDINGS_20260910.md`: seven32-epoch whole identity weights,
 12 input-group removals, fixed predictions reproduced. Acid-base removal
 harms4/7 hospital but helps3/7 MIMIC; blood/coagulation removal harms5/7 both.
 No group deletion helps7/7 both. All-non-target removal also fails. This
@@ -4546,7 +4546,7 @@ proof respiratory biology has no predictive value.
 
 ## Extended Training Budget
 
-`ENCODER_BUDGET_FINDINGS_20260910.md`:28 fits extended8->32 epochs, all first8
+`docs/research/findings/ENCODER_BUDGET_FINDINGS_20260910.md`:28 fits extended8->32 epochs, all first8
 logs exactly reproduced. Own identity improves hospital7/7,MIMIC5/7 versus8;
 whole identity improves1/7 each and significantly harms MIMIC4/7. MAE own
 36.559/31.238,whole38.202/33.368. Whole-vs-own remains0/7. Thus short training
@@ -4557,7 +4557,7 @@ other care-unit/time heterogeneity persists. No runtime/calibration/promotion;
 
 ## Seven-Seed Decoder Confirmation
 
-`ENCODER_CONFIRM_FINDINGS_20260910.md`:28 matched source-supported own/whole x
+`docs/research/findings/ENCODER_CONFIRM_FINDINGS_20260910.md`:28 matched source-supported own/whole x
 bounded/identity fits complete, corrected BNP inputs. Both identity arms
 improve bounded7/7 and persistence7/7 in pooled hospital and MIMIC. Own median
 MAE38.091/31.812, whole38.331/33.087. Whole-vs-own incremental gain remains0/7.
@@ -4568,7 +4568,7 @@ retention, new lockbox, or runtime change;296 tests pass.
 
 ## Analyte Identity Repair
 
-`BNP_IDENTITY_FINDINGS_20260910.md`: MIMIC50963 was incorrectly mapped to BNP;
+`docs/research/findings/BNP_IDENTITY_FINDINGS_20260910.md`: MIMIC50963 was incorrectly mapped to BNP;
 local dictionary verifies NTproBNP. Renamed to nt_pro_bnp, no alias/conversion.
 Standard availability cache corrected; original archived for prior reports.
 Fixed supported candidates show no significant glucose gain (0/3 both modes,

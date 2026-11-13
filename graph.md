@@ -6,6 +6,16 @@
 
 ## 證據到行動
 
+### 文件整理：倉庫目錄重整（2026-11-12，本地分支，未提交至遠端）
+
+- 最新要求：整理 oslian/Model 根目錄堆積的研究文件，並把 Oslian Demo 同步到現役 release。屬文件／目錄任務，不改模型、權重、門檻或任何實驗報告，不重跑研究。
+- 實際閱讀：本倉 AGENTS.md 全文、README、models/README.md 與 MODEL_MANIFEST.json、graph.md 開頭交接、`scripts/validate_release.py`、`tests/test_publication_assets.py`、`tests/test_runtime.py` 中 README 檢查。未重讀 ROOT_CAUSE_LEDGER／PROJECT_STATE 全文，不冒稱完整歷史審計。本次未執行 CodeGraph sync。
+- 唯一差異：根目錄中「沒有任何程式、設定、機器可讀協議或凍結證據以路徑引用」的 570 個檔案以 `git mv` 移入 `docs/research/{findings,protocols,results,notes}/` 與 `publication/`；被 `sha256(Path(...))`、報告 `bindings`、lockbox `frozen_code_sha256` 或檔名模板引用的檔案一律留在原路徑、內容不改。新增自動產生的 `docs/INDEX.md`。
+- 連結：可編輯的 Markdown 中相對連結與反引號路徑已改寫；被機器檔案綁定的 Markdown 一律不編輯。整理後相對連結 261 個、失效 0 個。
+- 驗收：整理前後同一環境執行 `tests/`，結果相同（整理前 1214 通過、1 失敗 `test_probe_tail_objective.py::TailTests::test_tail_and_constant_case`，屬既有問題）；`python -m scripts.validate_release` 通過。
+- 沒有新研究證據，核心結論未變。`publication/` 內快照清單記錄 2026-10-05 當時路徑，屬歷史紀錄。
+
+
 ### 目前研究：E45切空間修正的樣本支持與外推
 
 - 前輪對齊E44帳本屬權威文件進度，沒有模型提升。最新持續目標恢復研究，不提交／發布。

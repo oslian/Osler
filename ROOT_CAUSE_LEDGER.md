@@ -6,15 +6,15 @@
 
 **目前交接（2026-10-05）：**
 
-- **最新完成證據為E44，不再列待驗證。** [完成報告](artifacts/native_tangent_spectrum_20261005.json)與[獨立核對](artifacts/native_tangent_spectrum_verification_20261005.json)皆complete=true；五fold／20480查詢重播差0。刪弱方向後，強方向修正的selection MAE .892978、同來源 .787198，仍差於零bridge的.876270／.781413。排除「只刪弱方向即可修好」這個固定版本，不等於找到完整根因。見[E44結果](RECONSTRUCTION_TANGENT_SPECTRUM_FINDINGS_20261005.md)。本次文件整理只同步既有證據，沒有新實驗或promotion；完整泛化修法未交付的核心結論未變。
-- **最新干預E43完成並獨立核對，沒有完整通過。** 全bridge參數Jacobian在各fold的2048個fit查詢上有2048個保留數值方向；線性近似fit大幅降低描述性誤差，但實際模型只小幅改善fit，未見病人反而退步。實際MAE fit .753682→.745849、selection .876270→.893038、同來源 .781413→.784977；十一對照screen皆0。五模型／20480查詢精確重播、45/33bindings、23tests。最初求解停止與數值附錄保留；不把修好求解器當模型根因。見[E43結果](RECONSTRUCTION_TANGENT_BRIDGE_FINDINGS_20261005.md)。
-- **E42固定readout診斷保留。** 保存模型的53×64讀取矩陣有六零列，全為E41無評分項；有支持的27列全部滿行秩，float32右逆重播誤差至多3.5763e-7。排除這27項被最後線性層硬性綁死的解釋，不證明encoder能推導或到達正確state。7tests、15bindings核對；未改模型、無promotion。見[E42結果](RECONSTRUCTION_READOUT_REACHABILITY_FINDINGS_20261005.md)。
-- **E41失敗分類仍成立。** 對E40的53個當下遮蔽恢復target（不是forecast時間格），7無評分、19未達原支持門檻、27支持充足。後27項沒有一項在病人／來源組兩種等權均值下同勝十個控制，故不能把完整失敗只歸咎顯著性。對raw單獨有4項均值同勝但CI不足，保留反例。見[E41結果](RECONSTRUCTION_SCREEN_DIAGNOSIS_FINDINGS_20261005.md)。
+- **最新完成證據為E44，不再列待驗證。** [完成報告](artifacts/native_tangent_spectrum_20261005.json)與[獨立核對](artifacts/native_tangent_spectrum_verification_20261005.json)皆complete=true；五fold／20480查詢重播差0。刪弱方向後，強方向修正的selection MAE .892978、同來源 .787198，仍差於零bridge的.876270／.781413。排除「只刪弱方向即可修好」這個固定版本，不等於找到完整根因。見[E44結果](docs/research/findings/RECONSTRUCTION_TANGENT_SPECTRUM_FINDINGS_20261005.md)。本次文件整理只同步既有證據，沒有新實驗或promotion；完整泛化修法未交付的核心結論未變。
+- **最新干預E43完成並獨立核對，沒有完整通過。** 全bridge參數Jacobian在各fold的2048個fit查詢上有2048個保留數值方向；線性近似fit大幅降低描述性誤差，但實際模型只小幅改善fit，未見病人反而退步。實際MAE fit .753682→.745849、selection .876270→.893038、同來源 .781413→.784977；十一對照screen皆0。五模型／20480查詢精確重播、45/33bindings、23tests。最初求解停止與數值附錄保留；不把修好求解器當模型根因。見[E43結果](docs/research/findings/RECONSTRUCTION_TANGENT_BRIDGE_FINDINGS_20261005.md)。
+- **E42固定readout診斷保留。** 保存模型的53×64讀取矩陣有六零列，全為E41無評分項；有支持的27列全部滿行秩，float32右逆重播誤差至多3.5763e-7。排除這27項被最後線性層硬性綁死的解釋，不證明encoder能推導或到達正確state。7tests、15bindings核對；未改模型、無promotion。見[E42結果](docs/research/findings/RECONSTRUCTION_READOUT_REACHABILITY_FINDINGS_20261005.md)。
+- **E41失敗分類仍成立。** 對E40的53個當下遮蔽恢復target（不是forecast時間格），7無評分、19未達原支持門檻、27支持充足。後27項沒有一項在病人／來源組兩種等權均值下同勝十個控制，故不能把完整失敗只歸咎顯著性。對raw單獨有4項均值同勝但CI不足，保留反例。見[E41結果](docs/research/findings/RECONSTRUCTION_SCREEN_DIAGNOSIS_FINDINGS_20261005.md)。
 - **未變的核心結論：** 共享 state 有部分可用訊號，但完整根因與經驗證的泛化修法尚未交付。「有訊號但不穩」不能再當新發現。
-- **先前完成干預與獨立核對：E40。** 保護Adam實際步長後，同一候選軌跡的跨target局部有害內積從1814降至0，但十個強對照的完整screen仍為0。相對E38 PCGrad，47項有fit支持的target僅15項均值改善，32項在fit內就未改善；不能只歸咎外部資料差異。見[E40結果](RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)。
+- **先前完成干預與獨立核對：E40。** 保護Adam實際步長後，同一候選軌跡的跨target局部有害內積從1814降至0，但十個強對照的完整screen仍為0。相對E38 PCGrad，47項有fit支持的target僅15項均值改善，32項在fit內就未改善；不能只歸咎外部資料差異。見[E40結果](docs/research/findings/RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)。
 - **保留反例：** 固定版本同來源平均較好，但BUN、glucose、Hgb等在selection仍較共同更新差；描述性均值與反轉計數不能當顯著性或promotion。仍未定位哪些條件關係／支持差異造成失敗。
 - **新增局部實作修正：** E36診斷helper轉dtype時保留原float64時間，修正後全量parity為0；這是新診斷程式的錯誤，不能當原模型失敗根因。舊梯度衝突、樣本量與累積對照已做過，不重做。
-- **E37核對完成：** 原tensor／logs精確重現、52bindings、15角色、全来源導數核對與25tests通過；fold0/2向量相同，不能當五次獨立複驗。詳見[E37結果](RECONSTRUCTION_ADAM_ORIGIN_FINDINGS_20261005.md)。
+- **E37核對完成：** 原tensor／logs精確重現、52bindings、15角色、全来源導數核對與25tests通過；fold0/2向量相同，不能當五次獨立複驗。詳見[E37結果](docs/research/findings/RECONSTRUCTION_ADAM_ORIGIN_FINDINGS_20261005.md)。
 - **E40核對完成：** 五個保存模型／20,480查詢重播差0，scalar／統計最大roundoff3.918e-13，28項相關測試。58原／69核對bindings匹配；fold0/2相同，不是五次獨立複驗。441步因float32約束停步，步長亦縮小，這些是修法代價，不隱藏。
 - **本次新增分界：局部擬合、有限更新與轉移不同。** E43線性近似在接受半步下fit MAE .407425，實際為.745849；但線性近似selection本身已惡化到1.332393，所以只修近似精度不是此版本的充分轉移修法。實際fit改善的33項在selection／同來源各23項失去均值優勢，非顯著傷害計數。完整根因未定位；現役權重、區間或runtime未變，不提交或發布。
 
@@ -52,7 +52,7 @@
 
 **E44已完成，不屬未做項：** 固定原lambda與步長的強／弱分解未修復轉移。後續不得因歷史待辦重跑，亦不得用同批query挑cutoff或逐target挑有利消融。尚欠的是以下責任區分與完整能力驗證。
 
-1. E33開關消融和E34凍結主幹訓練／完整核對均已完成，不能再列未做。仍未分開哪些條件關係、觀測支持與有限預算造成修正無法轉移。E34較少可訓練參數及gradient clipping差異仍是限制；不能據此宣稱所有訓練責任已隔離。見[E34結果](RECONSTRUCTION_FROZEN_BRIDGE_FINDINGS_20261005.md)。
+1. E33開關消融和E34凍結主幹訓練／完整核對均已完成，不能再列未做。仍未分開哪些條件關係、觀測支持與有限預算造成修正無法轉移。E34較少可訓練參數及gradient clipping差異仍是限制；不能據此宣稱所有訓練責任已隔離。見[E34結果](docs/research/findings/RECONSTRUCTION_FROZEN_BRIDGE_FINDINGS_20261005.md)。
 2. 將局部內容／路徑診斷連到真正未知 target 的改善，並在固定強對照與資料角色下驗證修復。
 3. 新修法的 future forecast、自學習回放與未接觸外部驗證。最近當下重建實驗不能代替這些證據；MIMIC／NWICU 不再是新 lockbox。
 4. E36參數路徑已完成，不再列未做。仍未定位哪些輸入或訓練條件使初始方向無法轉移；這不是optimizer訓練軌跡，也不是已找到適用所有病人的倍率。正局部導數不能推論所有有限步長都失敗。
@@ -144,14 +144,14 @@
 119在逐座標縮放、43原proposal已不利；衰減與roundoff在此固定軌跡未新增有害分類。
 但逐座標縮放也修正749例、引入123例，不能單憑局部計數就刪除它。
 此處「有害」是訓練例步的局部loss方向，不是病人傷害，也不是泛化根因比例。
-原始依據：[E38 findings](RECONSTRUCTION_PAIR_GRADIENT_FINDINGS_20261005.md)、
+原始依據：[E38 findings](docs/research/findings/RECONSTRUCTION_PAIR_GRADIENT_FINDINGS_20261005.md)、
 [完成核對](artifacts/native_pair_gradient_verification_20261005.json)。
 
 **E40補上的判別：** 直接限制實際Adam步長，跨target局部有害內積降至0，
 但selection MAE僅從0.876528降至0.876494，fit與同來源均值反而略差，完整screen為0。
 這把「實際更新保護不足」從待測修法，改成「已修局部問題但不足以修好模型」。
 441次rounding停步與縮小步長是此版本的代價；負結果不否定所有受約束訓練。
-見[E40 findings](RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)與
+見[E40 findings](docs/research/findings/RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)與
 [完成核對](artifacts/native_actual_step_verification_20261005.json)。
 
 **下一次研究不能只問「再試會不會比較準」：**
@@ -216,7 +216,7 @@ Selection涵蓋47指標、235組、1,797,884次查詢／29,580病人。
 獨立核對83993正常退出，1,175保存reader重現；固定統計最大roundoff2.9976e-15。
 修復核對器浮點加總而未放寬容差，41項相關測試通過；這不是模型修復。
 器官state獨立逐步回放仍只首批1,024筆；全量cache核對不能冒充全量trajectory重播。
-詳見[E25結果](RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md)及[進度](RECONSTRUCTION_FULL_ORGAN_PROGRESS_20261003.md)。
+詳見[E25結果](docs/research/findings/RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md)及[進度](docs/research/notes/RECONSTRUCTION_FULL_ORGAN_PROGRESS_20261003.md)。
 既有程序均已結束；完整根因及泛化修法仍未交付，核心結論未變。
 
 ### 任務前與任務後最低要求
@@ -437,7 +437,7 @@ H1–H5 可同時存在。沒有證據要求所有 target 共用一個根因；�
 **E44固定強／弱方向消融及獨立核對完成（2026-10-05），未成轉移修法。**
 [協議](RECONSTRUCTION_TANGENT_SPECTRUM_PROTOCOL_20261005.md)、
 [數值附錄](RECONSTRUCTION_TANGENT_SPECTRUM_NUMERICS_20261005.md)、
-[結果](RECONSTRUCTION_TANGENT_SPECTRUM_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_TANGENT_SPECTRUM_FINDINGS_20261005.md)、
 [aggregate](artifacts/native_tangent_spectrum_20261005.json)、
 [獨立核對](artifacts/native_tangent_spectrum_verification_20261005.json)。
 不重訓，固定E43原lambda與alpha=.5，將同一保存修正分為強／弱參數敏感度方向。
@@ -456,7 +456,7 @@ Fold0/2相同，重用development且沿用原encoder暴露／raw支持限制，�
 **E43完整fit切空間求解與實際模型核對完成（2026-10-05），未成完整修法。**
 [固定協議](RECONSTRUCTION_TANGENT_BRIDGE_PROTOCOL_20261005.md)、
 [數值附錄](RECONSTRUCTION_TANGENT_NUMERICS_20261005.md)、
-[結果](RECONSTRUCTION_TANGENT_BRIDGE_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_TANGENT_BRIDGE_FINDINGS_20261005.md)、
 [aggregate](artifacts/native_tangent_bridge_20261005.json)、
 [獨立核對](artifacts/native_tangent_bridge_verification_20261005.json)。
 五fold各2048fit查詢對28672bridge參數，保留2048數值方向；不等於學到可轉移生理。
@@ -471,7 +471,7 @@ Fold0/2相同，重用development且沿用原encoder暴露／raw支持限制，�
 
 **E41失敗分解完成（2026-10-05），不是模型修復或新驗收門檻。**
 [協議](RECONSTRUCTION_SCREEN_DIAGNOSIS_PROTOCOL_20261005.md)、
-[結果](RECONSTRUCTION_SCREEN_DIAGNOSIS_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_SCREEN_DIAGNOSIS_FINDINGS_20261005.md)、
 [aggregate](artifacts/native_screen_failures_20261005.json)。
 全部53當下target、五fold5120selection列，46可評分／460比較，原screen精確重現。
 7無評分、19低於30病人或3component、27具支持但至少一控制未在兩種等權均值下同勝。
@@ -484,7 +484,7 @@ E41修正「0screen」的籠統判讀，沒有解決表示、條件轉移與目�
 
 **E40實際步長干預與獨立核對完成（2026-10-05），局部修復但非完整修法。**
 [固定協議](RECONSTRUCTION_ACTUAL_STEP_PROTOCOL_20261005.md)、
-[結果](RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ACTUAL_STEP_FINDINGS_20261005.md)、
 [assessment](artifacts/native_actual_step_20261005.json)、
 [獨立核對](artifacts/native_actual_step_verification_20261005.json)。
 保持E38主幹、單一bridge、配對順序、兩遍預算及Adam狀態，只修不同target配對的實際步長。
@@ -515,7 +515,7 @@ mean的scaled proposal計數668與E38 unscaled670是容差尺度不同，不能�
 完整根因與泛化修法仍未交付。E39不可再當未測方案重跑。
 
 **E38配對梯度干預完成（2026-10-05），0完整screen。**
-[結果](RECONSTRUCTION_PAIR_GRADIENT_FINDINGS_20261005.md)與
+[結果](docs/research/findings/RECONSTRUCTION_PAIR_GRADIENT_FINDINGS_20261005.md)與
 [核對](artifacts/native_pair_gradient_verification_20261005.json)：10模型、20480查詢，
 重新載入逐筆回放差0；69原／74核對bindings，scalar／統計差1.833e-13，24tests。
 Mean／PCGrad擬採用方向有害計數670／67，實際Adam2197／1921；selection病人
@@ -526,7 +526,7 @@ Fold0/2兩臂皆相同，不是五次獨立複驗。首次剩餘局部限制在�
 關閉，不改runtime／權重／區間，不promote；完整修法仍未完成。
 
 **E37實際Adam來源診斷完成（2026-10-05），不是修復。**
-[結果](RECONSTRUCTION_ADAM_ORIGIN_FINDINGS_20261005.md)與
+[結果](docs/research/findings/RECONSTRUCTION_ADAM_ORIGIN_FINDINGS_20261005.md)與
 [aggregate](artifacts/native_adam_origins_20261005.json)：五fold原tensor／logs
 精確重現，53來源加decay／rounding，全20,480查詢合成E36導數最大差1.111e-16，
 起點差0；52bindings／15角色核對，25tests。Selection18項局部有害中8自身
@@ -536,7 +536,7 @@ Component對應13=13+0、20=8+12、17=14+3；保留權重差異與有益共享�
 獨立複驗。E37當時未做干預；後續E38已完成固定投影，未成完整修法；不promote、不改runtime。
 
 **E36參數路徑診斷完成（2026-10-05），不是模型修復。**
-[結果](RECONSTRUCTION_PARAMETER_PATH_FINDINGS_20261005.md)及
+[結果](docs/research/findings/RECONSTRUCTION_PARAMETER_PATH_FINDINGS_20261005.md)及
 [aggregate](artifacts/native_parameter_path_20261005.json)：E34 primary immediate
 五fold／三角色20,480查詢，全端點float32精確重現，float64最大差1.264e-6；
 670筆雙步長有限差分最大差1.036e-8、全列scalar彙總最大差1.777e-15，21tests。
@@ -546,7 +546,7 @@ chord異號；同來源15項為11／4。來源等權另為25項20／5和18項17�
 初始方向失效的輸入／訓練條件責任仍未定位，沒有promotion或runtime變更。
 
 **E35方向／幅度與損失診斷完成（2026-10-05），不是模型修復。**
-[結果](RECONSTRUCTION_BRIDGE_GEOMETRY_FINDINGS_20261005.md)及
+[結果](docs/research/findings/RECONSTRUCTION_BRIDGE_GEOMETRY_FINDINGS_20261005.md)及
 [aggregate](artifacts/native_bridge_geometry_20261005.json)：固定E34三通道／三角色，
 20480查詢／61440候選輸出，全53盤點；20tests、30bindings，獨立scalar/fsum
 與向量算式最大差3.553e-15，原MAE與支持量重現。selection immediate22項
@@ -558,7 +558,7 @@ E9 teacher方向與舊exact-MAE修復早已做過，不當新通用解法。結�
 尚未定位哪個條件關係導致方向失效；不重訓、不改runtime、無promotion。
 
 **E34固定主幹對照完成，不是完整修法（2026-10-05）。**
-[結果](RECONSTRUCTION_FROZEN_BRIDGE_FINDINGS_20261005.md)及
+[結果](docs/research/findings/RECONSTRUCTION_FROZEN_BRIDGE_FINDINGS_20261005.md)及
 [獨立核對](artifacts/native_frozen_bridge_verification_20261005.json)：
 15模型／20480查詢，主幹逐tensor固定，全部保存回放差0；20tests，
 独立MAE／paired統計最大差8.882e-15，七比較及完整screen皆0。
@@ -569,7 +569,7 @@ E9 teacher方向與舊exact-MAE修復早已做過，不當新通用解法。結�
 與預算仍未完整拆清。關閉固定版本，不掃參數，不改runtime或宣稱future修復。
 
 **E33固定權重消融完成，不是完整修法（2026-10-05）。**
-[結果](RECONSTRUCTION_BRIDGE_ABLATION_FINDINGS_20261005.md)及
+[結果](docs/research/findings/RECONSTRUCTION_BRIDGE_ABLATION_FINDINGS_20261005.md)及
 [核對](artifacts/native_trained_bridge_ablation_verification_20261005.json)：
 全部15模型、20480次查詢，on與off-native重播差0；獨立fsum最大3.553e-15，17測試。
 immediate bridge在selection26/46、同來源26/44項平均有害，其中25／24項fit原有益。
@@ -581,7 +581,7 @@ selection病人macro on .876522、off .875705、無bridge .875949；raw仍.85385
 現役、權重與區間不變；未解完整泛化問題，不再將此消融列為未測。
 
 **E32共同來源分解完成，不是模型修復（2026-10-05）。**
-[結果](RECONSTRUCTION_ASSIMILATION_COMPOSITION_FINDINGS_20261005.md)與
+[結果](docs/research/findings/RECONSTRUCTION_ASSIMILATION_COMPOSITION_FINDINGS_20261005.md)與
 [aggregate](artifacts/native_assimilation_composition_20261005.json)：全部53×5×4，
 每控制206可分解、49缺角色、10無共同來源。主對照170組within>0，185組
 |within|>|composition|。正值是fit到query的相對增益縮水，不是全部輸基線。
@@ -593,7 +593,7 @@ selection病人macro on .876522、off .875705、無bridge .875949；raw仍.85385
 無runtime、權重或promotion改變；完整泛化修法未完成。
 
 **E31推論與獨立核對完成，不是模型修復（2026-10-05）。**
-[結果](RECONSTRUCTION_ASSIMILATION_TRANSFER_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ASSIMILATION_TRANSFER_FINDINGS_20261005.md)、
 [aggregate](artifacts/native_assimilation_transfer_20261005.json)、
 [verification](artifacts/native_assimilation_transfer_verification_20261005.json)。
 原29146及核對14534 exit0；五fold5120查詢／1613病人／44有支持target。
@@ -606,7 +606,7 @@ selection病人macro on .876522、off .875705、無bridge .875949；raw仍.85385
 無promotion、runtime或future能力改變；完整泛化修法仍未完成。
 
 **E30角色稽核完成，不是模型修復（2026-10-05）。**
-[結果](RECONSTRUCTION_ASSIMILATION_ROLES_FINDINGS_20261005.md)及
+[結果](docs/research/findings/RECONSTRUCTION_ASSIMILATION_ROLES_FINDINGS_20261005.md)及
 [aggregate](artifacts/native_organ_assimilation_roles_20261005.json)：E29五fold
 fit/selection來源交集皆0、病人交集皆0。53×5中219格兩角色有資料但無共同來源，
 46格缺角色支持；跨fold合併雖有5共同來源，不能當同模型對照。
@@ -635,12 +635,12 @@ tanh近飽和，立即臂selection最大latent correction .107346（limit .2）�
 這區分了已測版本的失敗位置，不代表已找到哪個條件關係導致泛化失敗。
 26項新舊回歸通過；不重訓、不改現役、不promote、不宣稱future增益。
 原assessment的verification=false保留歷史快照，以獨立verification完成證據為準。
-詳見[結果](RECONSTRUCTION_ORGAN_ASSIMILATION_FINDINGS_20261005.md)、
+詳見[結果](docs/research/findings/RECONSTRUCTION_ORGAN_ASSIMILATION_FINDINGS_20261005.md)、
 [完整核對](artifacts/native_organ_assimilation_verification_20261004.json)、
 [失敗位置](artifacts/native_organ_assimilation_diagnosis_20261005.json)。
 
 **E28診斷完成，不是新增準度或promotion。**
-[同時刻器官可達性](RECONSTRUCTION_ORGAN_REACHABILITY_FINDINGS_20261004.md)：
+[同時刻器官可達性](docs/research/findings/RECONSTRUCTION_ORGAN_REACHABILITY_FINDINGS_20261004.md)：
 固定E27全部15保存模型，0間隔改器官proposal不改body／輸出且無梯度路徑；
 1h正控制與body旁路均可達。原fit9403/10240、selection4634/5120的最後事件
 與anchor同時。這讓E27負結果多了一個明確實作限制，但未分離body旁路的資訊，
@@ -662,13 +662,13 @@ binding比native均值約低0.055%，四種比較及完整screen皆0。
 15保存模型兩角色重播誤差全0、原raw與統計／summary全核對；不是準度修復。
 Fit診斷相對native有23/46項未改善、9項fit改善但selection反轉；
 相對frozen雖46項fit改善，20項selection反轉。不把全部失敗統稱domain shift。
-詳見[完整結果](RECONSTRUCTION_ORGAN_BINDING_FINDINGS_20261004.md)，
+詳見[完整結果](docs/research/findings/RECONSTRUCTION_ORGAN_BINDING_FINDINGS_20261004.md)，
 [核對](artifacts/native_organ_binding_verification_20261004.json)與
 [fit診斷](artifacts/native_organ_binding_fit_gap_20261004.json)。
 這是既有固定子集的當下重建，不是全cohort、端到端encoder或新外部forecast驗證。
 現役權重／runtime／區間不變，無promotion；完整根因與泛化修法仍未交付。
 
-E26完成：`RECONSTRUCTION_ORGAN_ASSIGNMENT_FINDINGS_20261004.md`。
+E26完成：`docs/research/findings/RECONSTRUCTION_ORGAN_ASSIGNMENT_FINDINGS_20261004.md`。
 全部224同器官變數對、1344合成案／fold映射，四個不同已訓練checkpoint：
 原organ proposal／update／6h全0可分辨交換，body與候選binding全1344可分辨。
 首次局部操作在`mean(phi(value)+identity)`，值與身份先分開相加再平均，
@@ -677,7 +677,7 @@ E19既有fit回放10240次／3094獨立病人，9855次有非平凡同器官共�
 這是機制支持量，不是accuracy或誤差歸因。13tests；無重訓／runtime／promotion。
 後續binding介入及核對已由E27完成，0完整screen；不再把碰撞診斷或配對訓練列為未做。
 
-E25完整對照已完成，詳見`RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md`。
+E25完整對照已完成，詳見`docs/research/findings/RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md`。
 五fold／47supported，完整fit訓練940新readers，235原raw核對重用；
 病人macro body .854767、organs .849663、等寬展開 .853201、raw .825737。
 真器官相對body均值低0.60%，但47項病人均值均輸raw；完整增量／全部對照皆0screen。
@@ -686,7 +686,7 @@ E25完整對照已完成，詳見`RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md
 完整支持不是此版本的充分修法；分支關閉，無promotion，仍未找到全域唯一根因。
 本輪程序均已退出，後續文件整理不授權啟動新實驗。
 
-最新E24已完成，詳見 `RECONSTRUCTION_READER_SUPPORT_FINDINGS_20261003.md`。
+最新E24已完成，詳見 `docs/research/findings/RECONSTRUCTION_READER_SUPPORT_FINDINGS_20261003.md`。
 在完全相同E23的131組／4569查詢／1851病人重播既有full/small raw權重，
 不訓練；完整fit中位26325對抽樣75，raw及真值／病人角色一致。
 full raw病人macro .638187，比small .799944低20.22%，native .715713；
@@ -696,7 +696,7 @@ full raw病人macro .638187，比small .799944低20.22%，native .715713；
 不能宣稱純N因果。未來器官對照須相同充分fit支持，不再用弱reader下全域結論。
 Runtime不變。根因與完整修法仍未交付。
 
-前一項E23已完成，詳見 `RECONSTRUCTION_ORGAN_READOUT_FINDINGS_20261003.md`。
+前一項E23已完成，詳見 `docs/research/findings/RECONSTRUCTION_ORGAN_READOUT_FINDINGS_20261003.md`。
 五fold131組1310readers，28supported targets／1851人／4569查詢；八對照0screen。
 HGB body .783467、body+organs .789964、native .715713；raw .799944亦較弱。
 每target fit中位75病人，不能拿這個bounded reader否定完整器官資訊。
@@ -705,25 +705,25 @@ Ridge131組fit全改善但100組selection反轉；HGB110組fit改善、56組反�
 分支關閉，未找到完整根因／修法；未來重開必須正面處理fit支持與額外座標混淆。
 正式評分由獨立score入口完成，保留原trainer最後彙總key錯誤的歷史hash，不重訓。
 
-前一項E22，詳見 `RECONSTRUCTION_SUFFIX_FINDINGS_20261003.md`。
+前一項E22，詳見 `docs/research/findings/RECONSTRUCTION_SUFFIX_FINDINGS_20261003.md`。
 固定五fold後綴四路徑，708新reader與原基線重現、paired統計和screen精確重算，
 MAE彙總roundoff最大7.11e-15；原post/final state誤差0，37新舊測試。
 觀測寫入有10／8項兩reader共同對比證據；不能反推time完全無害、未知推論修好。
 本輪沒有新forecast或promotion，不更動runtime；不要重列後綴分離為未做。
 
-前一項為E21，詳見 `RECONSTRUCTION_CONTENT_TRAINING_FINDINGS_20261003.md`。
+前一項為E21，詳見 `docs/research/findings/RECONSTRUCTION_CONTENT_TRAINING_FINDINGS_20261003.md`。
 15模型、94908查詢／2048病人；masked46項有評分資料、27項最低支持，內容47／41。
 未知推論real .874808 vs primary .875550，0完整screen；內容Hgb／RR過兩對照。
 15保存模型全部精確重現、encoder未變、原body重現0誤差，24tests。
 否決這個固定內容保留介入作為完整修法；不推論所有內容監督都不可能有效。
 
-前一項為E20，詳見 `RECONSTRUCTION_ASSIMILATION_FINDINGS_20261003.md`。
+前一項為E20，詳見 `docs/research/findings/RECONSTRUCTION_ASSIMILATION_FINDINGS_20261003.md`。
 177 variable-fold／354新readers／88122查詢／2048病人，24tests。
 原event/final重現誤差皆0，177scalers有限正尺度，原對照預測全數不變。
 當次assimilation已有12項共同差距，後續另13項，交集9項。
 E20本身未干預修復；E21已測內容保留訓練，未成完整修法。E22再拆後續advance/update的已知內容責任，不promote。
 
-前一項 E19 observed-content diagnostic，詳見 `RECONSTRUCTION_OBSERVED_CONTENT_FINDINGS_20261003.md`。
+前一項 E19 observed-content diagnostic，詳見 `docs/research/findings/RECONSTRUCTION_OBSERVED_CONTENT_FINDINGS_20261003.md`。
 36項有支持、35全五fold；88122查詢／2048病人，全部保存預測重現，531scalers數值核對，19tests。
 已觀測值event/body的HGB病人macro為.628675/.893199，Ridge為.911219/1.259259。
 16項兩reader共同screen支持沿持續聚合路徑可用性下降；不能推論缺測能力提升或不可逆損失。
@@ -734,12 +734,12 @@ E20當時未拆後續advance/update，現已有E22診斷；E21已執行干預，
 逐次移除mean、latest、lag/count後重新擬合同一HGB，原始raw全235格重現。
 七對照均0校正screen；去lag/count不消除raw的均值優勢，但不能據此說沒有流程捷徑。
 235組保存模型／預測與bindings核對通過，17測試通過，無promotion。
-詳見 `RECONSTRUCTION_RAW_BLOCK_FINDINGS_20261003.md`。未新增encoder修復，不以本輪重訓診斷頭當成模型問題已解決。
+詳見 `docs/research/findings/RECONSTRUCTION_RAW_BLOCK_FINDINGS_20261003.md`。未新增encoder修復，不以本輪重訓診斷頭當成模型問題已解決。
 
 前一項 E17 stage probe：全47×5固定抽樣已完成，2350讀取器、59629查詢。
 最終body的HGB病人等權macro .885501，事件平均 .911521；不能以事件平均
 普遍替代state。8組比較均0校正screen，無promotion。這是診斷，不是全量修復。
-詳見 `RECONSTRUCTION_STAGE_PROBE_FINDINGS_20261003.md`。
+詳見 `docs/research/findings/RECONSTRUCTION_STAGE_PROBE_FINDINGS_20261003.md`。
 
 以下為上一項 E15 的完成記錄：
 
@@ -778,29 +778,29 @@ E20當時未拆後續advance/update，現已有E22診斷；E21已執行干預，
 
 以下檔案均在本 repository。先讀 findings 的範圍，再看它引用的 JSON／hash；不得只引用摘要。
 
-- **E1** [Decoder 限制](ENCODER_BOTTLENECK_FINDINGS_20260910.md)、[修復](ENCODER_REPAIR_FINDINGS_20260910.md)、[七 seed 確認](ENCODER_CONFIRM_FINDINGS_20260910.md)。
-- **E2** [可知時間輸入](AVAILABILITY_JEPA_FINDINGS_20260910.md)、[空歷史遮罩](ENCODER_HISTORY_MASK_FINDINGS_20260910.md)。
-- **E3** [固定 state 非線性對照](RECONSTRUCTION_NONLINEAR_FINDINGS_20261003.md)、[source JSON](artifacts/native_reconstruction_nonlinear_source_assessment_20261001.json)。
-- **E4** [Matched shuffle](RECONSTRUCTION_NONLINEAR_PLACEBO_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_nonlinear_placebo_assessment_20261003.json)。
-- **E5** [無損座標](RECONSTRUCTION_COORDINATE_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_coordinates_assessment_20261003.json)。
-- **E6** [Fit/selection 首次失敗位置](RECONSTRUCTION_NONLINEAR_FIT_GAP_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_nonlinear_fit_gap_20261003.json)。
-- **E7** [來源組差異](RECONSTRUCTION_NONLINEAR_SOURCE_COMPONENTS_20261003.md)。
-- **E8** [Observation skip](RECONSTRUCTION_OBSERVATION_SKIP_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_observation_skip_assessment_20261003.json)。
-- **E9** [Teacher](RECONSTRUCTION_STATE_TEACHER_FINDINGS_20261003.md)、[錯誤分解](RECONSTRUCTION_TEACHER_ERROR_GEOMETRY_FINDINGS_20261003.md)、[Blend](RECONSTRUCTION_READOUT_BLEND_FINDINGS_20261003.md)、[Residual](RECONSTRUCTION_NATIVE_ANCHOR_FINDINGS_20261003.md)。
-- **E10** [Kernel 尺度修正](RECONSTRUCTION_SCALED_KERNEL_FINDINGS_20261003.md)、[懲罰診斷](RECONSTRUCTION_KERNEL_OBJECTIVE_FINDINGS_20261003.md)、[C×10 結果／關閉分支](RECONSTRUCTION_KERNEL_RELAXATION_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_relaxed_kernel_assessment_20261003.json)。
-- **E11** [輸入包缺件修復](COVERAGE_INPUT_DELIVERY_FIX_20261002.md)。
-- **E12** [Support selector](RECONSTRUCTION_SUPPORT_SELECTOR_FINDINGS_20261003.md)、[Prefix](RECONSTRUCTION_PREFIX_COMPLEXITY_FINDINGS_20261003.md)。
-- **E13** [局部 bias 與病人配對](RECONSTRUCTION_SOURCE_ERROR_MECHANISM_20261001.md)。
-- **E14** [預算](ENCODER_EXPANDED_BUDGET_FINDINGS_20260910.md)、[Actual time](ENCODER_ACTUAL_TIME_FINDINGS_20260910.md)。
-- **E15** [對齊座標 protocol](RECONSTRUCTION_ALIGNED_COORDINATE_PROTOCOL_20261003.md)、[完整結果](RECONSTRUCTION_ALIGNED_COORDINATE_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_aligned_coordinates_assessment_20261003.json)、[fit/selection診斷](artifacts/native_reconstruction_aligned_coordinates_diagnosis_20261003.json)、[數值稽核](artifacts/native_reconstruction_aligned_coordinates_numerics_20261003.json)。
-- **E16** [Body/organ 分支](RECONSTRUCTION_BUN_DYNAMICS_BRANCHES_20260920.md)、[全33目標反例](RECONSTRUCTION_ALL_DYNAMICS_BRANCHES_20260920.md)、[訓練池與實際暴露](RECONSTRUCTION_BUN_DYNAMICS_FIT_20260920.md)、[抽樣加權](RECONSTRUCTION_BUN_WEIGHTED_OBJECTIVE_20260920.md)、[積分步長](RECONSTRUCTION_BUN_INTEGRATION_RESOLUTION_20260920.md)、[受保護梯度](RECONSTRUCTION_DYNAMICS_DESCENT_20260920.md)、[有限步更新](RECONSTRUCTION_DYNAMICS_FINITE_STEP_20260920.md)、[最後更新 trace](RECONSTRUCTION_FINAL_UPDATE_TRACE_20260920.md)。本輪核對8份 aggregate JSON 與22筆 `.py/.md/.json` bindings，均匹配；未重新 hash 私有 checkpoint／病人資料，也未重新執行病人回放。10項相關單元測試通過，只驗證測試涵蓋的 hook／摘要／loss／方向約束。
-- **E17** [Stage protocol](RECONSTRUCTION_STAGE_PROBE_PROTOCOL_20261003.md)、[完整結果](RECONSTRUCTION_STAGE_PROBE_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_stage_assessment_20261003.json)。固定每格最多512fit/256selection，非全cohort。59629 query occurrences／5703病人，12測試；不promote、不改runtime。
-- **E18** [Raw block protocol](RECONSTRUCTION_RAW_BLOCK_PROTOCOL_20261003.md)、[完整結果](RECONSTRUCTION_RAW_BLOCK_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_raw_blocks_assessment_20261003.json)。同E17病人，不新增外部資料；940fits／17測試，0校正screen。逐區塊重新擬合已做，不再列為未測。
+- **E1** [Decoder 限制](docs/research/findings/ENCODER_BOTTLENECK_FINDINGS_20260910.md)、[修復](docs/research/findings/ENCODER_REPAIR_FINDINGS_20260910.md)、[七 seed 確認](docs/research/findings/ENCODER_CONFIRM_FINDINGS_20260910.md)。
+- **E2** [可知時間輸入](docs/research/findings/AVAILABILITY_JEPA_FINDINGS_20260910.md)、[空歷史遮罩](docs/research/findings/ENCODER_HISTORY_MASK_FINDINGS_20260910.md)。
+- **E3** [固定 state 非線性對照](docs/research/findings/RECONSTRUCTION_NONLINEAR_FINDINGS_20261003.md)、[source JSON](artifacts/native_reconstruction_nonlinear_source_assessment_20261001.json)。
+- **E4** [Matched shuffle](docs/research/findings/RECONSTRUCTION_NONLINEAR_PLACEBO_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_nonlinear_placebo_assessment_20261003.json)。
+- **E5** [無損座標](docs/research/findings/RECONSTRUCTION_COORDINATE_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_coordinates_assessment_20261003.json)。
+- **E6** [Fit/selection 首次失敗位置](docs/research/findings/RECONSTRUCTION_NONLINEAR_FIT_GAP_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_nonlinear_fit_gap_20261003.json)。
+- **E7** [來源組差異](docs/research/notes/RECONSTRUCTION_NONLINEAR_SOURCE_COMPONENTS_20261003.md)。
+- **E8** [Observation skip](docs/research/findings/RECONSTRUCTION_OBSERVATION_SKIP_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_observation_skip_assessment_20261003.json)。
+- **E9** [Teacher](docs/research/findings/RECONSTRUCTION_STATE_TEACHER_FINDINGS_20261003.md)、[錯誤分解](docs/research/findings/RECONSTRUCTION_TEACHER_ERROR_GEOMETRY_FINDINGS_20261003.md)、[Blend](docs/research/findings/RECONSTRUCTION_READOUT_BLEND_FINDINGS_20261003.md)、[Residual](docs/research/findings/RECONSTRUCTION_NATIVE_ANCHOR_FINDINGS_20261003.md)。
+- **E10** [Kernel 尺度修正](docs/research/findings/RECONSTRUCTION_SCALED_KERNEL_FINDINGS_20261003.md)、[懲罰診斷](docs/research/findings/RECONSTRUCTION_KERNEL_OBJECTIVE_FINDINGS_20261003.md)、[C×10 結果／關閉分支](docs/research/findings/RECONSTRUCTION_KERNEL_RELAXATION_FINDINGS_20261003.md)、[JSON](artifacts/native_reconstruction_relaxed_kernel_assessment_20261003.json)。
+- **E11** [輸入包缺件修復](docs/research/notes/COVERAGE_INPUT_DELIVERY_FIX_20261002.md)。
+- **E12** [Support selector](docs/research/findings/RECONSTRUCTION_SUPPORT_SELECTOR_FINDINGS_20261003.md)、[Prefix](docs/research/findings/RECONSTRUCTION_PREFIX_COMPLEXITY_FINDINGS_20261003.md)。
+- **E13** [局部 bias 與病人配對](docs/research/notes/RECONSTRUCTION_SOURCE_ERROR_MECHANISM_20261001.md)。
+- **E14** [預算](docs/research/findings/ENCODER_EXPANDED_BUDGET_FINDINGS_20260910.md)、[Actual time](docs/research/findings/ENCODER_ACTUAL_TIME_FINDINGS_20260910.md)。
+- **E15** [對齊座標 protocol](RECONSTRUCTION_ALIGNED_COORDINATE_PROTOCOL_20261003.md)、[完整結果](docs/research/findings/RECONSTRUCTION_ALIGNED_COORDINATE_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_aligned_coordinates_assessment_20261003.json)、[fit/selection診斷](artifacts/native_reconstruction_aligned_coordinates_diagnosis_20261003.json)、[數值稽核](artifacts/native_reconstruction_aligned_coordinates_numerics_20261003.json)。
+- **E16** [Body/organ 分支](docs/research/notes/RECONSTRUCTION_BUN_DYNAMICS_BRANCHES_20260920.md)、[全33目標反例](docs/research/notes/RECONSTRUCTION_ALL_DYNAMICS_BRANCHES_20260920.md)、[訓練池與實際暴露](docs/research/notes/RECONSTRUCTION_BUN_DYNAMICS_FIT_20260920.md)、[抽樣加權](docs/research/notes/RECONSTRUCTION_BUN_WEIGHTED_OBJECTIVE_20260920.md)、[積分步長](docs/research/notes/RECONSTRUCTION_BUN_INTEGRATION_RESOLUTION_20260920.md)、[受保護梯度](docs/research/notes/RECONSTRUCTION_DYNAMICS_DESCENT_20260920.md)、[有限步更新](docs/research/notes/RECONSTRUCTION_DYNAMICS_FINITE_STEP_20260920.md)、[最後更新 trace](docs/research/notes/RECONSTRUCTION_FINAL_UPDATE_TRACE_20260920.md)。本輪核對8份 aggregate JSON 與22筆 `.py/.md/.json` bindings，均匹配；未重新 hash 私有 checkpoint／病人資料，也未重新執行病人回放。10項相關單元測試通過，只驗證測試涵蓋的 hook／摘要／loss／方向約束。
+- **E17** [Stage protocol](RECONSTRUCTION_STAGE_PROBE_PROTOCOL_20261003.md)、[完整結果](docs/research/findings/RECONSTRUCTION_STAGE_PROBE_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_stage_assessment_20261003.json)。固定每格最多512fit/256selection，非全cohort。59629 query occurrences／5703病人，12測試；不promote、不改runtime。
+- **E18** [Raw block protocol](RECONSTRUCTION_RAW_BLOCK_PROTOCOL_20261003.md)、[完整結果](docs/research/findings/RECONSTRUCTION_RAW_BLOCK_FINDINGS_20261003.md)、[assessment](artifacts/native_reconstruction_raw_blocks_assessment_20261003.json)。同E17病人，不新增外部資料；940fits／17測試，0校正screen。逐區塊重新擬合已做，不再列為未測。
 
 ## 9. 判斷更新紀錄
 
 E29 原始入口：[固定protocol](RECONSTRUCTION_ORGAN_ASSIMILATION_PROTOCOL_20261004.md)、
-[結果](RECONSTRUCTION_ORGAN_ASSIMILATION_FINDINGS_20261005.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ORGAN_ASSIMILATION_FINDINGS_20261005.md)、
 [核對](artifacts/native_organ_assimilation_verification_20261004.json)、
 [診斷](artifacts/native_organ_assimilation_diagnosis_20261005.json)。
 从「器官即時支路的真實價值未測」到「固定同body寫回已完整核對，未成修法」。
@@ -808,7 +808,7 @@ E29 原始入口：[固定protocol](RECONSTRUCTION_ORGAN_ASSIMILATION_PROTOCOL_2
 不能把結構可達或再多一個負結果當成全域根因解決。完整泛化修法仍未交付。
 
 E27 原始入口：[固定protocol](RECONSTRUCTION_ORGAN_BINDING_PROTOCOL_20261004.md)、
-[結果](RECONSTRUCTION_ORGAN_BINDING_FINDINGS_20261004.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ORGAN_BINDING_FINDINGS_20261004.md)、
 [assessment](artifacts/native_organ_binding_assessment_20261004.json)、
 [verification](artifacts/native_organ_binding_verification_20261004.json)。
 從「統計核對未完成」更新為「浮點比較修復、完整核對完成、固定介入未成修法」。
@@ -816,7 +816,7 @@ E27 原始入口：[固定protocol](RECONSTRUCTION_ORGAN_BINDING_PROTOCOL_202610
 不否定所有binding方式，也不宣稱H1–H5全部區分；完整泛化修法仍未交付。
 
 E26 原始入口：[固定protocol](RECONSTRUCTION_ORGAN_ASSIGNMENT_PROTOCOL_20261004.md)、
-[結果](RECONSTRUCTION_ORGAN_ASSIGNMENT_FINDINGS_20261004.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ORGAN_ASSIGNMENT_FINDINGS_20261004.md)、
 [合成權重核對](artifacts/native_organ_assignment_20261004.json)、
 [真實fit輸入支持](artifacts/native_organ_assignment_support_20261004.json)。
 H2從「只有讀取可用性差距，未定位局部資訊合併算子」更新為「器官pooling有
@@ -824,21 +824,21 @@ H2從「只有讀取可用性差距，未定位局部資訊合併算子」更新
 不把結構候選解除碰撞當成真實誤差改善，也不把舊事件ID稽核混為同一問題。
 
 E25 原始入口：[protocol](RECONSTRUCTION_FULL_ORGAN_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_FULL_ORGAN_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_full_organ_readout_assessment_20261003.json)、
 [核對](artifacts/native_reconstruction_full_organ_readout_verification_20261003.json)。
 從「完整支持器官對照尚未測」更新為「已完整測過，固定拼接方案未成完整修法」。
 排除單靠補足fit支持就解決此版本的說法；仍未分清表示、座標、目標與轉移責任。
 
 E24 原始入口：[protocol](RECONSTRUCTION_READER_SUPPORT_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_READER_SUPPORT_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_READER_SUPPORT_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_reader_support_20261003.json)、
 [核對](artifacts/native_reconstruction_reader_support_verification_20261003.json)。
 從「小fit可能限制E23對照」更新為「同一查詢完整raw確實更強，診斷限制成立」；
 仍未證明器官full-fit會成功、純樣本數因果或完整模型修復。
 
 E23 原始入口：[protocol](RECONSTRUCTION_ORGAN_READOUT_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_ORGAN_READOUT_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ORGAN_READOUT_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_organ_compartments_assessment_20261003.json)、
 [reader核對](artifacts/native_reconstruction_organ_compartments_verification_20261003.json)、
 [完整state回放](artifacts/native_reconstruction_organ_compartments_replay_20261003.json)。
@@ -846,24 +846,24 @@ E23 原始入口：[protocol](RECONSTRUCTION_ORGAN_READOUT_PROTOCOL_20261003.md)
 但較小支持量使raw也弱於native，不能將負結果泛化成資訊不存在。
 
 E22 原始入口：[protocol](RECONSTRUCTION_SUFFIX_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_SUFFIX_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_SUFFIX_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_suffix_assessment_20261003.json)、
 [核對](artifacts/native_reconstruction_suffix_verification_20261003.json)。
 部分已知內容的後續讀回差距更指向觀測寫入，未知推論的修法仍未完成。
 
 E21 原始入口：[protocol](RECONSTRUCTION_CONTENT_TRAINING_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_CONTENT_TRAINING_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_CONTENT_TRAINING_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_content_training_assessment_20261003.json)、
 [核對](artifacts/native_reconstruction_content_training_verification_20261003.json)。
 干預保留已知內容後，局部內容改善未帶來完整未知推論通過；不promote。
 
 E20 原始入口：[protocol](RECONSTRUCTION_ASSIMILATION_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_ASSIMILATION_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_ASSIMILATION_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_assimilation_assessment_20261003.json)、
 [核對](artifacts/native_reconstruction_assimilation_verification_20261003.json)。
 
 E19 原始入口：[protocol](RECONSTRUCTION_OBSERVED_CONTENT_PROTOCOL_20261003.md)、
-[結果](RECONSTRUCTION_OBSERVED_CONTENT_FINDINGS_20261003.md)、
+[結果](docs/research/findings/RECONSTRUCTION_OBSERVED_CONTENT_FINDINGS_20261003.md)、
 [assessment](artifacts/native_reconstruction_observed_content_assessment_20261003.json)、
 [產物核對](artifacts/native_reconstruction_observed_content_verification_20261003.json)。
 這是已知觀測值的內容保留診斷，不是前述47個未知target的同一評分任務。
