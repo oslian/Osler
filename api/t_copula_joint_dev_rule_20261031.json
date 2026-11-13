@@ -1,0 +1,41 @@
+{
+  "schema": "joint_forecast_dev_rule.v3",
+  "written_before_results": true,
+  "written": "2026-10-31, after ONLINE_JOINT_DEV_RESULT_20261031.md and before any t-copula result.",
+  "disclosure": "motivated by joint-event results already seen on the same development databases and samples: under the Gaussian copula over own_trajectory marginals, map < 65 & heart_rate > 120 is underpredicted (O/E 1.1-1.5; the overall error correlation is +0.2, which makes low MAP with high HR rarer than independence) and creatinine rise >= 0.3 & potassium >= 6.0 is underpredicted about 4x (OWN_TRAJECTORY_DEV_RESULT_20261031.md, ONLINE_JOINT_DEV_RESULT_20261031.md). The test is therefore in-sample for the motivation; only an unused external lockbox is independent evidence.",
+  "question": "Over the own_trajectory marginals, does a Student-t copula (symmetric tail dependence) calibrate same-horizon joint events better than the Gaussian copula without worsening the multivariate scores?",
+  "inherits": "stacked_expert_dev_rule_20261031.json",
+  "inherited_sections": ["data", "patients", "model", "minimum_support", "robust"],
+  "trajectory": {"lags_hours": [1, 3, 6, 12, 24]},
+  "systems": {"own_trajectory": {"exchange": false, "trajectory": true}},
+  "marginal": {
+    "system": "own_trajectory",
+    "point": "as own_trajectory_joint_dev_rule_20261031.json",
+    "distribution": "as own_trajectory_joint_dev_rule_20261031.json (point + empirical quantile of the signed errors on MIMIC conformal patients)",
+    "members": 50
+  },
+  "joint": {
+    "copulas": ["independent", "gaussian", "t"],
+    "correlation": "one latent correlation matrix shared by gaussian and t: as own_trajectory_joint_dev_rule_20261031.json (2 sin(pi rho_s / 6) of pairwise Spearman correlations on MIMIC selection patients, >= 200 co-observed rows, eigenvalue repair). Disclosed approximation: the Spearman-to-correlation map is exact for the Gaussian copula only; it is kept for t so that the two copulas differ only in the degrees of freedom.",
+    "t_degrees_of_freedom": "one nu for all cells, chosen from the grid [2, 3, 4, 6, 8, 12, 20, 30, 50, 100] by maximum pairwise composite pseudo-likelihood (Demarta and McNeil 2005 two-step: correlation fixed, nu by likelihood) of the bivariate t-copula densities over every cell pair with >= 200 co-observed rows of MIMIC selection patients; pseudo-observations are each cell's mid-ranks / (n + 1) over all its selection rows. nu = 100 is reported as indistinguishable from Gaussian.",
+    "t_draws": "the correlated normal draws of the gaussian system divided by sqrt(W / nu), W ~ chi-square(nu) drawn per row and member and shared by the vector's components, mapped to levels by the t(nu) CDF",
+    "independent": "the same base draws with the identity correlation"
+  },
+  "blocks": {
+    "cross_target": "per anchor and horizon: the vector of the targets labelled there (>= 2)",
+    "across_horizons": "per anchor and target: the vector of the horizons labelled there (>= 2)"
+  },
+  "scores": {
+    "primary": "variogram score of order 0.5 on values standardized per cell by the calibration-error IQR",
+    "secondary": "energy score on the same values"
+  },
+  "comparisons": [["t", "gaussian"], ["gaussian", "independent"], ["t", "independent"]],
+  "primary_readouts": {
+    "joint_events": "for every test database x pair x horizon with >= 30 joint events in a sample (pairs of joint_forecast_dev_rule_20261031.json): t closer than gaussian in that sample if |log O/E| of t < |log O/E| of gaussian; t robustly closer if closer in >= 80% of the samples where it is scored",
+    "multivariate": "per test database and block: t vs gaussian variogram score, patient-cluster bootstrap 95% CI of (t - gaussian); worse in a sample if the lower bound > 0, better if the upper bound < 0; robust if in >= 80% of 5 samples"
+  },
+  "decision": "t replaces gaussian as the development dependence layer only if (a) t is robustly closer on at least half of the database x pair x horizon combinations scored in >= 4 samples, and (b) t is not robustly worse than gaussian on the variogram score for any database x block. Otherwise gaussian stays. Either way AGENTS.md is changed only with user approval, and no joint event probability is output while the marginal tails are uncalibrated.",
+  "secondary_readouts": ["energy score t vs gaussian", "Brier of the joint events", "gaussian vs independent and t vs independent on both scores", "the chosen nu and the composite log-likelihood profile per sample"],
+  "development_evidence_only": true,
+  "causal_claim_allowed": false
+}

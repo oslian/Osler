@@ -9,6 +9,7 @@ treatment recommendation (`causal_claim_allowed: false` everywhere).
 | [`model/`](model/) | Whole-body JEPA source, runtime weights, the 2026-09-02 release in `model/models/`, and the frozen adaptive lockboxes (v10, v11). Formerly `oslian/Model`. | [`model/AGENTS.md`](model/AGENTS.md), [`model/README.md`](model/README.md) |
 | [`osler/`](osler/) | The earlier Osler research tree: the symbolic engine, the DKA world model, the eICU/MIMIC extraction and audit scripts, and the code the v10 lockbox froze. Formerly the root of this repository. | [`osler/AGENTS.md`](osler/AGENTS.md), [`osler/README.md`](osler/README.md) |
 | [`demo/`](demo/) | The Oslian Demo (Flask + static front end): medication safety and FHIR stream monitoring. It loads `model/` through a pinned lock. Formerly the `oslian-demo` branch of WholeBody-JEPA. | [`demo/README.md`](demo/README.md), [`demo/docs/MODEL_RUNTIME.md`](demo/docs/MODEL_RUNTIME.md) |
+| [`api/`](api/) | The Oslian forecast API (FastAPI) with the PRD, the 2026-11-02 registry and the model files it serves; a self-contained snapshot. | [`api/README.md`](api/README.md), [`api/AGENTS.md`](api/AGENTS.md) |
 
 All three histories are kept: `git log -- model/`, `git log -- osler/` and `git log -- demo/`
 show each project's own commits.

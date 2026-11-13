@@ -1,0 +1,38 @@
+{
+  "schema": "online_joint_dev_rule.v1",
+  "written_before_results": true,
+  "written": "2026-10-31, after OWN_TRAJECTORY_DEV_RESULT_20261031.md (own_trajectory robust on 48/67 expert db:cells; most NWICU failures were care-unit interval undercoverage of the DtACI interval; HCO3 < 18 marginal O/E 0.67-0.69 under static marginals) and before any online-marginal result.",
+  "disclosure": "same development databases, MIMIC samples, cohort, split and own_trajectory model as the preceding rules; the online distribution settings are the frozen v12 part C ones (threshold_event_candidates_20261029.json), not tuned here.",
+  "question": "Do online marginal distributions (frozen online point correction + Mondrian MultiQT) calibrate the per-cell marginals better than static ones, and does the dependence layer still beat independent cells over them?",
+  "inherits": "stacked_expert_dev_rule_20261031.json",
+  "inherited_sections": ["data", "patients", "model", "minimum_support", "robust"],
+  "trajectory": {"lags_hours": [1, 3, 6, 12, 24]},
+  "systems": {"own_trajectory": {"exchange": false, "trajectory": true}},
+  "point": "own_trajectory static forecast (as own_trajectory_dev_rule_20261031.json)",
+  "online_marginal": {
+    "deployment_clock": "per hospital, osler_jepa.deployment_clock with seed stable_seed(cell, 0, hospital, 'clock'), as jepa_deployment_form_dev.deploy (identical scored rows; warm-up stays unscored); an outcome is used only after label_available_hr",
+    "point_correction": "online_point_correction with site_adaptive_point_amendment_20261024.json (via jepa_gate_rule_20261022.json), scale = median |error| on MIMIC selection patients",
+    "distribution": "mondrian_multiqt_stream per hospital: day-one scores = signed errors of MIMIC conformal patients divided by the v2 quintile scale fitted on MIMIC selection patients; uniform calibration weights (event rows carry no day-one covariates, as the JEPA deployment form); categories = tail8 bins of the current value from MIMIC calibration patients; MultiQT settings of threshold_event_candidates_20261029.json",
+    "members": "50 values per row: the row's issued quantiles interpolated at levels (k - 0.5) / 50, k = 1..50 (all inside the 0.01-0.99 grid)"
+  },
+  "static_marginal": "the own_trajectory static point + empirical quantiles of its signed errors on MIMIC conformal patients at the same 50 levels",
+  "joint": {
+    "copula": "Gaussian copula as own_trajectory_joint_dev_rule_20261031.json (pairwise Spearman of own_trajectory static errors on MIMIC selection patients)",
+    "coupling": "ensemble copula coupling (Schefzik et al. 2013): each cell's 50 sorted marginal values are assigned to members by the ranks of the latent draws; independent = the same with identity-correlation draws; joint and independent therefore share identical marginals"
+  },
+  "blocks": {
+    "cross_target": "per anchor and horizon: the targets labelled and scored there (>= 2)",
+    "across_horizons": "per anchor and target: the horizons labelled and scored there (>= 2)"
+  },
+  "primary_readouts": {
+    "marginal_interval": "per database:cell, the online distribution's central 90% interval [q0.05, q0.95] passes the interval gate (external_value_conditional_interval_audit.interval_report, GATE_AXES interval axes, bounds [0.87, 0.93]); robust if >= 80% of 5 samples; compared with the own_trajectory DtACI interval of own_trajectory_dev_s*_20261031.json on the same scored rows",
+    "joint_vs_independent": "per test database and block, over the online marginals: variogram score (order 0.5, standardized by the calibration-error IQR), patient-cluster bootstrap 95% CI of joint - independent; joint better if the upper bound < 0; robust if better in >= 80% of samples"
+  },
+  "secondary_readouts": [
+    "variogram and energy score of online-joint vs static-joint (does online calibration help the multivariate forecast)",
+    "single-event marginal O/E, static vs online, on the same rows, for map < 65, heart_rate > 120, potassium >= 6.0, bicarbonate < 18, creatinine rise >= 0.3, glucose > 180",
+    "joint event O/E and Brier for the four pairs of joint_forecast_dev_rule_20261031.json, online-joint vs online-independent vs static-joint (pairs with >= 30 joint events)"
+  ],
+  "development_evidence_only": true,
+  "causal_claim_allowed": false
+}

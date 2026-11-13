@@ -1,0 +1,38 @@
+{
+  "schema": "tail_calibration_dev_rule.v1",
+  "written_before_results": true,
+  "written": "2026-10-31, after T_COPULA_JOINT_DEV_RESULT_20261031.md and before any result of a state-conditional marginal.",
+  "disclosure": "motivated by results already seen on the same development databases and samples: the static own_trajectory marginal (one error distribution for every row of a cell) gives single-event O/E of 0.5-1.15 across samples and databases (map < 65 and bicarbonate < 18 overpredicted), and the online Mondrian MultiQT marginal of ONLINE_JOINT_DEV_RESULT_20261031.md improved but did not fix them. The state-conditional form tested here is the static day-one part of that same frozen form (v2 quintile scale with the amended recording-resolution floor, tail8 Mondrian categories), without the online updates. In-sample for the motivation; only an unused external lockbox is independent evidence.",
+  "question": "Does a state-conditional (Mondrian, scale-normalized) static marginal calibrate single threshold events better than the unconditional static marginal, without worsening the multivariate forecast under the Gaussian dependence layer?",
+  "inherits": "stacked_expert_dev_rule_20261031.json",
+  "inherited_sections": ["data", "patients", "model", "minimum_support", "robust"],
+  "trajectory": {"lags_hours": [1, 3, 6, 12, 24]},
+  "systems": {"own_trajectory": {"exchange": false, "trajectory": true}},
+  "marginal": {
+    "system": "own_trajectory",
+    "point": "as own_trajectory_joint_dev_rule_20261031.json",
+    "members": 50,
+    "unconditional": "point + empirical quantile of the cell's signed errors on MIMIC conformal patients (as own_trajectory_joint_dev_rule_20261031.json)",
+    "mondrian": "point + s(x) * empirical quantile of the normalized signed errors e / s(x) of the MIMIC conformal patients in the row's category. s = v2 quintile scale of |e| fitted on MIMIC selection patients (osler_jepa.interval_scale, scheme quintile), floored at the recording resolution of the cell's MIMIC calibration current values (threshold_event_form.resolution; online_joint_dev_rule_amendment_20261031.json). Categories = tail8 bins of the current value (osler_jepa.predictive_distribution.value_bins on the MIMIC calibration current values); a category with < 30 conformal patients uses the pooled conformal scores."
+  },
+  "joint": {
+    "copulas": ["independent", "gaussian"],
+    "correlation": "as own_trajectory_joint_dev_rule_20261031.json, shared by both marginals (estimated on the raw signed errors of MIMIC selection patients; disclosed: not re-estimated on the normalized scores, so that the two systems differ only in the marginal)",
+    "coupling": "the same latent draws map through each marginal's quantile function"
+  },
+  "events": "map < 65, heart_rate > 120, potassium >= 6.0, bicarbonate < 18, creatinine rise >= 0.3, glucose > 180 (joint_forecast_dev.EVENTS); probability = share of the 50 members (levels (k - 0.5) / 50) in the event",
+  "calibrated_band": "single-event O/E in [0.8, 1.25] (defined here for this readout)",
+  "primary_readouts": {
+    "single_event": "per test database x event x horizon, on all labelled test rows of the cell, with >= 30 events in a sample: mondrian closer than unconditional in that sample if |log O/E| is smaller; robustly closer if closer in >= 80% of the samples where it is scored",
+    "multivariate": "per test database and block: energy score of mondrian+gaussian vs unconditional+gaussian, patient-cluster bootstrap 95% CI of the difference; worse in a sample if the lower bound > 0; robustly worse if worse in >= 80% of 5 samples"
+  },
+  "decision": "mondrian replaces unconditional as the marginal under the dependence layer only if (a) it is robustly closer on at least half of the database x event x horizon combinations scored in >= 4 samples, and (b) its energy score is not robustly worse on any database x block. AGENTS.md changes only with user approval.",
+  "secondary_readouts": [
+    "share of combinations inside the calibrated band in >= 80% of samples, per marginal",
+    "central 90% tail exceedance per cell: share of rows below q0.05 and above q0.95 (target 0.05 each)",
+    "variogram score of mondrian+gaussian vs unconditional+gaussian and vs mondrian+independent",
+    "same-horizon joint-event O/E (joint_forecast_dev.EVENT_PAIRS, >= 30 joint events) for both marginals under both copulas"
+  ],
+  "development_evidence_only": true,
+  "causal_claim_allowed": false
+}

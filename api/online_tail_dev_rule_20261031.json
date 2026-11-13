@@ -1,0 +1,36 @@
+{
+  "schema": "online_tail_dev_rule.v1",
+  "written_before_results": true,
+  "written": "2026-10-31, after TAIL_CALIBRATION_DEV_RESULT_20261031.md (static Mondrian adopted as the dev marginal; 47/83 single-event combinations still outside [0.8, 1.25], mostly long horizons and site-specific) and before any result of this rule.",
+  "disclosure": "same development databases, samples, cohort, split and own_trajectory point as the preceding rules. The full online form (system M) was already scored against the unconditional static marginal in ONLINE_JOINT_DEV_RESULT_20261031.md (single-event O/E of map < 65 0.75-0.94 online vs 0.65-0.86 unconditional; its 90% interval failed more often than DtACI), so its comparison here is partly seen; the decomposition (system P) and the comparison with static Mondrian on identical rows are new. In-sample for the motivation; only an unused external lockbox is independent evidence. A tail-only online update was considered and not used: no mature method updates only the outer levels of a predictive distribution, so the decomposition uses only the frozen, published components.",
+  "question": "Does per-hospital online adaptation of the Mondrian marginal calibrate single threshold events better than the static Mondrian marginal on the same deployment rows, and which component (online point correction or online quantile tracking) carries it?",
+  "inherits": "stacked_expert_dev_rule_20261031.json",
+  "inherited_sections": ["data", "patients", "model", "minimum_support", "robust"],
+  "trajectory": {"lags_hours": [1, 3, 6, 12, 24]},
+  "systems": {"own_trajectory": {"exchange": false, "trajectory": true}},
+  "marginals": {
+    "S": "static Mondrian (AGENTS.md; tail_calibration_dev.calibrate): static own_trajectory point + s(x) * category empirical quantile of the MIMIC conformal normalized errors",
+    "P": "online point correction (frozen, site_adaptive_point_amendment_20261024.json via jepa_gate_rule_20261022.json, on the shared deployment clock per hospital as jepa_deployment_form_dev.deploy) + the same static Mondrian shape and scale as S",
+    "M": "jepa_deployment_form_dev.deploy_distribution: the same online point correction + Mondrian MultiQT per hospital with the frozen v12 part C settings (threshold_event_candidates_20261029.json) and the recording-resolution scale floor; issued quantiles interpolated at the member levels",
+    "members": "50 per row at levels (k - 0.5) / 50",
+    "rows": "per database and cell, the scored (post-warm-up) rows of the deployment clock, identical for S, P and M"
+  },
+  "joint": {
+    "copula": "Gaussian copula as tail_calibration_dev_rule_20261031.json (correlation of the static own_trajectory errors on MIMIC selection patients), applied by ensemble copula coupling (osler_jepa.joint_copula.couple) to each marginal's sorted members; independent = identity-correlation ranks"
+  },
+  "events": "as tail_calibration_dev_rule_20261031.json",
+  "calibrated_band": "single-event O/E in [0.8, 1.25]",
+  "primary_readouts": {
+    "single_event": "per test database x event x horizon with >= 30 events in a sample: candidate (P or M) closer than S in that sample if |log O/E| is smaller; robustly closer if closer in >= 80% of the samples where it is scored",
+    "multivariate": "per test database and block: energy score of candidate+gaussian vs S+gaussian, patient-cluster bootstrap 95% CI; robustly worse if the lower bound > 0 in >= 80% of 5 samples"
+  },
+  "decision": "a candidate passes if it is robustly closer than S on at least half of the database x event x horizon combinations scored in >= 4 samples and its energy score is not robustly worse than S on any database x block. If both pass, the one robustly closer on more combinations replaces S as the dev marginal under the dependence layer (a tie goes to P, the simpler form); if neither passes, S stays. AGENTS.md changes only with user approval.",
+  "secondary_readouts": [
+    "combinations inside the calibrated band in >= 80% of samples, per marginal",
+    "central-90% tail exceedance per cell (share below q0.05 and above q0.95)",
+    "variogram score candidate+gaussian vs S+gaussian; gaussian vs independent over each marginal",
+    "same-horizon joint-event O/E under the Gaussian copula for each marginal"
+  ],
+  "development_evidence_only": true,
+  "causal_claim_allowed": false
+}
