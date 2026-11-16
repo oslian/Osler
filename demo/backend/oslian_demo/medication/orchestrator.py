@@ -57,8 +57,9 @@ _SYS = (
 
 
 class _Run:
-    def __init__(self, text, drugs_pkpd, clinical, api_key, provider, use_openfda):
+    def __init__(self, text, drugs_pkpd, clinical, api_key, provider, use_openfda, measured=None):
         self.text, self.drugs, self.clinical = text, drugs_pkpd, dict(clinical)
+        self.measured = measured
         self.api_key, self.provider, self.use_openfda = api_key, provider, use_openfda
         self.fields = self.targets = self.canon = self.scenario = None
         self.result = self.disease_model = self.openfda_loaded = None
@@ -67,7 +68,7 @@ class _Run:
     def parse_case(self):
         parsed = case_parser.parse(self.text, self.api_key, self.provider)
         self.parser = parsed.pop("_parser", "rules")
-        self.fields = parsed
+        self.fields = agent.apply_measured(parsed, self.measured)
         ind = self.fields.get("indication") or "—"
         src = {"llm": "LLM", "rules": "rules", "form": "form"}.get(self.parser, self.parser)
         return (f"parsed: indication={ind}, age={self.fields.get('age')}, "
@@ -209,15 +210,15 @@ def _loop_gemini(run, impls, text, key, use_openfda):
 
 
 def analyze_stream_llm(fields, drugs_pkpd, clinical, text=None, api_key=None,
-                       provider=None, use_openfda=False):
+                       provider=None, use_openfda=False, measured=None):
     """LLM tool-calling orchestration (OpenAI or Gemini). Falls back to deterministic on any issue."""
     prov = (provider or "openai").lower()
     loop = {"openai": _loop_openai, "gemini": _loop_gemini}.get(prov)
     if not api_key or loop is None:
-        yield from agent.analyze_stream(fields, drugs_pkpd, clinical, text, api_key, provider, use_openfda)
+        yield from agent.analyze_stream(fields, drugs_pkpd, clinical, text, api_key, provider, use_openfda, measured)
         return
 
-    run = _Run(text or "", drugs_pkpd, clinical, api_key, provider, use_openfda)
+    run = _Run(text or "", drugs_pkpd, clinical, api_key, provider, use_openfda, measured)
     impls = _impls(run)
     try:
         yield from loop(run, impls, text or "", api_key, use_openfda)
@@ -245,4 +246,4 @@ def analyze_stream_llm(fields, drugs_pkpd, clinical, text=None, api_key=None,
         "indication": run.canon, "parser": getattr(run, "parser", "llm"),
         "fields": run.fields, "result": run.result, "disease_model": run.disease_model,
         "graph": graph, "openfda_loaded": run.openfda_loaded,
-        "jepa_shadow": jepa_shadow, "orchestration": prov}}
+        "jepa_shadow": jepa_shadow, "orchestration": prov, "measured_inputs": measured}}

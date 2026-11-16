@@ -36,6 +36,23 @@ def _attach_rationale(result: Dict, drugs_pkpd: Dict) -> None:
         c["rationale"] = d.get("rationale")
 
 
+def apply_measured(fields: Dict, measured: Optional[Dict]) -> Dict:
+    """The case fields with a monitored patient's measured values written over the matching vitals and labs.
+
+    ``measured`` is ``monitoring.measured.measured_inputs``: observations only. Each used value records the case
+    value it replaced, so the bundle shows exactly what changed. Nothing else in the case is touched.
+    """
+    if not measured:
+        return fields
+    out = dict(fields)
+    for item in measured["used"]:
+        group = dict(out.get(item["group"]) or {})
+        item["replaced_case_value"] = group.get(item["field"])
+        group[item["field"]] = item["value"]
+        out[item["group"]] = group
+    return out
+
+
 def build_patient(d: Dict) -> PatientProfile:
     vit = d.get("vitals") or {}
     labs = d.get("labs") or {}
@@ -53,7 +70,8 @@ def build_patient(d: Dict) -> PatientProfile:
 
 def analyze_stream(fields: Dict, drugs_pkpd: Dict, clinical: Dict,
                    text: Optional[str] = None, api_key: Optional[str] = None,
-                   provider: Optional[str] = None, use_openfda: bool = False):
+                   provider: Optional[str] = None, use_openfda: bool = False,
+                   measured: Optional[Dict] = None):
     """
     Generator that yields the agent's workflow one step at a time (Claude-Code style):
       {"type":"step", icon, title, detail, running?}   # running=True → still working
@@ -78,6 +96,12 @@ def analyze_stream(fields: Dict, drugs_pkpd: Dict, clinical: Dict,
     _kv = [f"{k}={fields.get(k)}" for k in ("age", "sex", "egfr") if fields.get(k) is not None]
     yield {"type": "step", "icon": "🧩", "title": f"Parse case · {src}",
            "detail": f"indication={fields.get('indication') or '—'}; " + ", ".join(_kv)}
+
+    if measured:
+        fields = apply_measured(fields, measured)
+        yield {"type": "step", "icon": "📟", "title": f"Measured values · {len(measured['used'])} from the monitored patient",
+               "detail": ", ".join(f"{m['field']}={m['value']:g} {m['unit']}" for m in measured["used"])
+                         or "none recent enough; the case values stand"}
 
     # ── 2. targets ─────────────────────────────────────────────
     indication = fields.get("indication") or ""
@@ -135,15 +159,16 @@ def analyze_stream(fields: Dict, drugs_pkpd: Dict, clinical: Dict,
     yield {"type": "final", "bundle": {
         "indication": canon, "parser": parser_used, "fields": fields,
         "result": result, "disease_model": disease_model, "graph": graph,
-        "openfda_loaded": openfda_loaded}}
+        "openfda_loaded": openfda_loaded, "measured_inputs": measured}}
 
 
 def analyze(fields: Dict, drugs_pkpd: Dict, clinical: Dict,
             text: Optional[str] = None, api_key: Optional[str] = None,
-            provider: Optional[str] = None, use_openfda: bool = False) -> Dict:
+            provider: Optional[str] = None, use_openfda: bool = False,
+            measured: Optional[Dict] = None) -> Dict:
     """Non-streaming convenience wrapper: collects analyze_stream into one bundle."""
     trace, bundle = [], None
-    for ev in analyze_stream(fields, drugs_pkpd, clinical, text, api_key, provider, use_openfda):
+    for ev in analyze_stream(fields, drugs_pkpd, clinical, text, api_key, provider, use_openfda, measured):
         if ev["type"] == "error":
             return {"error": ev["error"]}
         if ev["type"] == "step" and not ev.get("running"):

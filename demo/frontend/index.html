@@ -51,7 +51,7 @@
       <li><span class="n">04</span><span><span class="t">No causal or counterfactual claim</span><span class="d">Forecasts describe an observed trajectory. They do not state what an intervention would do. Every cell carries causal_claim_allowed: false.</span></span></li>
       <li><span class="n">05</span><span><span class="t">No treatment recommendation or clinical alert</span><span class="d">The Rx view demonstrates a rule set against public labels. The stream view raises no alerts: persistence, missing and degraded are data boundaries, not warnings.</span></span></li>
       <li><span class="n">06</span><span><span class="t">No automated prescribing</span><span class="d">No output of this system can be sent to an order entry system. There is no prescribing action in the product.</span></span></li>
-      <li><span class="n">07</span><span><span class="t">A forecast cannot change a drug ranking</span><span class="d">The Rx engine and the forecast runtime are isolated. Neither reads the other's output.</span></span></li>
+      <li><span class="n">07</span><span><span class="t">A forecast cannot change a drug ranking</span><span class="d">No forecast reaches the Rx engine. When you ask for it, the engine reads three measured values of the monitored patient (heart rate, SpO₂, potassium) and lists each one with its source. The stream never reads the Rx result.</span></span></li>
     </ol>
   </div>
 </section>
@@ -150,6 +150,7 @@
       <div class="modal-opts">
         <label class="check"><input type="checkbox" id="useFda" checked> Fetch live openFDA labels</label>
         <label class="check"><input type="checkbox" id="useLlmOrch" checked> LLM orchestration — falls back to rules without a key</label>
+        <label class="check"><input type="checkbox" id="useMeasured"> Treat this case as the monitored patient: use its measured heart rate, SpO₂ and potassium (no forecast is used)</label>
       </div>
     </div>
     <div class="modal-foot">
@@ -303,6 +304,12 @@ async function analyze(structured){
     api_key:KEY,provider:PROVIDER,use_openfda:p.openfdaRequested,
     orchestrator:$('useLlmOrch').checked?'llm':'deterministic'};
   try{
+    if($('useMeasured').checked){
+      // the monitored patient is whoever the Monitoring view has a session for; without one the request is not sent
+      const sessions=(await (await fetch('/api/demo-streams')).json()).sessions||[];
+      if(!sessions.length)throw new Error('No monitored patient yet. Open Monitoring first, or untick the measured-values option.');
+      const s=sessions[sessions.length-1];body.stream_patient_id=s.patient_id;body.stream_session_id=s.session_id;
+    }
     const r=await fetch('/api/analyze_stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const reader=r.body.getReader();const dec=new TextDecoder();let buf='';
     while(true){
@@ -325,6 +332,20 @@ async function analyze(structured){
 }
 
 /* ── Rx rendering ────────────────────────────────────────────────────────── */
+/* What the engine read. Without measured values: the case and the label rules only.
+ * With them: each measured value, when it was measured, the source observation and
+ * the case value it replaced. A forecast is never among them. */
+function engineInputsNote(b){
+  const m=b.measured_inputs;
+  if(!m)return '<div class="engine-iso"><span class="n">Engine inputs</span>'+
+    '<span class="d">The medication-safety engine read this case and the label rule set only. No forecast can change this ranking.</span></div>';
+  const used=m.used.map(u=>`${esc(u.field)} ${esc(u.value)} ${esc(u.unit)}, measured ${esc(u.effective_time)} (${esc(u.reference)})`+
+    (u.replaced_case_value==null?'':`, replacing the case's ${esc(u.replaced_case_value)}`)).join('; ');
+  const skipped=m.not_used.map(u=>`${esc(u.variable)}: ${esc(u.reason)}`).join('; ');
+  return '<div class="engine-iso" data-measured="1"><span class="n">Engine inputs</span>'+
+    `<span class="d">This case was analysed as monitored patient ${esc(m.patient_id)}. Measured values read from the stream as of ${esc(m.as_of)}: `+
+    `${used||'none recent enough'}.${skipped?` Not used: ${skipped}.`:''} Everything else is the case's own. No forecast was read, and no forecast can change this ranking.</span></div>`;
+}
 function engineLine(b){
   const eng=(b.trace||[]).find(s=>/Symbolic engine/.test(s.title));
   const ms=eng?((eng.title.match(/· ([\d.]+) ms/)||[])[1]):null;
@@ -425,8 +446,7 @@ function renderMain(){
     '<table class="rank-table"><thead><tr><th class="col-rank">Rank</th><th>Drug</th>'+
       '<th class="col-safety">Safety decision</th><th class="col-basis">Basis</th><th class="col-more"></th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table>'+
-    '<div class="engine-iso"><span class="n">Engine isolation</span>'+
-      '<span class="d">The medication-safety engine reads this case text and the label rule set only. It does not read the synthetic stream\'s forecast output, and no forecast can change this ranking.</span></div>'+
+    engineInputsNote(p.bundle)+
     '<div class="ranking-foot">'+
       `<span class="meta">Agent workflow · ${(p.bundle.trace||[]).length} steps · ${engineLine(p.bundle)} · `+
         '<button class="disc" type="button" data-act="open-chat">View trace ⌄</button></span>'+
