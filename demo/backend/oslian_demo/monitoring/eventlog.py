@@ -346,7 +346,7 @@ def _run_completed(payload: dict[str, Any]) -> dict[str, Any]:
     summary = payload.get("summary") or {}
     return {"run": payload.get("run_id"), "cutoff": payload.get("input_cutoff"),
             "runtime": payload.get("runtime_mode"),
-            "model": summary.get("model_cells"), "persistence": summary.get("persistence_cells"),
+            "model": summary.get("model_cells"),
             "missing": summary.get("missing_cells"), "degraded": summary.get("degraded_cells"),
             "duration_ms": payload.get("duration_ms")}
 

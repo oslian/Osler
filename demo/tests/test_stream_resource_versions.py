@@ -25,7 +25,7 @@ from oslian_demo.monitoring.repository import Repository, ResourceVersionConflic
 from oslian_demo.monitoring.session import SessionManager
 from oslian_demo.monitoring.source import MockFhirSource, make_source
 from oslian_demo.monitoring.timeline import delivered_timeline
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime
 
 SOURCE = "synthetic-fhir-r4"
 FIXTURE = FIXTURE_DIR / "synthetic_patient_v1.json"
@@ -33,7 +33,7 @@ SUPPLIED_CODES = {"2951-2", "2823-3", "2075-0", "1963-8", "3094-0", "2524-7", "6
 
 
 def _runtime():
-    return WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None))
+    return ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1"))
 
 
 def _old_fixture_path(tmp: str) -> Path:

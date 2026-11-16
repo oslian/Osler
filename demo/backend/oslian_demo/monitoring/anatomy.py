@@ -1,9 +1,9 @@
 """Organ <-> variable <-> forecast-cell mapping for the anatomy view.
 
 The frontend never guesses by name. It receives this document, which joins the
-approved organ map with the pinned 41-cell catalog. Organs are anatomical only
-(the local AGENTS.md canonical organ list); the checkpoint's functional modules
-are reported separately and are never drawn as organs.
+approved organ map with the pinned 45-cell catalog. Organs are anatomical only
+(the local AGENTS.md canonical organ list); the clinical-function groups are
+reported separately and are never drawn as organs.
 """
 
 from __future__ import annotations
@@ -49,10 +49,9 @@ def anatomy_document(catalog_cells: list[dict[str, Any]], path: Path = ORGAN_MAP
     document = load_organ_map(path)
     cells_by_variable: dict[str, list[dict[str, Any]]] = {}
     for cell in catalog_cells:
-        variable = "o2sat" if cell["target"] == "hypoxemia_event" else cell["target"]
-        cells_by_variable.setdefault(variable, []).append({
+        cells_by_variable.setdefault(cell["target"], []).append({
             "cell": cell["cell"], "target": cell["target"], "horizon_hours": cell["horizon_hours"],
-            "can_move": cell["can_move"], "source_model": cell["source_model"],
+            "source_model": cell["source_model"],
         })
     organs = []
     for organ in document["organs"]:

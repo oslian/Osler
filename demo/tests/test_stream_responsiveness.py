@@ -17,22 +17,20 @@ import time
 import unittest
 
 os.environ.setdefault("OSLIAN_STREAM_DB", ":memory:")
-os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
+os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 
 from flask import Flask  # noqa: E402
 
-from oslian_demo.config import load_model_lock  # noqa: E402
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.eventlog import StreamEventLogger  # noqa: E402
-from oslian_demo.monitoring.wholebody import (  # noqa: E402
-    ReleaseWorker, RuntimeConfig, WholeBodyRuntime,
-)
+from oslian_demo.monitoring.forecast_runtime import ForecastRuntime, RuntimeConfig  # noqa: E402
+from oslian_demo.monitoring.mapping import CANONICAL_UNITS  # noqa: E402
 
-FIXTURE = RuntimeConfig("fixture", None, "python", None)
+FIXTURE = RuntimeConfig("detached", "http://127.0.0.1:1")
 
 
-class SlowRuntime(WholeBodyRuntime):
-    """A fixture runtime that takes as long as a real release inference."""
+class SlowRuntime(ForecastRuntime):
+    """A detached runtime that takes as long as a real forecast request."""
 
     def __init__(self, delay: float):
         super().__init__(FIXTURE)
@@ -48,7 +46,7 @@ class SlowRuntime(WholeBodyRuntime):
 
 
 def _app(runtime=None, logger=None):
-    service = StreamService(":memory:", runtime=runtime or WholeBodyRuntime(FIXTURE), logger=logger)
+    service = StreamService(":memory:", runtime=runtime or ForecastRuntime(FIXTURE), logger=logger)
     app = Flask(__name__)
     app.register_blueprint(create_blueprint(service))
     return service, app.test_client()
@@ -63,41 +61,13 @@ def _timed(fn):
 class ReadsDoNotWaitForInferenceTests(unittest.TestCase):
     """The measured symptom: health blocked for the length of every inference."""
 
-    def test_health_does_not_queue_behind_an_inference_in_flight(self):
-        worker = ReleaseWorker(RuntimeConfig("release", None, "python", None), "deadbeef")
-        worker.startup = {"ready": True, "checks": [], "commit": "deadbeef", "scikit_learn": "1.7.2"}
-
-        class _Process:
-            def poll(self):
-                return None
-
-        worker._process = _Process()
-        holding = threading.Event()
-        release = threading.Event()
-
-        def inference():
-            with worker._lock:          # exactly what predict() holds for its round trip
-                holding.set()
-                release.wait(5)
-
-        thread = threading.Thread(target=inference, daemon=True)
-        thread.start()
-        self.assertTrue(holding.wait(2), "the fake inference never took the lock")
-        try:
-            elapsed, startup = _timed(worker.status)
-            self.assertLess(elapsed, 0.5, "health read waited for the inference to finish")
-            self.assertTrue(startup["ready"])
-            self.assertEqual(startup["scikit_learn"], "1.7.2")
-        finally:
-            release.set()
-            thread.join(timeout=5)
-
     def test_navigation_and_control_answer_while_a_run_is_executing(self):
         runtime = SlowRuntime(delay=1.5)
         service, client = _app(runtime)
         try:
             sid = client.post("/api/demo-streams", json={"source": "synthetic"}).get_json()["session_id"]
-            client.post(f"/api/demo-streams/{sid}/step")
+            for _ in range(13):     # the 13th synthetic event reaches the first 6-hour anchor
+                client.post(f"/api/demo-streams/{sid}/step")
             self.assertTrue(runtime.busy.wait(10), "no run started")
 
             # while that run is in flight, everything a person can reach must answer
@@ -258,7 +228,8 @@ class RunSchedulerIsBoundedTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams", json={"source": "synthetic"}).get_json()["session_id"]
             session = service.sessions.get(sid)
-            client.post(f"/api/demo-streams/{sid}/step")
+            for _ in range(13):     # the 13th synthetic event reaches the first 6-hour anchor
+                client.post(f"/api/demo-streams/{sid}/step")
             session.scheduler.wait_idle(timeout=30)
             after_first = runtime.calls
             self.assertGreater(after_first, 0)
@@ -274,30 +245,22 @@ class RunSchedulerIsBoundedTests(unittest.TestCase):
 
 
 class ForecastStatesAreDistinguishableTests(unittest.TestCase):
-    """Model, carried-forward and observation-only must each be identifiable."""
+    """A model forecast and an observation-only signal must each be identifiable."""
 
-    def test_the_registry_splits_into_model_capable_and_carried_forward_cells(self):
-        runtime = WholeBodyRuntime(FIXTURE)
-        cells = runtime.contract["catalog"]["cells"]
-        model_capable = [c for c in cells if c["can_move"]]
-        carried_forward = [c for c in cells if not c["can_move"]]
-        contract = load_model_lock()["runtime_contract"]
-        self.assertEqual(len(cells), contract["catalog_cells"])
-        self.assertEqual(len(model_capable), contract["model_capable_cells"])
-        self.assertEqual(len(carried_forward), contract["persistence_fallback_cells"])
-        for cell in carried_forward:
-            self.assertEqual(cell["source_model"], "patient_persistence_anchor",
-                             "a carried-forward cell must never claim a model as its source")
+    def test_every_catalog_cell_names_the_recipe_that_forecasts_it(self):
+        runtime = ForecastRuntime(FIXTURE)
+        self.assertEqual(len(runtime.cells), 45)
+        self.assertEqual(len({c["cell"] for c in runtime.cells}), 45)
+        for cell in runtime.cells:
+            self.assertTrue(cell["source_model"] and cell["source_model"] != "none", cell["cell"])
+            self.assertEqual(cell["cell"], f"{cell['target']}@{cell['horizon_hours']}h")
 
-    def test_a_signal_outside_the_registry_has_no_forecast_cell_at_all(self):
-        runtime = WholeBodyRuntime(FIXTURE)
-        targets = {c["target"] for c in runtime.contract["catalog"]["cells"]}
-        variables = set(runtime.contract["variables"])
-        observation_only = variables - targets
-        self.assertTrue(observation_only,
-                        "the fixture must keep at least one observation-only signal for this state")
-        for variable in observation_only:
-            self.assertFalse([c for c in runtime.contract["catalog"]["cells"] if c["target"] == variable])
+    def test_a_signal_outside_the_catalog_has_no_forecast_cell_at_all(self):
+        runtime = ForecastRuntime(FIXTURE)
+        targets = {c["target"] for c in runtime.cells}
+        observation_only = set(CANONICAL_UNITS) - targets
+        self.assertTrue(observation_only, "the stream must keep at least one observation-only signal for this state")
+        self.assertIn("lactate", observation_only)
 
 
 if __name__ == "__main__":

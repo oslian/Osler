@@ -276,12 +276,12 @@ class RouteTests(unittest.TestCase):
                   if r["findings"][0]["variable"] != "creatinine"]
         self.assertTrue(lifted, "no stay is on the list for a non-creatinine reason")
 
-    def test_the_ward_route_does_not_touch_the_wholebody_runtime(self):
+    def test_the_ward_route_does_not_touch_the_forecast_runtime(self):
         # The order is computed from observations alone. If this route ever grows
         # a runtime dependency it stops being answerable without a model contract.
         import inspect
         source = inspect.getsource(ward)
-        for forbidden in ("wholebody", "WholeBodyRuntime", "forecast_point", "release"):
+        for forbidden in ("forecast_runtime", "ForecastRuntime", "forecast_point"):
             self.assertNotIn(forbidden, source)
 
 

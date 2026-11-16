@@ -3,7 +3,7 @@
 Kept apart from `api.py` on purpose. The stream blueprint owns a single
 patient's timeline, its ledger and the runtime adapter; this owns an ordering
 over many patients and touches none of that. The two share `ranking.py` and
-nothing else, and this route never calls the WholeBody runtime -- the order is
+nothing else, and this route never calls the forecast runtime -- the order is
 computed from observations alone, which is why it needs no model contract and
 carries no forecast.
 

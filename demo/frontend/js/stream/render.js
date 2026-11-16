@@ -98,18 +98,17 @@ export function renderCommandBar() {
       </details>` : '';
   const counts = S.live.run ? S.live.run.summary : null;
   const runtimeTag = rt.runtime_attached
-    ? '<span class="tag">runtime attached · bounded research demo</span>'
-    : rt.runtime_mode === 'release'
-      ? '<span class="tag caution">runtime not attached · release validation failed</span>'
-      : '<span class="tag caution">runtime not attached · gated</span>';
+    ? '<span class="tag">forecast API attached · replicated cells</span>'
+    : rt.runtime_mode === 'api'
+      ? '<span class="tag caution">forecast API not attached · check failed</span>'
+      : '<span class="tag caution">forecast API not attached</span>';
   const bounded = rt.runtime_attached
-    ? 'bounded research demo · research-only · 90% intervals only where calibrated · no clinical alert · not a formal or clinically validated model'
+    ? 'research-only · one forecast per 6-hour anchor · points only, no interval · no clinical alert · not clinically validated'
     : 'research-only · no clinical alert';
   const output = S.lastRunFailed
     ? '<span class="status degraded"><i></i>runtime failure · no current forecast</span>'
     : counts
       ? `<span class="counts"><span class="m" title="predicted by the model">model forecast ${counts.model_cells}</span>`
-        + `<span class="p" title="not a model prediction: the last observed value, repeated">carried forward ${counts.persistence_cells}</span>`
         + (counts.missing_cells ? `<span class="x" title="the model returned no value">no forecast ${counts.missing_cells}</span>` : '')
         + (counts.degraded_cells ? `<span class="d" title="the model runtime is not attached">withheld ${counts.degraded_cells}</span>` : '')
         + '</span>'
@@ -147,7 +146,7 @@ export function renderCommandBar() {
       ${developerSpeeds}
       <div class="queue">epoch ${esc(s.epoch ?? '—')} · session <span class="mono">${esc((s.session_id || '').slice(0, 8))}</span> · SSE ${esc(conn)}</div>
     </div>
-    <div class="cmd-sub"><span class="cmd-runtime"><span class="mono">oslian/Model ${esc((rt.model_commit || '').slice(0, 7) || '—')}</span> ${runtimeTag} ${output}</span><span class="cmd-context">${context}</span><span class="cmd-bounded">${esc(bounded)}</span></div>`;
+    <div class="cmd-sub"><span class="cmd-runtime"><span class="mono">oslian/Osler api ${esc((rt.model_commit || '').slice(0, 7) || '—')}</span> ${runtimeTag} ${output}</span><span class="cmd-context">${context}</span><span class="cmd-bounded">${esc(bounded)}</span></div>`;
 }
 function simElapsed(s) {
   const base = Number(s.sim_elapsed_seconds) || 0;
@@ -264,7 +263,7 @@ export function renderRail() {
         ${line}${why}</button></li>`;
     }).join('');
   } else if (S.view === 'functions') {
-    head.innerHTML = `<h2 class="h-sec">Clinical functions</h2><span class="meta">${S.metric ? '' : '11 modules from the release checkpoint · demo-approved primary/related split v1'}</span>`;
+    head.innerHTML = `<h2 class="h-sec">Clinical functions</h2><span class="meta">${S.metric ? '' : '11 clinical-function groups · demo-approved primary/related split v1'}</span>`;
     list.innerHTML = S.functions ? S.functions.groups.map((g) => {
       const s = functionSummary(g);
       const pct = s.mapped ? Math.round((s.observed / s.mapped) * 100) : 0;
@@ -508,9 +507,9 @@ function cellRow(c, extra = '') {
   return `<tr><td class="cell">${esc(c.cell)}</td><td class="num">${observed} <span class="why">${esc(c.unit || '')}</span>${age}</td><td class="num">${point}</td><td class="num">${interval}</td><td>${cellChip(c)}<div class="why">${esc(forecastNote(c))}${c.fallback_reason ? ` · ${esc(c.fallback_reason)}` : ''}</div></td><td class="src" title="${esc(c.source_model)}">${esc(SOURCE_LABELS[c.source_model] || c.source_model)}</td>${extra}<td><button class="disc" type="button" data-act="prov-cell" data-cell="${esc(c.cell)}">Provenance ⌄</button></td></tr>`;
 }
 function runFooter(run) {
-  const note = run.runtime_mode === 'fixture'
-    ? 'Runtime not attached: every cell is degraded with a null point. Nothing is fabricated.'
-    : 'Persistence baseline = the patient\'s latest observed value; not a model prediction and not clinical validation. A 90% interval appears only where the release calibrated that cell; event cells are calibrated probabilities.';
+  const note = run.runtime_mode === 'detached'
+    ? 'Forecast API not attached: every cell is degraded with a null point. Nothing is fabricated.'
+    : 'Forecast issued at the 6-hour anchor shown as the cutoff; each horizon counts from it. Points only: the validated interval needs the hospital\'s own outcomes. Not clinical validation.';
   return `<p class="cells-foot">Run <span class="mono">${esc(run.run_id.slice(0, 8))}</span> · cutoff ${esc(fmtClinical(run.input_cutoff))} · ${esc(run.input_resource_count)} resources · commit <span class="mono">${esc((run.model_commit || '').slice(0, 7))}</span> · ${esc(note)} · causal_claim_allowed: false.</p>`;
 }
 
@@ -524,7 +523,7 @@ export function renderLower() {
   const runs = S.runs.map((r) => {
     const anchored = S.anchor && S.anchor.run.run_id === r.run_id;
     const failed = r.status === 'failed';
-    const sum = r.summary ? `model ${r.summary.model_cells} · persistence ${r.summary.persistence_cells} · missing ${r.summary.missing_cells} · degraded ${r.summary.degraded_cells}` : (failed ? esc(r.error || 'failed') : r.status);
+    const sum = r.summary ? `model ${r.summary.model_cells} · missing ${r.summary.missing_cells} · degraded ${r.summary.degraded_cells}` : (failed ? esc(r.error || 'failed') : r.status);
     return `<li><button type="button" data-act="anchor-run" data-run="${esc(r.run_id)}" aria-pressed="${anchored ? 'true' : 'false'}"${failed ? ' disabled' : ''}><span class="mono">${esc(fmtReceived(r.completed_at || r.started_at) || '—')}</span><span>cutoff ${esc(fmtClinical(r.input_cutoff))} · epoch ${esc(r.epoch)}${failed ? ' · <span class="failed">failed</span>' : ''}</span><span>${r.run_id === liveId ? '<span class="live">live head</span>' : ''}</span><span class="d">${sum} · ${esc(r.runtime_mode)} · ${esc(r.input_resource_count ?? '')} resources</span></button></li>`;
   }).join('');
   const feed = S.feed.map((f) => `<li class="${esc(f.kind)}"><span class="mono">${esc(fmtReceived(f.at) || '')}</span><b>${esc(f.title)}</b><span class="d">${esc(f.detail || '')}</span></li>`).join('');

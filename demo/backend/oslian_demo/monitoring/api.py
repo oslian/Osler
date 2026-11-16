@@ -37,17 +37,17 @@ from .session import SPEEDS, SessionManager, StreamSession
 from .source import SOURCES, is_known_source_key, make_source
 from .timeline import (attach_observation_statements, delivered_timeline, organ_state, organ_state_for_run,
                        run_timeline, series, variable_state)
-from .wholebody import RuntimeConfig, WholeBodyRuntime
+from .forecast_runtime import INTERVAL_POLICY, ForecastRuntime, RuntimeConfig
 
 SSE_EVENT_TYPES = (
     "stream.state", "fhir.resource.accepted", "fhir.resource.rejected", "observation.normalized",
     "observation.unmapped", "model.run.started", "model.run.completed", "model.run.failed",
 )
 class StreamService:
-    def __init__(self, db_path: str | Path | None = None, runtime: WholeBodyRuntime | None = None,
+    def __init__(self, db_path: str | Path | None = None, runtime: ForecastRuntime | None = None,
                  source_factory=None, logger: StreamEventLogger | None = None):
         self.repo = Repository(db_path or AppConfig.from_env().stream_db)
-        self.runtime = runtime or WholeBodyRuntime(RuntimeConfig.from_env())
+        self.runtime = runtime or ForecastRuntime(RuntimeConfig.from_env())
         self.logger = logger or StreamEventLogger.from_env(dict(os.environ))
         self.sessions = SessionManager(self.repo, self.runtime, source_factory or make_source, self.logger)
 
@@ -254,8 +254,7 @@ def create_blueprint(service: StreamService) -> Blueprint:
             # timeline is built from, so the figure and the charts cannot disagree
             "organs": organ_state_for_run(service.repo, run),
             "runtime": service.runtime.provenance(),
-            "interval_policy": service.runtime.lock["output_boundaries"]["interval_policy"],
-            "persistence_policy": "persistence is a baseline fallback, not a model prediction",
+            "interval_policy": INTERVAL_POLICY,
             "causal_claim_allowed": False,
             "clinical_alerts_supported": False,
         })
@@ -304,7 +303,7 @@ def create_blueprint(service: StreamService) -> Blueprint:
 
     @bp.get("/api/model/anatomy")
     def model_anatomy():
-        return jsonify(anatomy_document(service.runtime.contract["catalog"]["cells"]))
+        return jsonify(anatomy_document(service.runtime.cells))
 
     @bp.get("/api/model/mapping")
     def model_mapping():
@@ -312,8 +311,7 @@ def create_blueprint(service: StreamService) -> Blueprint:
 
     @bp.get("/api/model/functions")
     def model_functions():
-        contract = service.runtime.contract
-        return jsonify(functions_document(contract["catalog"]["cells"], contract["modules"]))
+        return jsonify(functions_document(service.runtime.cells))
 
     return bp
 

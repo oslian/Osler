@@ -32,9 +32,7 @@ def main() -> None:
         print("[oslian-demo] stopping")
     finally:
         # Ctrl+C must leave nothing behind: this cancels any pending run, waits
-        # only for a run already executing, flushes the console writer and shuts
-        # the release worker down through its own protocol rather than orphaning
-        # the subprocess.
+        # only for a run already executing, and flushes the console writer.
         service.close()
 
 

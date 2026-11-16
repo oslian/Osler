@@ -1,17 +1,19 @@
 """Patient timeline, watermark, per-variable state, and model input assembly.
 
 The only path from the ledger to the model runs through ``build_model_input``,
-which takes the delivered timeline filtered by ``effective_time <= cutoff``.
-Nothing after the cutoff is ever serialised into the model CSV.
+which takes the delivered timeline filtered by ``effective_time <= cutoff`` and
+turns it into the anchor stream the validated forecast cells were fitted on:
+one anchor every 6 hours from the encounter start, each holding a variable's
+latest value from the 6 hours before it and that value's age. The cutoff is
+itself an anchor time, so nothing after the forecast's own anchor is ever sent.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
-import io
-import csv
+import json
 from typing import Any
 
 from .fhir import parse_instant, iso
@@ -23,7 +25,7 @@ from .routing import variable_routing
 class ModelInput:
     cutoff: str
     watermark: str | None            # latest effective_time actually included
-    csv_text: str
+    anchors: tuple[dict[str, Any], ...]   # {"time": RFC3339, "values": {"<variable>_t", "<variable>_age_hr"}}
     rows: int
     resource_refs: tuple[str, ...]   # Observation/<id>/_history/<version>
     input_hash: str
@@ -190,27 +192,50 @@ def series(timeline: list[dict], variable: str) -> list[dict[str, Any]]:
     ]
 
 
+ANCHOR_SPACING_HOURS = 6.0   # the spacing of every transition file the cells were fitted on
+LOOKBACK_HOURS = 6.0         # a value older than this is missing at the anchor, as in the fitted rows
+EPISODE_MAX_HOURS = 72.0     # the fitted rows stop 72 hours after the stay starts
+
+
+def latest_anchor(onset: str, latest_time: str) -> str | None:
+    """The last anchor time at or before ``latest_time``; None before the first anchor (onset + 6 h)."""
+    onset_dt = parse_instant(onset, "onset")
+    steps = int((parse_instant(latest_time, "latest_time") - onset_dt).total_seconds() // (ANCHOR_SPACING_HOURS * 3600.0))
+    return iso(onset_dt + timedelta(hours=ANCHOR_SPACING_HOURS * steps)) if steps >= 1 else None
+
+
 def build_model_input(timeline: list[dict], cutoff: str, onset: str) -> ModelInput:
-    """Serialise the causal prefix (effective_time <= cutoff) as long-format CSV."""
+    """The anchor stream up to ``cutoff``, which must be an anchor time (``latest_anchor``)."""
     cutoff_dt = parse_instant(cutoff, "cutoff")
     onset_dt = parse_instant(onset, "onset")
-    rows: list[tuple[float, str, float]] = []
+    steps = (cutoff_dt - onset_dt).total_seconds() / (ANCHOR_SPACING_HOURS * 3600.0)
+    if steps < 1 or steps != int(steps):
+        raise ValueError("the input cutoff must be an anchor time: a whole number of 6-hour steps after the onset")
+    observed: list[tuple[datetime, str, float]] = []
     refs: list[str] = []
     watermark: datetime | None = None
     for row in timeline:
         at = parse_instant(row["effective_time"], "effective_time")
         if at > cutoff_dt:
             raise ValueError("timeline row after the input cutoff reached model input assembly")
-        hours = (at - onset_dt).total_seconds() / 3600.0
-        rows.append((round(hours, 6), row["variable"], float(row["value"])))
+        observed.append((at, row["variable"], float(row["value"])))
         refs.append(f"Observation/{row['resource_id']}/_history/{row['version_id']}")
         watermark = at if watermark is None or at > watermark else watermark
-    buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow(["hours_since_onset", "variable", "value"])
-    for hours, variable, value in rows:
-        writer.writerow([f"{hours:.6f}", variable, f"{value:.6f}"])
-    text = buffer.getvalue()
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return ModelInput(cutoff=cutoff, watermark=iso(watermark) if watermark else None, csv_text=text,
-                      rows=len(rows), resource_refs=tuple(dict.fromkeys(refs)), input_hash=digest, onset=onset)
+    observed.sort(key=lambda item: item[0])
+    anchors = []
+    for step in range(1, int(steps) + 1):
+        anchor = onset_dt + timedelta(hours=ANCHOR_SPACING_HOURS * step)
+        start = anchor - timedelta(hours=LOOKBACK_HOURS)
+        latest: dict[str, tuple[datetime, float]] = {}
+        for at, variable, value in observed:
+            if start <= at <= anchor:
+                latest[variable] = (at, value)
+        values: dict[str, float] = {}
+        for variable in sorted(latest):
+            at, value = latest[variable]
+            values[f"{variable}_t"] = value
+            values[f"{variable}_age_hr"] = round((anchor - at).total_seconds() / 3600.0, 6)
+        anchors.append({"time": iso(anchor), "values": values})
+    digest = hashlib.sha256(json.dumps(anchors, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return ModelInput(cutoff=cutoff, watermark=iso(watermark) if watermark else None, anchors=tuple(anchors),
+                      rows=len(observed), resource_refs=tuple(dict.fromkeys(refs)), input_hash=digest, onset=onset)

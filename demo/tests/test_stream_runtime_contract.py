@@ -1,242 +1,224 @@
-"""Release runtime adapter contract: 41-cell catalog, statuses, calibrated intervals, events, gating."""
+"""Forecast runtime adapter contract: the 45-cell catalog, statuses, detached mode and fail-closed checks.
+
+The attached mode is exercised against a stub of the forecast API served on a
+local port, so these tests need no model files.
+"""
 
 import copy
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import threading
 import unittest
 
-from oslian_demo.config import load_model_lock
 from oslian_demo.monitoring import anatomy
-from oslian_demo.monitoring.timeline import ModelInput
-from oslian_demo.monitoring.wholebody import (
-    ABSTENTION_REASON, RuntimeConfig, RuntimeUnavailable, WholeBodyRuntime, load_contract_fixture,
-    normalize_release_cells,
+from oslian_demo.monitoring.forecast_runtime import (
+    INTERVAL_STATUS, REASON_NOT_ATTACHED, REASON_OUTSIDE_EPISODE, ForecastRuntime, RuntimeConfig, RuntimeUnavailable,
+    load_contract_fixture,
 )
+from oslian_demo.monitoring.timeline import build_model_input
 
-FIXTURE_CONFIG = RuntimeConfig("fixture", None, "python", None)
-MODEL_SOURCES = {"frozen_whole_body_jepa", "unified_shared_jepa_target_head",
-                 "multisource_shared_jepa_target_head", "calibrated_event_risk_head"}
+DETACHED = RuntimeConfig("detached", "http://127.0.0.1:1")
+ONSET = "2026-03-14T06:00:00.000Z"
+ROWS = [
+    {"effective_time": "2026-03-14T10:00:00.000Z", "variable": "heart_rate", "value": 88.0, "resource_id": "hr", "version_id": "1"},
+    {"effective_time": "2026-03-14T12:00:00.000Z", "variable": "creatinine", "value": 1.5, "resource_id": "cr", "version_id": "1"},
+]
+STATE = {"heart_rate": {"value": 88.0, "age_hours": 2.0, "count": 1}, "creatinine": {"value": 1.5, "age_hours": 0.0, "count": 1}}
+
+
+class StubApi:
+    """The two endpoints the runtime calls, answering from the pinned contract unless a test changes it."""
+
+    def __init__(self):
+        self.contract = load_contract_fixture()
+        self.registry_sha256 = self.contract["registry_sha256"]
+        self.cells = [{"cell": c["cell"], "target": c["target"], "horizon_hours": c["horizon_hours"],
+                       "recipe": c["source_model"], "flags": c["flags"]} for c in self.contract["cells"]]
+        self.forecast_status = 200
+        self.edit = lambda reply: reply
+        self.requests: list[dict] = []
+        stub = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def _send(self, status, body):
+                data = json.dumps(body).encode("utf-8")
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def do_GET(self):
+                self._send(200, {"cells": stub.cells, "model": {"registry_sha256": stub.registry_sha256}})
+
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                stub.requests.append(body)
+                if stub.forecast_status != 200:
+                    return self._send(stub.forecast_status, {"detail": "refused"})
+                last = body["anchors"][-1]
+                forecasts = []
+                for cell in stub.cells:
+                    current = last["values"].get(f"{cell['target']}_t")
+                    forecasts.append({"cell": cell["cell"], "status": "ok" if current is not None else "current_value_missing",
+                                      "point": current + 1.0 if current is not None else None})
+                self._send(200, stub.edit({"anchor_time": last["time"].replace(".000Z", ""), "forecasts": forecasts,
+                                           "model": {"registry_sha256": stub.registry_sha256}}))
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+def model_input(cutoff="2026-03-14T12:00:00.000Z"):
+    return build_model_input([r for r in ROWS if r["effective_time"] <= cutoff], cutoff, ONSET)
 
 
 class ContractFixtureTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.contract = load_contract_fixture()
-        cls.lock = load_model_lock()
-        cls.catalog = {c["cell"]: c for c in cls.contract["catalog"]["cells"]}
-        cls.sample_cells = cls.contract["sample"]["release_output"]["cells"]
-        cls.bounded = frozenset(cls.lock["output_boundaries"]["interval_statuses_with_bounds"])
-
-    def normalize(self, raw, state=None):
-        return normalize_release_cells(raw, state or {}, self.catalog, self.bounded)
-
-    def test_fixture_provenance_is_pinned_and_verified(self):
-        self.assertEqual(self.contract["model_commit"], self.lock["validated_commit"])
-        self.assertEqual(self.contract["model_repository"], self.lock["repository"])
-        files = self.contract["manifest"]["files"]
-        self.assertEqual(self.contract["registry_sha256"], files["runtime_registry.json"]["sha256"])
-        self.assertEqual(self.contract["selector_sha256"], files["unified_source_selector.json"]["sha256"])
-        self.assertEqual(self.contract["scikit_learn_pin"], "1.7.2")
-        self.assertTrue(all(c["status"] == "passed" for c in self.contract["worker_checks"]))
-        self.assertFalse(self.contract["formal_architecture_gate"]["release_satisfies_rule"])
-        self.assertFalse(self.contract["catalog"]["causal_claim_allowed"])
-
-    def test_catalog_counts_agree_with_the_release_manifest(self):
-        cells = self.contract["catalog"]["cells"]
-        manifest = self.contract["manifest"]
-        self.assertEqual(len(cells), int(manifest["catalog_cells"]))
-        self.assertEqual(sum(c["can_move"] for c in cells), int(manifest["runtime_move_cells"]))
-        self.assertEqual(sum(c["interval_capable"] for c in cells), int(manifest["runtime_interval_cells"]))
-        self.assertEqual(sum(not c["can_move"] for c in cells), int(manifest["fallback_cells"]))
+    def test_the_contract_pins_the_registry_and_the_45_cells(self):
+        contract = load_contract_fixture()
+        self.assertEqual(contract["schema"], "oslian.forecast-api-contract.v1")
+        self.assertEqual(len(contract["registry_sha256"]), 64)
+        self.assertEqual(len(contract["api_commit"]), 40)
+        self.assertEqual(contract["anchor_spacing_hours"], 6.0)
+        self.assertFalse(contract["boundary"]["causal_claim_allowed"])
+        self.assertFalse(contract["boundary"]["clinical_promotion_allowed"])
+        cells = contract["cells"]
+        self.assertEqual(len(cells), 45)
         for cell in cells:
-            self.assertTrue(cell["unit"], cell["cell"])
-            if cell["interval_capable"]:
-                self.assertTrue(cell["can_move"], cell["cell"])
-            if cell["can_move"]:
-                self.assertIsNone(cell["fallback_reason"], cell["cell"])
-            else:
-                self.assertTrue(cell["fallback_reason"], cell["cell"])
-            if cell["target"] == "hypoxemia_event":
-                self.assertEqual(cell["unit"], "probability")
-                self.assertFalse(cell["interval_capable"])
-
-    def test_normalized_cells_follow_the_contract(self):
-        cells = self.normalize(self.sample_cells, {"glucose": {"count": 5}})
-        self.assertEqual(len(cells), len(self.catalog))
-        expected_model = sum(1 for c in self.sample_cells
-                             if c.get("can_move") and c.get("forecast_point") is not None
-                             and c["source_model"] != "patient_persistence_anchor")
-        self.assertEqual(sum(c["status"] == "model" for c in cells), expected_model)
-        for cell in cells:
-            self.assertIn(cell["status"], {"model", "persistence", "missing", "degraded"})
-            self.assertFalse(cell["causal_claim_allowed"])
-            spec = self.catalog[cell["cell"]]
-            if cell["lower"] is not None:
-                self.assertTrue(spec["interval_capable"], cell["cell"])
-                self.assertEqual(cell["status"], "model")
-                self.assertIn(cell["interval_status"], self.bounded)
-                self.assertLessEqual(cell["lower"], cell["forecast_point"])
-                self.assertLessEqual(cell["forecast_point"], cell["upper"])
-            else:
-                self.assertIsNone(cell["upper"])
-                self.assertNotIn(cell["interval_status"], self.bounded)
-            if cell["status"] == "persistence":
-                self.assertAlmostEqual(cell["forecast_point"], cell["observed_value"])
-                self.assertEqual(cell["source_model"], "patient_persistence_anchor")
-                self.assertTrue(cell["fallback_reason"])
-            if cell["status"] == "model":
-                self.assertIn(cell["source_model"], MODEL_SOURCES)
-                self.assertIsNone(cell["fallback_reason"])
-        glucose = next(c for c in cells if c["cell"] == "glucose@1h")
-        self.assertEqual(glucose["ledger_observation_count"], 5)
-        # the synthetic patient exercises every calibrated cell
-        self.assertEqual(sum(c["lower"] is not None for c in cells), self.contract["catalog"]["interval_cells"])
-
-    def test_event_cells_are_probabilities_without_intervals(self):
-        cells = self.normalize(copy.deepcopy(self.sample_cells))
-        events = [c for c in cells if c["target"] == "hypoxemia_event"]
-        self.assertEqual(len(events), 2)
-        for event in events:
-            self.assertEqual(event["status"], "model")
-            self.assertEqual(event["source_model"], "calibrated_event_risk_head")
-            self.assertGreaterEqual(event["forecast_point"], 0.0)
-            self.assertLessEqual(event["forecast_point"], 1.0)
-            self.assertIsNone(event["lower"])
-            self.assertIsNone(event["upper"])
-
-    def test_a_head_the_release_reports_abstained_is_a_baseline(self):
-        raw = copy.deepcopy(self.sample_cells)
-        target = next(c for c in raw if c["cell"] == "chloride@12h")
-        target.update({"forecast_point": target["observed_value"], "can_move": False, "lower": None, "upper": None,
-                       "source_model": "patient_persistence_anchor", "fallback_reason": ABSTENTION_REASON,
-                       "interval_status": "interval_external_validation_not_passed"})
-        chloride = next(c for c in self.normalize(raw) if c["cell"] == "chloride@12h")
-        self.assertEqual(chloride["status"], "persistence")
-        self.assertEqual(chloride["fallback_reason"], "continuous_head_abstained")
-
-    def test_missing_target_history_is_missing_not_invented(self):
-        raw = copy.deepcopy(self.sample_cells)
-        target = next(c for c in raw if c["cell"] == "platelets@1h")
-        target.update({"observed_value": None, "forecast_point": None, "source_model": "missing", "lower": None,
-                       "upper": None, "can_move": False, "fallback_reason": "no_observed_target_value",
-                       "interval_status": "missing_point", "observations": 0})
-        platelets = next(c for c in self.normalize(raw) if c["cell"] == "platelets@1h")
-        self.assertEqual(platelets["status"], "missing")
-        self.assertIsNone(platelets["forecast_point"])
-
-    def _bounded_raw(self):
-        raw = copy.deepcopy(self.sample_cells)
-        return raw, next(c for c in raw if c["lower"] is not None)
-
-    def test_a_bound_the_catalog_does_not_allow_fails_closed(self):
-        raw = copy.deepcopy(self.sample_cells)
-        unbounded = next(c for c in raw if c["can_move"] and not self.catalog[c["cell"]]["interval_capable"]
-                         and c["target"] != "hypoxemia_event")
-        unbounded.update({"lower": unbounded["forecast_point"] - 1, "upper": unbounded["forecast_point"] + 1,
-                          "interval_status": "externally_audited_mimic_split_conformal_90"})
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-
-    def test_a_bound_on_a_baseline_fails_closed(self):
-        raw = copy.deepcopy(self.sample_cells)
-        baseline = next(c for c in raw if c["source_model"] == "patient_persistence_anchor")
-        baseline.update({"lower": 0.0, "upper": 1e9, "interval_status": "externally_audited_mimic_split_conformal_90"})
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-
-    def test_a_bound_that_misses_its_point_or_is_not_finite_fails_closed(self):
-        raw, cell = self._bounded_raw()
-        cell["lower"], cell["upper"] = cell["forecast_point"] + 1, cell["forecast_point"] + 2
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-        raw, cell = self._bounded_raw()
-        cell["upper"] = float("inf")
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-
-    def test_a_calibrated_status_without_bounds_fails_closed(self):
-        raw, cell = self._bounded_raw()
-        cell["lower"] = cell["upper"] = None
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-
-    def test_unknown_sources_bad_probabilities_and_foreign_cells_fail_closed(self):
-        raw = copy.deepcopy(self.sample_cells)
-        next(c for c in raw if c["source_model"] == "frozen_whole_body_jepa")["source_model"] = "some_new_head"
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-        raw = copy.deepcopy(self.sample_cells)
-        next(c for c in raw if c["target"] == "hypoxemia_event")["forecast_point"] = 1.5
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-        raw = copy.deepcopy(self.sample_cells)
-        raw[0]["cell"] = "sodium@1h"
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(raw)
-        with self.assertRaises(RuntimeUnavailable):
-            self.normalize(self.sample_cells[:-1])
+            self.assertEqual(set(cell), {"cell", "target", "horizon_hours", "unit", "source_model", "flags"})
+            self.assertEqual(cell["cell"], f"{cell['target']}@{cell['horizon_hours']}h")
 
 
-class FixtureModeRuntimeTests(unittest.TestCase):
-    def setUp(self):
-        self.runtime = WholeBodyRuntime(FIXTURE_CONFIG)
-
+class DetachedRuntimeTests(unittest.TestCase):
     def test_default_mode_is_detached_and_degraded(self):
-        self.assertEqual(self.runtime.mode, "fixture")
-        self.assertFalse(self.runtime.attached())
-        health = self.runtime.health()
-        self.assertFalse(health["ready"])
+        self.assertEqual(RuntimeConfig.from_env({}).mode, "detached")
+        runtime = ForecastRuntime(DETACHED)
+        self.assertFalse(runtime.attached())
+        result = runtime.run(model_input(), STATE)
+        self.assertEqual(result.summary, {"catalog_cells": 45, "model_cells": 0, "missing_cells": 0, "degraded_cells": 45})
+        for cell in result.cells:
+            self.assertEqual(cell["status"], "degraded")
+            self.assertEqual(cell["fallback_reason"], REASON_NOT_ATTACHED)
+            self.assertIsNone(cell["forecast_point"])
+            self.assertIsNone(cell["lower"])
+            self.assertIsNone(cell["upper"])
+            self.assertFalse(cell["causal_claim_allowed"])
+        observed = next(c for c in result.cells if c["cell"] == "creatinine@6h")
+        self.assertEqual(observed["observed_value"], 1.5, "the observation is still shown; only the forecast is withheld")
+        health = runtime.health()
         self.assertEqual(health["status"], "runtime_not_attached")
-        model_input = ModelInput("2026-03-14T08:00:00.000Z", "2026-03-14T08:00:00.000Z", "hours_since_onset,variable,value\n",
-                                 0, (), "hash", "2026-03-14T06:00:00.000Z")
-        state = {"o2sat": {"value": 91.0, "age_hours": 0.0, "count": 2}, "map": {"value": 70.0, "age_hours": 1.0, "count": 3}}
-        result = self.runtime.run(model_input, state)
-        self.assertEqual(len(result.cells), len(self.runtime.catalog))
-        self.assertTrue(all(c["status"] == "degraded" and c["forecast_point"] is None for c in result.cells))
-        self.assertTrue(all(c["fallback_reason"] == "wholebody_runtime_not_attached" for c in result.cells))
-        self.assertTrue(all(c["lower"] is None and c["upper"] is None and c["interval_status"] == "runtime_not_attached"
-                            for c in result.cells))
-        hypox = next(c for c in result.cells if c["cell"] == "hypoxemia_event@1h")
-        self.assertEqual(hypox["observed_value"], 1.0)
-        self.assertEqual(result.summary["degraded_cells"], len(self.runtime.catalog))
+        self.assertFalse(health["ready"])
 
-    def test_capabilities_are_registry_driven(self):
-        cap = self.runtime.capabilities()
-        self.assertEqual(cap["catalog_cells"], len(cap["cells"]))
-        self.assertEqual(cap["model_cells"] + cap["persistence_cells"], cap["catalog_cells"])
-        lock = load_model_lock()["runtime_contract"]
-        self.assertEqual(cap["model_cells"], lock["model_capable_cells"])
-        self.assertEqual(cap["interval_cells"], lock["interval_cells"])
-        self.assertEqual(cap["event_risk_cells"], lock["event_risk_cells"])
-        self.assertIn("own calibrator", cap["interval_policy"])
-        self.assertEqual(len(cap["variables"]), 53)
-        self.assertFalse(cap["causal_claim_allowed"])
-        self.assertFalse(cap["clinical_alerts_supported"])
-        self.assertFalse(cap["runtime_attached"])
-        self.assertIn("not anatomical organs", cap["modules_note"])
-        # 2026-09-01 decision, 2026-11-12 release adoption: bounded research-demo runtime only;
-        # nothing about the formal rule changes
-        self.assertEqual(cap["runtime_scope"], "gated fixture (safe default)")
-        approval = cap["approval"]
-        self.assertEqual(approval["approved_scope"], "bounded research-demo runtime")
-        self.assertEqual(approval["release_adopted_on"], "2026-11-12")
-        self.assertFalse(approval["formal_architecture_rule_satisfied"])
-        self.assertFalse(approval["promotion_registry_entry"])
-        self.assertTrue(approval["fail_closed_checks_unchanged"])
-        self.assertEqual(approval["safe_default_mode"], "fixture")
-        for phrase in ("formal adjacent-three-level model", "production runtime", "clinically validated model"):
-            self.assertIn(phrase, approval["must_not_be_called"])
+    def test_capabilities_come_from_the_contract(self):
+        capabilities = ForecastRuntime(DETACHED).capabilities()
+        self.assertEqual(capabilities["catalog_cells"], 45)
+        self.assertEqual(capabilities["interval_cells"], 0)
+        self.assertEqual(capabilities["anchor_spacing_hours"], 6.0)
+        self.assertFalse(capabilities["causal_claim_allowed"])
+        self.assertFalse(capabilities["clinical_promotion_allowed"])
+        self.assertFalse(capabilities["clinical_alerts_supported"])
+        self.assertIn("creatinine@6h", {c["cell"] for c in capabilities["cells"]})
 
     def test_env_config_rejects_unknown_mode(self):
         with self.assertRaises(ValueError):
-            RuntimeConfig.from_env({"OSLIAN_WHOLEBODY_RUNTIME": "magic"})
-        self.assertEqual(RuntimeConfig.from_env({}).mode, "fixture")
+            RuntimeConfig.from_env({"OSLIAN_FORECAST_RUNTIME": "production"})
+
+
+class AttachedRuntimeTests(unittest.TestCase):
+    def setUp(self):
+        self.api = StubApi()
+        self.runtime = ForecastRuntime(RuntimeConfig("api", self.api.url))
+
+    def tearDown(self):
+        self.api.close()
+
+    def test_a_run_sends_the_anchor_stream_and_normalizes_every_cell(self):
+        result = self.runtime.run(model_input(), STATE)
+        self.assertTrue(self.runtime.attached())
+        anchors = self.api.requests[-1]["anchors"]
+        self.assertEqual([a["time"] for a in anchors], ["2026-03-14T12:00:00.000Z"])
+        self.assertEqual(anchors[0]["values"], {"creatinine_t": 1.5, "creatinine_age_hr": 0.0,
+                                                "heart_rate_t": 88.0, "heart_rate_age_hr": 2.0})
+        self.assertEqual(len(result.cells), 45)
+        cell = next(c for c in result.cells if c["cell"] == "creatinine@6h")
+        self.assertEqual((cell["status"], cell["forecast_point"], cell["unit"]), ("model", 2.5, "mg/dL"))
+        self.assertEqual(cell["interval_status"], INTERVAL_STATUS)
+        self.assertIsNone(cell["lower"])
+        missing = next(c for c in result.cells if c["cell"] == "map@6h")
+        self.assertEqual((missing["status"], missing["forecast_point"], missing["fallback_reason"]),
+                         ("missing", None, "current_value_missing"))
+        self.assertEqual(result.summary["model_cells"] + result.summary["missing_cells"], 45)
+        self.assertEqual(result.summary["degraded_cells"], 0)
+
+    def test_a_value_older_than_the_lookback_is_missing_at_the_anchor(self):
+        self.runtime.run(model_input("2026-03-14T18:00:00.000Z"), STATE)
+        first, second = self.api.requests[-1]["anchors"]
+        self.assertIn("heart_rate_t", first["values"])
+        self.assertNotIn("heart_rate_t", second["values"], "measured 8 h before the 12 h anchor")
+        self.assertEqual(second["values"], {"creatinine_t": 1.5, "creatinine_age_hr": 6.0})
+
+    def test_past_the_fitted_episode_window_no_forecast_is_requested(self):
+        result = self.runtime.run(model_input("2026-03-17T12:00:00.000Z"), STATE)      # onset + 78 h
+        self.assertEqual(self.api.requests, [])
+        self.assertEqual({c["fallback_reason"] for c in result.cells}, {REASON_OUTSIDE_EPISODE})
+        self.assertEqual(result.summary["degraded_cells"], 45)
+
+    def test_another_registry_fails_closed(self):
+        self.api.registry_sha256 = "0" * 64
+        with self.assertRaises(RuntimeUnavailable):
+            self.runtime.run(model_input(), STATE)
+        self.assertFalse(self.runtime.attached())
+        health = self.runtime.health()
+        self.assertEqual((health["status"], health["ready"]), ("degraded", False))
+
+    def test_a_different_cell_list_fails_closed(self):
+        self.api.cells = self.api.cells[:-1]
+        with self.assertRaises(RuntimeUnavailable):
+            self.runtime.run(model_input(), STATE)
+
+    def test_a_reply_for_another_anchor_or_with_a_changed_registry_fails_closed(self):
+        self.runtime.verify()
+        for change in ({"anchor_time": "2026-03-14T06:00:00"}, {"model": {"registry_sha256": "0" * 64}}):
+            self.api.edit = lambda reply, change=change: {**reply, **change}
+            with self.assertRaises(RuntimeUnavailable):
+                self.runtime.run(model_input(), STATE)
+
+    def test_missing_cells_or_an_unknown_status_fail_closed(self):
+        self.runtime.verify()
+        self.api.edit = lambda reply: {**reply, "forecasts": reply["forecasts"][:-1]}
+        with self.assertRaises(RuntimeUnavailable):
+            self.runtime.run(model_input(), STATE)
+
+        def unknown(reply):
+            reply = copy.deepcopy(reply)
+            reply["forecasts"][0]["status"] = "extrapolated"
+            return reply
+        self.api.edit = unknown
+        with self.assertRaises(RuntimeUnavailable):
+            self.runtime.run(model_input(), STATE)
+
+    def test_a_refusal_or_an_unreachable_api_fails_closed(self):
+        self.runtime.verify()
+        self.api.forecast_status = 422
+        with self.assertRaises(RuntimeUnavailable):
+            self.runtime.run(model_input(), STATE)
+        with self.assertRaises(RuntimeUnavailable):
+            ForecastRuntime(RuntimeConfig("api", "http://127.0.0.1:1")).run(model_input(), STATE)
 
 
 class AnatomyTests(unittest.TestCase):
     def test_organ_map_is_anatomical_and_cells_join_the_catalog(self):
         contract = load_contract_fixture()
-        document = anatomy.anatomy_document(contract["catalog"]["cells"])
+        document = anatomy.anatomy_document(contract["cells"])
         ids = [o["id"] for o in document["organs"]]
         self.assertEqual(set(ids), set(anatomy.CANONICAL_ORGANS))
         for organ in document["organs"]:
@@ -245,12 +227,12 @@ class AnatomyTests(unittest.TestCase):
         kidneys = next(o for o in document["organs"] if o["id"] == "kidneys")
         self.assertIn("creatinine@6h", {c["cell"] for c in kidneys["cells"]})
         lungs = next(o for o in document["organs"] if o["id"] == "lungs")
-        self.assertIn("hypoxemia_event@1h", {c["cell"] for c in lungs["cells"]})
+        self.assertIn("o2sat@12h", {c["cell"] for c in lungs["cells"]})
         brain = next(o for o in document["organs"] if o["id"] == "brain")
         self.assertEqual(brain["cells"], [])
         self.assertEqual(document["unattributed_variables"], [])
         total = sum(len(o["cells"]) for o in document["organs"]) + len(document["systemic"]["cells"])
-        self.assertGreaterEqual(total, len(contract["catalog"]["cells"]), "every cell reaches at least one organ or systemic")
+        self.assertGreaterEqual(total, len(contract["cells"]), "every cell reaches at least one organ or systemic")
 
     def test_functional_system_names_are_rejected_as_organs(self):
         import tempfile

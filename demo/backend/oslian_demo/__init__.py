@@ -3,7 +3,7 @@
     medication/   symbolic medication-safety candidate ranking (deterministic
                   engine; the LLM only parses free text and explains the result)
     monitoring/   synthetic FHIR R4 stream + retrospective replay, ledgered in
-                  SQLite and forecast by the WholeBody runtime adapter
+                  SQLite and forecast by the validated forecast API in api/
 
 Nothing here diagnoses, prescribes, raises a clinical alert, or estimates a
 causal treatment effect.

@@ -7,7 +7,7 @@ import unittest
 from oslian_demo.config import FIXTURE_DIR
 from oslian_demo.monitoring import fhir, mapping
 from oslian_demo.monitoring.source import MockFhirSource
-from oslian_demo.monitoring.wholebody import load_contract_fixture
+from oslian_demo.monitoring.forecast_runtime import load_contract_fixture
 
 AT = datetime(2026, 3, 14, 8, 0, tzinfo=timezone.utc)
 
@@ -147,16 +147,15 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(mapping.map_observation(_obs("8867-4", 80, "/min", status="entered-in-error"), AT, None).failure,
                          mapping.FAIL_STATUS)
 
-    def test_registry_is_consistent_with_release_variables(self):
+    def test_registry_is_consistent_with_the_forecast_contract(self):
         contract = load_contract_fixture()
         keys = [rule.key for rule in mapping.RULES]
         self.assertEqual(len(keys), len(set(keys)), "duplicate mapping keys")
-        release_variables = set(contract["variables"])
-        self.assertEqual(len(release_variables), 53)
-        self.assertEqual(set(mapping.CANONICAL_UNITS), release_variables)
-        for variable, unit in mapping.CANONICAL_UNITS.items():
-            self.assertEqual(unit, contract["variable_units"][variable], variable)
-        self.assertEqual(set(mapping.known_variables()), release_variables, "every release variable has a mapping rule")
+        self.assertEqual(len(mapping.CANONICAL_UNITS), 53)
+        self.assertEqual(set(mapping.known_variables()), set(mapping.CANONICAL_UNITS), "every variable has a mapping rule")
+        # every forecast cell's target is a variable the stream can deliver, in the unit the contract states
+        for cell in contract["cells"]:
+            self.assertEqual(cell["unit"], mapping.CANONICAL_UNITS[cell["target"]], cell["cell"])
         for rule in mapping.RULES:
             self.assertTrue(rule.display, rule.code)
 

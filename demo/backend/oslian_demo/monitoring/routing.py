@@ -8,7 +8,7 @@ them may guess it by name. This module inverts the two maps once and hands out
 the resulting index.
 
 Both maps are validated by their own loaders first, so an id that appears here is
-already known to be a canonical anatomical organ or a checkpoint module.
+already known to be a canonical anatomical organ or a clinical-function group.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class VariableRouting:
         return self._organs.get(variable, ())
 
     def functions_for(self, variable: str) -> tuple[str, ...]:
-        """Checkpoint functional modules this variable belongs to."""
+        """Clinical-function groups this variable belongs to."""
         return self._functions.get(variable, ())
 
     def is_systemic(self, variable: str) -> bool:

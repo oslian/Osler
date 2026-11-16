@@ -14,17 +14,15 @@ renamed or copied.
 - **By hand** — `$env:PYTHONPATH = "backend"` then `python -m oslian_demo`.
 
 `model/` and `osler/` are never on that path. The Flask process imports only
-`demo/backend`; the release worker loads `model/` in its own subprocess.
+`demo/backend`; forecasts come from the forecast API in `api/`, a separate process.
 
 Rules the package keeps:
 
-- No module rewrites `sys.path`, with one deliberate exception:
-  `monitoring/worker.py` runs as a subprocess *inside* the pinned release
-  checkout and must let that checkout shadow every same-named module.
+- No module rewrites `sys.path`.
 - No module imports from another repository. `shared/ontology.py` exists so the
   Medication Safety engine does not have to.
 - No module reads an environment variable except through `config.py` — the
-  exceptions being `wholebody.RuntimeConfig.from_env` and
+  exceptions being `forecast_runtime.RuntimeConfig.from_env` and
   `eventlog.StreamEventLogger.from_env`, which are the runtime's and the logger's
   own contracts and are listed in `config.py`'s docstring.
 - No module computes a package path itself; it imports the constant.
@@ -32,27 +30,20 @@ Rules the package keeps:
 ## Everyday commands
 
 ```powershell
-# start (fixture mode)
+# start (detached mode)
 .\scripts\start-demo.ps1
 
-# start against the locked model release
-.\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\overlay
+# start against a running forecast API (see ..\api\README.md)
+.\scripts\start-demo.ps1 -Mode api -ApiUrl http://127.0.0.1:8000
 
 # either mode on a ledger of your own (created if missing, never overwritten)
 .\scripts\start-demo.ps1 -Database .\var\oslian_stream_ranges_v2.sqlite3
-.\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\overlay
 
 # the whole demo suite
 .\scripts\test-demo.ps1
 
 # one file, verbose
 .\scripts\test-demo.ps1 tests\test_stream_api.py -v
-
-# include the release-worker test
-.\scripts\test-demo.ps1 -Mode release -ReleasePythonPath C:\path\to\overlay
-
-# model runtime
-.\scripts\check-model-runtime.ps1 -ReleasePythonPath C:\path\to\overlay
 ```
 
 Every script takes `-Python` (or `$env:OSLIAN_PYTHON`) if `python` on `PATH` is
@@ -98,14 +89,12 @@ See [FRONTEND.md](FRONTEND.md) for module boundaries and the React assessment.
 ```powershell
 $env:PYTHONPATH = "backend"
 python -m oslian_demo.monitoring.build_synthetic_fixture --write
-python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir ..\model --commit <git log -1 --format=%H -- ..\model> --write
+python -m oslian_demo.monitoring.build_forecast_contract_fixture --api-url http://127.0.0.1:8000 --api-commit <git log -1 --format=%H -- ..\api>
 ```
 
-The release contract fixture must be produced **through the worker**, inside the
-locked checkout, so its manifest and registry hash are the real ones. Do not
-hand-edit it: the contract tests exist to catch exactly that. If you regenerate
-it for a new release, `backend/model-lock.json` must be updated in the same
-commit — `WholeBodyRuntime` refuses to start if the two disagree.
+The forecast contract must be produced **from a running forecast API**, so its
+cell list and registry hash are the real ones. Do not hand-edit it: in attached
+mode `ForecastRuntime` compares it with the API and refuses to run if they differ.
 
 ## Anatomy assets
 

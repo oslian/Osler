@@ -7,7 +7,7 @@ that share a browser shell and nothing else:
   for an indication and explains the ranking. An LLM only parses free text and
   narrates a result that is already fixed; it never changes the ranking.
 - **Monitoring** — a FHIR R4 stream is validated, ledgered, normalised and
-  forecast by the WholeBody runtime adapter, and drawn on an anatomical figure.
+  forecast by the validated forecast API in `api/`, and drawn on an anatomical figure.
   Two data modes share one pipeline, one chart and one runtime contract: a
   **live synthetic stream** and a **retrospective replay** of a deidentified
   public eICU demo stay.
@@ -29,14 +29,14 @@ This is a **methodology and architecture demo, not a clinically validated tool.*
 - The live stream is a **synthetic FHIR R4 fixture**, not an Epic or hospital
   feed, and contains no real patient data. The retrospective case is public,
   HIPAA safe-harbor deidentified eICU CRD Demo data.
-- Forecast cells are **factual forecasts**. Persistence is a baseline
-  fallback, not a prediction. A cell shows a 90% interval only when the release
-  emits one from that cell's own externally audited calibrator; every other
-  interval is `null`. Event cells are calibrated probabilities. Every response
-  carries `causal_claim_allowed: false`.
-- The pinned model release is approved **only as a bounded research-demo
-  runtime**. It must never be described as a formal adjacent-three-level model, a
-  production runtime, or a clinically validated model.
+- Forecast cells are **factual forecasts**: points only. Every interval is
+  `null`, because the validated interval is fitted online on each hospital's own
+  outcomes, which a demo stream does not have. Every response carries
+  `causal_claim_allowed: false`.
+- The 45 forecast cells were frozen and then replicated on external hospital
+  databases under one-shot protocols. That is research evidence about retrospective
+  data. It is **not** clinical validation, and the demo must never be described as
+  a production runtime or a clinically validated model.
 
 No diagnosis, prescribing, clinical claim, causal claim, counterfactual,
 treatment recommendation or clinical alert is authorized anywhere here.
@@ -60,11 +60,10 @@ backend/
     medication/           Medication Safety blueprint, engine/ and data/
     monitoring/           Monitoring blueprint: the FHIR streaming pipeline, fixtures/
     shared/ontology.py    the state vocabulary this repository owns
-  model-lock.json         the only model release the release runtime may load
 
 tests/                    the demo test suite
-scripts/                  start, test, and the three model-runtime scripts
-docs/                     ARCHITECTURE.md, DEVELOPMENT.md, MODEL_RUNTIME.md, FRONTEND.md
+scripts/                  start and test
+docs/                     ARCHITECTURE.md, DEVELOPMENT.md, FRONTEND.md
 var/                      local runtime state (SQLite ledger); never committed
 ```
 
@@ -76,20 +75,22 @@ package. `backend/oslian_demo` imports nothing from any other repository.
 
 ## Where the demo and the model live
 
-The demo is the `demo/` folder of the **oslian/Osler** repository. The model it
-serves is `model/` in the same repository; the demo never copies a weight, it
-records *which* model it serves in `backend/model-lock.json`:
+The demo is the `demo/` folder of the **oslian/Osler** repository and owns no
+model. Forecasts come from the forecast API in `api/` of the same repository, a
+separate process the demo calls over HTTP:
 
 ```text
 https://github.com/oslian/Osler.git
   demo/    this application
-  model/   the whole-body JEPA release (model/models/) and its source
+  api/     the forecast API: 45 replicated expert cells, their weights and registry
+  model/   the September whole-body JEPA release (research comparison; not served here)
   osler/   the earlier research tree
 ```
 
-The lock pins the last commit that changed `model/` and every artifact's SHA-256.
-Any later change to `model/` makes release mode refuse to start until the lock is
-regenerated on purpose (see [docs/MODEL_RUNTIME.md](docs/MODEL_RUNTIME.md)).
+`backend/oslian_demo/monitoring/fixtures/forecast_api_contract_v1.json` pins what
+the demo may show: the 45 cells and the SHA-256 of the registry they come from.
+In attached mode the API's own cell list and registry hash are compared with it
+before the first forecast and on every reply; any difference fails the run closed.
 
 ### Clone
 
@@ -98,16 +99,13 @@ git clone https://github.com/oslian/Osler.git
 cd Osler\demo
 ```
 
-The repository root carries `.gitattributes` with `* text=auto eol=lf`, so the
-hashed JSON artifacts in `model/models/` check out byte for byte on Windows.
-
 ---
 
-## Quick start (fixture mode)
+## Quick start (detached mode)
 
-Fixture mode is the safe default: no model process, no weights, no
-configuration. Every run completes with 41 `degraded` cells and
-`forecast_point: null`, and the UI says *runtime not attached · gated*.
+Detached mode is the safe default: no API, no weights, no configuration. Every
+run completes with 45 `degraded` cells and `forecast_point: null`, and the UI says
+*forecast API not attached*.
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -140,32 +138,31 @@ ledger actually in use:
 
 ---
 
-## Release mode
+## Attached mode
 
-There is nothing to initialise: `model/` is part of the clone. Start the release
-runtime with:
-
-```powershell
-.\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
-```
-
-With its own ledger as well:
+Start the forecast API first, from `api/` (see `api/README.md`; it needs the
+research dependencies and `scikit-learn==1.7.2`):
 
 ```powershell
-.\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -Python C:\path\to\python.exe -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
+cd ..\api
+python -m uvicorn osler_api.app:app --host 127.0.0.1 --port 8000
 ```
 
-The release worker needs an interpreter that can import `model/` with
-`scikit-learn==1.7.2` — the version the serialized population anchors were fitted
-with. `-ReleasePythonPath` prepends a dependency overlay if your main interpreter
-has a different scikit-learn. Both also read
-`OSLIAN_WHOLEBODY_PYTHON` / `OSLIAN_WHOLEBODY_PYTHONPATH`.
-
-Full verification in one command:
+Then start the demo against it:
 
 ```powershell
-.\scripts\check-model-runtime.ps1 -ReleasePythonPath C:\path\to\sklearn-overlay
+$env:OSLIAN_FORECAST_RUNTIME = "api"
+$env:OSLIAN_FORECAST_API_URL = "http://127.0.0.1:8000"
+.\scripts\start-demo.ps1
 ```
+
+A forecast is issued at an **anchor**: every 6 hours from the encounter start,
+which is how the rows the cells were fitted on are spaced. Each anchor holds a
+variable's latest value from the 6 hours before it; an older value is missing at
+that anchor. The first forecast therefore appears 6 hours into the stream, a
+run's input cutoff is an anchor time, and each cell's horizon counts from it.
+Past 72 hours of stay the cells were never fitted, and runs return degraded cells
+with `fallback_reason: outside_fitted_episode_window`.
 
 ---
 
@@ -175,46 +172,28 @@ Full verification in one command:
 curl.exe http://127.0.0.1:5000/api/model/health
 ```
 
-Fixture mode answers HTTP 503 with `"status": "runtime_not_attached"` and
-`"ready": false`. That is the correct gated answer, not a failure.
+Detached mode answers HTTP 503 with `"status": "runtime_not_attached"` and
+`"ready": false`. That is the correct answer, not a failure.
 
-Release mode must answer HTTP 200 with all five of:
+Attached mode must answer HTTP 200 with `runtime_mode: api`,
+`runtime_attached: true`, `status: healthy` and `ready: true`. Anything else means
+the API was unreachable or served other cells or another registry; `reason` and
+`checks` in the same response say which.
 
-| Field | Expected |
-|---|---|
-| `runtime_mode` | `release` |
-| `runtime_attached` | `true` |
-| `status` | `healthy` |
-| `ready` | `true` |
-| `scikit_learn` | `1.7.2` |
+### The 45 cells
 
-Anything else means a fail-closed check failed; `checks` in the same response
-names which one — pinned commit, model manifest, a SHA-256, module origin, the
-scikit-learn pin, the registry count, or the smoke prediction.
+The contract has 45 target × horizon cells over 15 targets (MAP, heart rate,
+respiratory rate, SpO₂, glucose, potassium, sodium, chloride, bicarbonate,
+creatinine, BUN, hemoglobin, hematocrit, platelets, urine output). Each one is
+`independently_replicated` in the registry. A cell's `status` is:
 
-### The 41 cells
+- `model`: the API returned a point for this anchor;
+- `missing`: the target had no value in the 6 hours before the anchor, so there
+  is nothing to forecast from;
+- `degraded`: no forecast was requested (detached, or past the fitted window).
 
-The pinned registry has 41 target × horizon cells, and the split is a property of
-the release, not a runtime decision:
-
-- **28 model-capable cells** (`can_move: true`), chosen per cell by the release's
-  unified source selector: 11 `frozen_whole_body_jepa`, 11
-  `unified_shared_jepa_target_head`, 4 `multisource_shared_jepa_target_head`, and
-  the 2 `hypoxemia_event` cells from `calibrated_event_risk_head`.
-- **13 persistence-fallback cells** (`can_move: false`,
-  `source_model: patient_persistence_anchor`) — the target × horizon did not pass
-  its validation gate, so the cell carries the patient's last observed value
-  forward and says so. **Persistence is a safety policy, not a prediction.**
-
-**25 continuous cells** may show a 90% interval: the release emits `lower`/`upper`
-only from that cell's own calibrator (`externally_audited_mimic_split_conformal_90`
-or `unified_source_disjoint_calibration_90`). The runtime refuses any other bound —
-on a cell the catalog does not mark `interval_capable`, on a baseline, or one that
-does not contain its point — and fails the run closed. The two event cells are a
-calibrated probability in [0, 1] and never carry an interval. A head that declines
-to move is reported by the release as persistence with
-`fallback_reason: continuous_head_abstained`. All 41 carry
-`causal_claim_allowed: false`.
+There is no carried-forward baseline and no event probability in this runtime.
+`lower` and `upper` are always `null`. All 45 carry `causal_claim_allowed: false`.
 
 ---
 
@@ -275,31 +254,22 @@ Deep links:
 
 ## Changing the model
 
-A model change is a commit to `model/`, and it is not live in the demo until the
-lock is regenerated in a separate commit:
+A model change is a change to `api/` (its weights and registry). It is not shown
+by the demo until the contract is regenerated from the running API:
 
 ```powershell
-# 1. change and validate the model, from model/
-cd ..\model
-python -m scripts.validate_release
-git commit -am "model: ..."
-
-# 2. regenerate the contract fixture through the worker, from demo/
-cd ..\demo
-$commit = git log -1 --format=%H -- ..\model
+$commit = git log -1 --format=%H -- ..\api
 $env:PYTHONPATH = "backend"
-python -m oslian_demo.monitoring.build_release_contract_fixture --release-dir ..\model --commit $commit --write
+python -m oslian_demo.monitoring.build_forecast_contract_fixture --api-url http://127.0.0.1:8000 --api-commit $commit
 ```
 
-Then update `backend/model-lock.json` (commit and artifact hashes from
-`model/models/MODEL_MANIFEST.json`), run the tests in fixture and release mode,
-and commit the lock and fixture together, touching nothing under `model/`.
+Run the tests and commit the contract.
 
 ---
 
 ## Environment variables
 
-All optional. With none set the demo serves fixture mode on `127.0.0.1:5000`
+All optional. With none set the demo serves detached mode on `127.0.0.1:5000`
 with its ledger in `var/`. Copy `.env.example`; `.env` is git-ignored and must
 never hold a real key.
 
@@ -311,10 +281,8 @@ never hold a real key.
 | `OSLIAN_STREAM_LOG` | `events`, `off` | `events` |
 | `OSLIAN_STREAM_LOG_FORMAT` | `pretty`, `json` | `pretty` |
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
-| `OSLIAN_WHOLEBODY_RUNTIME` | `fixture`, `release` | `fixture` |
-| `OSLIAN_WHOLEBODY_RELEASE_DIR` | release directory | `../model` |
-| `OSLIAN_WHOLEBODY_PYTHON` | interpreter for the release worker | this interpreter |
-| `OSLIAN_WHOLEBODY_PYTHONPATH` | dependency overlay for that interpreter | — |
+| `OSLIAN_FORECAST_RUNTIME` | `detached`, `api` | `detached` |
+| `OSLIAN_FORECAST_API_URL` | the forecast API in `api/` | `http://127.0.0.1:8000` |
 | `OSLIAN_EPIC_PRIVATE_KEY_PEM` | referenced by name only; never read | — |
 | `OSLIAN_PYTHON` | interpreter the PowerShell scripts use | `python` |
 | `LLM_PROVIDER` | `openai`, `gemini` | `openai` |
@@ -336,15 +304,15 @@ python -m pytest tests -q
 ```
 
 `pyproject.toml` puts `backend` on the path, so no install step is needed. The
-release-worker test skips itself in fixture mode; `.\scripts\test-demo.ps1 -Mode release`
-runs it against the locked commit.
+attached runtime is tested against a stub of the forecast API on a local port, so
+the suite needs no model files.
 
 ---
 
 ## Stopping the demo
 
 One process. `Ctrl+C` in the window running it stops Flask, the playback threads,
-the SSE bus and — in release mode — the worker subprocess.
+and the SSE bus. The forecast API is a separate process; stop it in its own window.
 
 If a port is left bound by an orphaned process:
 
@@ -376,12 +344,9 @@ session-creation route answers 409) instead of being served from the old copy.
 | `flask is not installed for ...` | That interpreter has no Flask. `python -m pip install -r requirements.txt`, or pass `-Python`. |
 | `port 5000 is already in use` | An earlier run is still bound. Stop it (above) or pass `-Port`. |
 | `frontend is missing` | The checkout is incomplete — `frontend/index.html` must exist beside `backend/`. |
-| `no models directory in ...` | `OSLIAN_WHOLEBODY_RELEASE_DIR` points somewhere other than `model/`. |
-| `model/ was last changed in <sha>` | `model/` changed after the lock was written. Re-lock deliberately (Changing the model). |
-| `model files do not match model-lock.json` | Almost always a CRLF checkout. The setup script forces LF; fix the checkout, never the check. |
-| `/api/model/health` returns 503 `runtime_not_attached` | Fixture mode. Correct and intended; start with `-Mode release`. |
-| Release health is `degraded`, `ready: false` | A fail-closed check failed. Read `checks` and `reason`. |
-| `scikit_learn` is not `1.7.2` | The worker interpreter has a different version. Pass `-ReleasePythonPath` with a 1.7.2 overlay. |
+| `/api/model/health` returns 503 `runtime_not_attached` | Detached mode. Correct and intended; set `OSLIAN_FORECAST_RUNTIME=api`. |
+| Attached health is `degraded`, `ready: false` | The API is not running at `OSLIAN_FORECAST_API_URL`, or it serves other cells or another registry than the contract. Read `reason`. |
+| No forecast in the first hours of a stream | Intended: the first anchor is 6 hours after the encounter start. |
 | Every request takes ~300 ms in the browser, even when idle | You opened `http://localhost:<port>`. The server binds IPv4 loopback only, so on Windows the browser tries `::1` first and pays the fallback on every request — measured at 314 ms median via `localhost` against 15 ms via `127.0.0.1`. Use the URL the launcher prints (`http://127.0.0.1:<port>`). Werkzeug's development server always closes the connection, so keep-alive cannot amortise it. |
 | The page looks stale after editing an ES module | Chrome caches modules per document. Open a new tab, or hard-reload. |
 | Backend edits have no effect | The server does not hot-reload. Stop it and start it again. |

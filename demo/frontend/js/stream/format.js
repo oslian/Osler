@@ -119,7 +119,7 @@ export const REPORT = {
   attentionHeading: 'Results requiring attention',
   otherHeading: 'Other observed results',
   forecastHeading: 'Oslian forecast outlook',
-  forecastNote: 'Research-only forecasts. A 90% interval appears only for a cell whose own release calibrator passed external audit; every other cell is a point or a carried-forward baseline.',
+  forecastNote: 'Research-only forecasts, issued at each 6-hour anchor of the stay. Points only: the validated interval needs the hospital\'s own outcomes, which this stream does not have.',
   chartsHeading: 'Trends',
   anatomyHeading: 'Anatomy overview',
   provenanceHeading: 'Provenance appendix',
@@ -173,7 +173,7 @@ export const NO_FORECAST_MODEL = 'No forecast model';
 export const OBSERVED_HISTORY = 'Observed history';
 export const UPDATING_FORECAST = 'Updating forecast…';
 export const INTERVAL_NOTE =
-  'A shaded 90% interval appears only where the release calibrated that cell; every other forecast is a point.';
+  'Forecasts are points. No interval is shown: the validated interval needs the hospital\'s own outcomes.';
 
 /* A cell's 90% interval in words, or null when the release supplied none. */
 export function fmtInterval(cell) {
@@ -196,7 +196,7 @@ export const TRAJECTORY = {
   historyTitle: 'OBSERVED HISTORY',
   historySub: 'FHIR observations',
   forecastTitle: 'FUTURE FORECAST',
-  forecastSub: 'Forecasts · 90% interval where calibrated',
+  forecastSub: 'Forecasts · points from the 6 h anchor',
   cutoffLabel: 'Forecast starts here',
   cutoffSub: 'Model input cutoff',
   liveHead: 'LIVE HEAD',
@@ -213,8 +213,9 @@ export const TRAJECTORY = {
 /* What a withheld cell says to a reader. The audit reason stays in provenance;
  * this is the one-line explanation that goes next to the empty region. */
 export function unavailableReason(status, fallbackReason) {
-  if (fallbackReason === 'wholebody_runtime_not_attached') return 'The model runtime is not attached';
-  if (fallbackReason === 'shared_jepa_head_not_external_validated') return 'This horizon is not externally validated, so no model value is shown';
+  if (fallbackReason === 'forecast_api_not_attached') return 'The forecast API is not attached';
+  if (fallbackReason === 'outside_fitted_episode_window') return 'Past 72 hours of stay, where the model was never fitted';
+  if (fallbackReason === 'current_value_missing') return 'No value in the 6 hours before the anchor, so there is nothing to forecast from';
   if (status === 'missing') return 'The model returned no value for this horizon';
   if (status === 'degraded') return 'The model runtime did not produce this horizon';
   return 'No value was produced for this horizon';
