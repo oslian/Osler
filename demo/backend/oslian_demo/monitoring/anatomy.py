@@ -1,7 +1,7 @@
 """Organ <-> variable <-> forecast-cell mapping for the anatomy view.
 
 The frontend never guesses by name. It receives this document, which joins the
-approved organ map with the pinned 45-cell catalog. Organs are anatomical only
+approved organ map with the runtime's catalog of shown cells. Organs are anatomical only
 (the local AGENTS.md canonical organ list); the clinical-function groups are
 reported separately and are never drawn as organs.
 """
