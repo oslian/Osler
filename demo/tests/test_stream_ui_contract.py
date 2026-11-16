@@ -113,22 +113,20 @@ class StreamUiContractTests(unittest.TestCase):
         self.assertIn("A 90% interval is drawn only around a model forecast", chart)
         # a band is built from model forecasts with two finite bounds, and from nothing else
         self.assertIn("const bounded = model.filter((f) => Number.isFinite(f.lower) && Number.isFinite(f.upper));", chart)
-        self.assertNotIn("baseline.filter((f) => Number.isFinite(f.lower)", chart)
         without_comment = re.sub(r"/\*.*?\*/", "", chart + MODULES["format.js"], flags=re.S)
         self.assertNotIn("confidence", without_comment.lower())
         self.assertIn("INTERVAL_NOTE", chart)                  # the legend says it in plain language
         self.assertIn("No calibrated interval for these forecasts; points only.", chart)  # and the description
-        self.assertIn("carried forward", chart)
         self.assertIn('stroke-dasharray="5 4"', chart)         # model path is dashed
-        self.assertIn('stroke-dasharray="3 4"', chart)         # a baseline is dashed differently, and grey
-        self.assertNotIn("COLORS.blue", chart[chart.index("carried-forward baselines"):chart.index("// model forecast:")])
         self.assertIn("withheld", chart)
-        for word in ("historyTitle", "forecastTitle", "cutoffLabel", "cutoffSub", "baselineOnly", "noModel", "unavailable"):
+        # the states the old model had and this runtime never emits are gone from every module
+        for gone in ("persistence", "abstain", "carried forward", "hypoxemia", "jepa"):
+            self.assertNotIn(gone, STREAM_JS.lower().replace("their events are still carried", ""), gone)
+        for word in ("historyTitle", "forecastTitle", "cutoffLabel", "cutoffSub", "noModel", "unavailable"):
             self.assertIn(f"TRAJECTORY.{word}", chart)
         fmt = MODULES["format.js"]
         self.assertIn("'Forecast starts here'", fmt)
         self.assertIn("'Model input cutoff'", fmt)
-        self.assertIn("'Baseline only · not a model forecast'", fmt)
         self.assertIn("'No forecast model for this metric'", fmt)
         self.assertIn("'Forecast unavailable'", fmt)
         self.assertIn('tabindex="0"', chart)                   # chart points are keyboard reachable
@@ -852,13 +850,11 @@ class ReportContractTests(unittest.TestCase):
         self.assertIn("const attention = rows.filter((r) => r.attention.kind === 'outside');", self.REPORT)
         self.assertIn("const other = rows.filter((r) => !attention.includes(r));", self.REPORT)
 
-    def test_the_forecast_section_separates_a_model_from_a_repeated_observation(self):
+    def test_the_forecast_section_names_each_state(self):
         forecast = self.REPORT[self.REPORT.index("function forecastRow("):self.REPORT.index("/* ── trends")]
-        for word in ("'Carried forward — model abstained'", "'Model forecast'", "'Carried forward'",
-                     "'Missing'", "'Degraded'"):
+        for word in ("'Model forecast'", "'Missing'", "'Degraded'"):
             self.assertIn(word, forecast, word)
         self.assertIn("forecastNote: 'Research-only forecasts, issued at each 6-hour anchor of the stay. Points only", MODULES["format.js"])
-        self.assertIn("A carried-forward value is not a model forecast.", self.REPORT)
 
     def test_trend_charts_are_drawn_only_where_they_earn_the_paper(self):
         self.assertIn("r.attention.kind === 'outside' || r.forecasts.some((f) => f.projected)", self.REPORT)
@@ -1027,8 +1023,7 @@ class ReportColourSemanticsTests(unittest.TestCase):
         # same table the screen uses, so a greyscale copy loses only the colour
         self.assertIn("${mark(flag.mark)}${flag.text}", self.REPORT)
         self.assertIn("${mark(PROJECTED[cell.projectedSide].mark)}${PROJECTED[cell.projectedSide].text}", self.REPORT)
-        for state in ("'Model forecast'", "'Carried forward'", "'Carried forward — model abstained'",
-                      "'Missing'", "'Degraded'"):
+        for state in ("'Model forecast'", "'Missing'", "'Degraded'"):
             self.assertIn(state, self.REPORT, state)
 
 

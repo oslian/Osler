@@ -8,9 +8,8 @@ the SVG back here. The assertions are the invariants a reader relies on:
 - observed points and forecast points sit on one linear time axis;
 - the cutoff splits the plot into a labelled history region and a labelled
   future region;
-- a model cell, a carried-forward cell, a withheld cell and a variable with no
-  runtime cell each draw only what they are - never a model-styled line for a
-  baseline, never a marker for a value that does not exist;
+- a model cell, a withheld cell and a variable with no runtime cell each draw
+  only what they are - never a marker for a value that does not exist;
 - a historical anchor draws the frozen run's inputs while the live head has
   moved on;
 - the future region is the future, never an uncertainty band; a calibrated
@@ -43,9 +42,9 @@ const obs = (hours, value, unit = 'mL/hour') => ({ effective_time: iso(T0 + hour
   resource_id: `obs-${hours}`, version_id: '1', received_at: iso(T0 + hours * H) });
 const cell = (h, status, point, extra) => ({ cell: `urine_output@${h}h`, target: 'urine_output', unit: 'mL/hour',
   horizon_hours: h, observed_value: 58, measurement_age_hours: 0, observations: 4, forecast_point: point,
-  source_model: status === 'model' ? 'frozen_whole_body_jepa' : status === 'persistence' ? 'patient_persistence_anchor' : 'none',
+  source_model: status === 'model' ? 'measurement_pure_ridge' : 'none',
   status, fallback_reason: null, interval_status: 'none', lower: null, upper: null, causal_claim_allowed: false, ...(extra || {}) });
-const run = (id, cutoffHours) => ({ run_id: id, input_cutoff: iso(T0 + cutoffHours * H), epoch: 1, runtime_mode: 'release', input_resource_count: 4 });
+const run = (id, cutoffHours) => ({ run_id: id, input_cutoff: iso(T0 + cutoffHours * H), epoch: 1, runtime_mode: 'api', input_resource_count: 4 });
 S.capabilities = { cells: [{ cell: 'urine_output@1h', target: 'urine_output', horizon_hours: 1 },
                            { cell: 'urine_output@3h', target: 'urine_output', horizon_hours: 3 }] };
 const history = () => [obs(0, 40), obs(2, 50), obs(4, 55), obs(6, 58)];
@@ -61,8 +60,6 @@ const out = {};
 out.model = draw('urine_output');
 out.narrow = draw('urine_output', { width: 320 });
 out.recent = draw('urine_output', { window: 'recent' });
-S.live.cells = [cell(1, 'persistence', 58), cell(3, 'persistence', 58)];
-out.persistence = draw('urine_output');
 S.live.cells = [cell(1, 'degraded', null, { fallback_reason: 'forecast_api_not_attached' }), cell(3, 'missing', null)];
 out.unavailable = draw('urine_output');
 S.live.cells = [cell(1, 'model', 68.5), cell(3, 'missing', null, { fallback_reason: 'current_value_missing' })];
@@ -75,8 +72,6 @@ out.nobasis = draw('urine_output');
 const calibrated = { lower: 40.1, upper: 96.9, interval_status: 'externally_audited_mimic_split_conformal_90' };
 S.live.cells = [cell(1, 'model', 68.5, calibrated), cell(3, 'model', 56.4)];
 out.bounded = draw('urine_output');
-S.live.cells = [cell(1, 'persistence', 58, calibrated), cell(3, 'persistence', 58)];
-out.boundedBaseline = draw('urine_output');
 // the live head moves on; an open anchor keeps the old run's inputs and cells
 S.live = { run: run('live-run-2', 10), cells: [cell(1, 'model', 99), cell(3, 'model', 98)] };
 S.series.urine_output.push(obs(8, 70), obs(10, 75));
@@ -173,28 +168,7 @@ class TrajectoryChartTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r'data-status="model"[^>]*>(?:<line[^>]*>)?<polygon', s["svg"])), 2, "hollow diamonds")
         for label in ("1h · 68.5", "3h · 56.4"):
             self.assertIn(label, s["svg"])
-        self.assertNotIn('data-series="baseline"', s["svg"])
         self.assertIn("Model forecast", s["legend"])
-        self.assertNotIn("Baseline only", s["legend"])
-
-    def test_persistence_is_a_grey_baseline_and_never_wears_the_model_style(self):
-        s = self.out["persistence"]
-        self.assertEqual(s["kind"], "persistence")
-        svg = s["svg"]
-        self.assertNotIn('data-series="model"', svg)
-        self.assertNotRegex(svg, r'data-status="persistence"[^>]*>(?:<line[^>]*>)?<polygon', "no diamonds for a baseline")
-        self.assertEqual(len(re.findall(r'data-status="persistence"[^>]*>(?:<line[^>]*>)?<rect', svg)), 2, "hollow squares")
-        self.assertEqual(svg.count('data-status="persistence"'), 2)
-        lines = re.findall(r'<line data-series="baseline" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"[^>]*stroke="(#[0-9A-Fa-f]+)"[^>]*stroke-dasharray="([^"]+)"', svg)
-        self.assertEqual(len(lines), 2)
-        for x1, y1, x2, y2, colour, dash in lines:
-            self.assertEqual(y1, y2, "a carried-forward value is horizontal")
-            self.assertNotEqual(colour.upper(), "#344F69", "a baseline is never forecast blue")
-            self.assertNotEqual(dash, "5 4", "a baseline never uses the model dash")
-        self.assertIn("Baseline only · not a model forecast", svg)
-        self.assertIn("Baseline only · not a model forecast", s["legend"])
-        self.assertNotIn("Model forecast", s["legend"])
-        self.assertNotIn("model forecast", " ".join(re.findall(r'aria-label="([^"]*)"', svg)).lower().replace("not a model forecast", ""))
 
     def test_no_runtime_cell_draws_no_forecast_and_says_so(self):
         s = self.out["none"]
@@ -203,7 +177,6 @@ class TrajectoryChartTests(unittest.TestCase):
         self.assertIn('data-region="future"', s["svg"], "the future region still exists; it is not blank")
         self.assertNotIn('data-kind="forecast"', s["svg"])
         self.assertNotIn("data-series=\"model\"", s["svg"])
-        self.assertNotIn("data-series=\"baseline\"", s["svg"])
 
     def test_withheld_cells_draw_nothing_and_give_a_reader_facing_reason(self):
         s = self.out["unavailable"]
@@ -284,9 +257,6 @@ class TrajectoryChartTests(unittest.TestCase):
         self.assertIn("Calibrated 90% intervals: 1h 40.1 to 96.9 mL/hour", desc)
         aria = " ".join(re.findall(r'aria-label="([^"]*)"', bounded["svg"]))
         self.assertIn("90% interval 40.1 to 96.9 mL/hour", aria)
-        # a carried-forward value is never banded, even if a bound reached it
-        self.assertNotIn('data-series="interval"', self.out["boundedBaseline"]["svg"])
-        self.assertNotIn("Calibrated 90% interval", self.out["boundedBaseline"]["legend"])
         for name, s in self.out.items():
             if name != "bounded":
                 self.assertNotIn('data-series="interval"', s["svg"], name)

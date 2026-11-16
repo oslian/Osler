@@ -17,16 +17,15 @@
  * and no performer, no conclusion and no clinical alert is claimed.
  *
  * The forecast outlook is Oslian's own section and is kept apart from the
- * results: a model point forecast, a carried-forward value, a head that
- * abstained and a withheld cell are four different things and are printed as
- * four different things.
+ * results: a model point forecast and a withheld cell are different things and
+ * are printed as different things.
  */
 
 import { S, activeHorizon, currentRun, indicatorView, organAttentionMap, sourceInfo, trajectoryFor } from './store.js';
 import { buildAnatomy } from './anatomy.js';
 import { chartLegend, trajectoryChart } from './chart.js';
 import { esc, fmtNum, BUILDER, FLAG, NO_FORECAST_MODEL, INTERVAL_NOTE, PROJECTED, REPORT, TRAJECTORY,
-  forecastState, flagOf, isAbstained, unavailableReason } from './format.js';
+  forecastState, flagOf, unavailableReason } from './format.js';
 import { fmtAge, fmtClinical, label } from './render.js';
 import { rangeText } from './signals.js';
 
@@ -48,8 +47,8 @@ export function freezeReport() {
     organs: plain(organAttentionMap(view.all)),
     organOrder: S.anatomy ? S.anatomy.organs.map((o) => ({ id: o.id, label: o.label })) : [],
     counts: { observed: view.observed, total: view.total, outside: view.outside, projected: view.projected,
-      unsupplied: view.unsupplied, modelCells: view.modelCells, carriedCells: view.carriedCells,
-      abstainedCells: view.abstainedCells, withheldCells: view.withheldCells },
+      unsupplied: view.unsupplied, modelCells: view.modelCells,
+      withheldCells: view.withheldCells },
     meta: {
       patient: src.display_name || (S.patient ? S.patient.display : 'Patient'),
       patientId: (S.session && S.session.patient_id) || '',
@@ -132,22 +131,19 @@ function forecastRow(row, horizon) {
   const value = Number.isFinite(cell.forecast_point) ? `${fmtNum(cell.forecast_point)} ${cell.unit || row.unit}` : 'null';
   const d = cell.status === 'model' && Number.isFinite(cell.forecast_point) && Number.isFinite(current)
     ? cell.forecast_point - current : null;
-  const diff = d === null ? (cell.status === 'persistence' ? '±0' : '—')
+  const diff = d === null ? '—'
     : d === 0 ? 'unchanged' : `${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d))}`;
-  const state = isAbstained(cell) ? 'Carried forward — model abstained'
-    : cell.status === 'model' ? 'Model forecast'
-      : cell.status === 'persistence' ? 'Carried forward'
-        : cell.status === 'missing' ? 'Missing' : 'Degraded';
+  const state = cell.status === 'model' ? 'Model forecast' : cell.status === 'missing' ? 'Missing' : 'Degraded';
   const projected = cell.projected
     ? `<span class="proj">${mark(PROJECTED[cell.projectedSide].mark)}${PROJECTED[cell.projectedSide].text}</span>`
     : (cell.status === 'model' && row.range ? 'Within supplied range' : '—');
-  return `<tr data-status="${esc(cell.status)}"${cell.abstained ? ' data-abstained="true"' : ''}${cell.projected ? ` data-projected="${esc(cell.projectedSide)}"` : ''}>
+  return `<tr data-status="${esc(cell.status)}"${cell.projected ? ` data-projected="${esc(cell.projectedSide)}"` : ''}>
     <th scope="row" class="indicator-name">${esc(row.name)}</th>
     <td class="v current-result">${esc(fmtNum(current))} <small>${esc(row.state.unit)}</small></td>
     <td class="v forecast-result${cell.status === 'model' ? ' model' : ''}${cell.projected ? ' projected' : ''}">${esc(value)}</td>
     <td>${cell.horizon_hours}h</td>
     <td class="v result-change">${esc(diff)}</td>
-    <td>${esc(state)}${cell.status !== 'model' && cell.status !== 'persistence' ? `<span class="d">${esc(unavailableReason(cell.status, cell.fallback_reason))}</span>` : ''}</td>
+    <td>${esc(state)}${cell.status !== 'model' ? `<span class="d">${esc(unavailableReason(cell.status, cell.fallback_reason))}</span>` : ''}</td>
     <td>${projected}</td>
   </tr>`;
 }
@@ -270,15 +266,14 @@ export function renderReport(host) {
           <th scope="col">Forecast status</th><th scope="col">Projected range status</th></tr></thead>
           <tbody>${rows.map((r) => forecastRow(r, horizon)).join('')}</tbody></table>`}
         <p class="report-note">Counted across the whole snapshot: ${report.frozen.counts.modelCells} model forecast cells ·
-          ${report.frozen.counts.carriedCells} carried forward (${report.frozen.counts.abstainedCells} model abstained) ·
-          ${report.frozen.counts.withheldCells} withheld. A carried-forward value is not a model forecast.</p>
+          ${report.frozen.counts.withheldCells} withheld.</p>
       </section>
 
       ${chartRows.length ? `<section class="report-section" aria-label="${REPORT.chartsHeading}">
         <h2>${REPORT.chartsHeading}</h2>
         <p class="report-note">Drawn for indicators with a current result outside a supplied range, a forecast projected outside one, or an indicator you selected.
           Observed history is a solid ink line; the model input cutoff is the dashed rule; a model point forecast is a hollow blue diamond;
-          a carried-forward value is a grey square; a point projected outside the supplied range is an amber dashed diamond; the supplied
+          a point projected outside the supplied range is an amber dashed diamond; the supplied
           reference range is the pale band. ${INTERVAL_NOTE}</p>
         <div class="report-charts">${chartRows.map(trendChart).join('')}</div>
       </section>` : ''}
@@ -294,7 +289,7 @@ export function renderReport(host) {
         <h2>${REPORT.limitsHeading}</h2>
         <ul>
           <li>Reference intervals are supplied by the observations themselves and are reproduced as received; this system writes no threshold of its own. Where none was supplied, the result is reported without a comparison.</li>
-          <li>Forecasts are research-only. ${INTERVAL_NOTE} Carried-forward values repeat the last observation and are not predictions.</li>
+          <li>Forecasts are research-only. ${INTERVAL_NOTE}</li>
           <li>Runtime: ${m.runtimeAttached ? 'attached' : 'not attached'}${m.runtimeMode ? ` · ${esc(m.runtimeMode)}` : ''}${m.modelCommit ? ` · model <span class="mono">${esc(m.modelCommit.slice(0, 7))}</span>` : ''}${m.registry ? ` · registry <span class="mono">${esc(m.registry.slice(0, 12))}</span>` : ''}.</li>
           <li>No diagnosis, causal claim, treatment recommendation or clinical alert is made. causal_claim_allowed: false.</li>
         </ul>

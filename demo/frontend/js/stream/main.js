@@ -271,9 +271,8 @@ function showTip(target) {
   if (d.kind === 'observed') {
     tip.innerHTML = `<b>${when}</b> · observed<br><span class="mono">${fmtNum(value)} ${unit}</span> · ${d.resource} v${d.version}${d.received ? '<br>received ' + fmtReceived(d.received) : ''}<br><u>click for FHIR provenance</u>`;
   } else {
-    const what = d.status === 'persistence' ? 'baseline only · last value carried forward · not a model forecast' : 'model forecast';
     const basis = d.basisValue !== undefined ? `<br>basis ${fmtNum(Number(d.basisValue))} ${unit} at ${fmtClinical(new Date(Number(d.basisMs)).toISOString())}` : '';
-    tip.innerHTML = `<b>${when}</b> · ${d.horizon}h ${what}<br><span class="mono">${fmtNum(value)} ${unit}</span> · ${d.source}${basis}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
+    tip.innerHTML = `<b>${when}</b> · ${d.horizon}h model forecast<br><span class="mono">${fmtNum(value)} ${unit}</span> · ${d.source}${basis}<br>run ${String(d.run).slice(0, 8)} · <u>click for provenance</u>`;
   }
   const r = target.getBoundingClientRect(), w = wrap.getBoundingClientRect();
   tip.hidden = false;

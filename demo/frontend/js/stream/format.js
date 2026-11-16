@@ -7,40 +7,22 @@ export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => 
 /* One vocabulary for forecast state, used by every view.
  *
  * The audit words are still the truth underneath - a cell is `model`,
- * `persistence`, `missing` or `degraded` and nothing here changes that - but
- * the screen says what each one means to a reader. In particular, a
- * carried-forward value is never called a forecast, because it is not one: the
- * target x horizon did not pass its validation gate, so the cell repeats the
- * patient's last observed value instead. */
+ * `missing` or `degraded` and nothing here changes that - but the screen says
+ * what each one means to a reader. */
 export const FORECAST_LABEL = {
   model: 'Model forecast',
-  persistence: 'Last value carried forward',
   missing: 'No forecast available',
   degraded: 'Forecast withheld',
 };
 
 export const FORECAST_NOTE = {
   model: 'predicted by the model',
-  persistence: 'not a model prediction — the last observed value, repeated',
   missing: 'the model returned no value for this target and horizon',
-  degraded: 'the model runtime is not attached, so no value is shown',
+  degraded: 'no forecast was requested for this anchor, so no value is shown',
 };
 
-/* A target head that declined to move is reported by the release itself as a
- * persistence cell with this reason. Every view reads the reason, never an
- * equality between point and observation. A carried-forward value is never a
- * model forecast, whichever way it came to be one. */
-export const ABSTAINED_REASON = 'continuous_head_abstained';
-export const CARRIED_ABSTAINED = 'Carried forward — model abstained';
-export const isAbstained = (cell) => !!cell && cell.status === 'persistence' && cell.fallback_reason === ABSTAINED_REASON;
-export function forecastLabel(cell) {
-  if (isAbstained(cell)) return CARRIED_ABSTAINED;
-  return FORECAST_LABEL[cell.status] || String(cell.status);
-}
-export function forecastNote(cell) {
-  if (isAbstained(cell)) return 'the shared head declined to move, so the observed value is repeated — not a model prediction';
-  return FORECAST_NOTE[cell.status] || '';
-}
+export const forecastLabel = (cell) => FORECAST_LABEL[cell.status] || String(cell.status);
+export const forecastNote = (cell) => FORECAST_NOTE[cell.status] || '';
 
 /* Signals & forecasts: what a row can say about an observation's value. The
  * statement is the observation's own (its FHIR interpretation, or a reference
@@ -56,7 +38,6 @@ export const RANGE = {
   outside: 'Outside supplied range',          // a source reading with no direction (A, AA)
   projectedAbove: 'Projected above supplied range',
   projectedBelow: 'Projected below supplied range',
-  carried: 'Carried forward',
   unavailable: 'Forecast unavailable',
 };
 
@@ -95,14 +76,11 @@ export function flagOf(row) {
  * a repeated observation a prediction. */
 export const FORECAST_STATE = {
   model: 'model',
-  persistence: 'carried forward',
-  abstained: 'carried forward — model abstained',
   missing: 'no value produced',
   degraded: 'withheld',
 };
 export function forecastState(cell) {
   if (!cell) return null;
-  if (isAbstained(cell)) return FORECAST_STATE.abstained;
   return FORECAST_STATE[cell.status] || cell.status;
 }
 
@@ -145,7 +123,7 @@ export const BUILDER = {
  * reader who does not see colour get the same distinction. */
 export const STATUS_MARK = {
   above: '▲', below: '▼', within: '●', outside: '◆', unsupplied: '◌', unit: '◌', none: '·',
-  projectedAbove: '△', projectedBelow: '▽', model: '◇', carried: '■', unavailable: '—', fresh: '✦',
+  projectedAbove: '△', projectedBelow: '▽', model: '◇', unavailable: '—', fresh: '✦',
 };
 export const DATA_VIEW = {
   title: 'Signals & forecasts',
@@ -181,10 +159,9 @@ export function fmtInterval(cell) {
   return `${fmtNum(cell.lower)}–${fmtNum(cell.upper)}`;
 }
 
-/* A forecast value as a reader should read it: an event cell is a probability. */
+/* A forecast value as a reader should read it. */
 export function fmtForecastValue(cell) {
   if (!cell || cell.forecast_point === null || cell.forecast_point === undefined) return 'null';
-  if (cell.target === 'hypoxemia_event' && cell.status === 'model') return `${(cell.forecast_point * 100).toFixed(1)}% probability`;
   return fmtNum(cell.forecast_point);
 }
 
@@ -201,7 +178,6 @@ export const TRAJECTORY = {
   cutoffSub: 'Model input cutoff',
   liveHead: 'LIVE HEAD',
   snapshot: 'HISTORICAL SNAPSHOT',
-  baselineOnly: 'Baseline only · not a model forecast',
   noModel: 'No forecast model for this metric',
   unavailable: 'Forecast unavailable',
   noRun: 'No model run yet',
