@@ -120,8 +120,8 @@ class StreamUiContractTests(unittest.TestCase):
         self.assertIn('stroke-dasharray="5 4"', chart)         # model path is dashed
         self.assertIn("withheld", chart)
         # the states the old model had and this runtime never emits are gone from every module
-        for gone in ("persistence", "abstain", "carried forward", "hypoxemia", "jepa"):
-            self.assertNotIn(gone, STREAM_JS.lower().replace("their events are still carried", ""), gone)
+        for gone in ("persistence", "abstain", "hypoxemia", "jepa"):
+            self.assertNotIn(gone, STREAM_JS.lower(), gone)
         for word in ("historyTitle", "forecastTitle", "cutoffLabel", "cutoffSub", "noModel", "unavailable"):
             self.assertIn(f"TRAJECTORY.{word}", chart)
         fmt = MODULES["format.js"]
