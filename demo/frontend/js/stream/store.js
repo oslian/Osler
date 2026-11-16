@@ -26,7 +26,9 @@ export const S = {
   runs: [],
   runInFlight: null,
   lastRunFailed: null,
-  view: 'anatomy',        // anatomy | functions | data | ward
+  view: 'anatomy',        // anatomy | functions | data | ward | scores
+  scores: null,           // /api/patients/<id>/forecast-scores payload
+  scoresError: null,
   // Ward attention order. Many stays, observations only: it shares nothing with
   // the session above it, which is why it survives an unattached runtime.
   ward: null,             // /api/ward payload

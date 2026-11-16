@@ -92,6 +92,7 @@ anatomy · organ signals · cells · run history · provenance drawer
 | `ingest.py` | validate → ledger (idempotent) → map → canonical row or mapping failure |
 | `timeline.py` | delivered timeline, per-variable state, organ state, the 6-hour anchor stream sent to the model, exact per-run replay |
 | `forecast_runtime.py` | the single runtime adapter: detached, or the forecast API over HTTP with fail-closed contract checks |
+| `scoring.py` | scores each anchor's newest forecast against the measurement the cells were fitted against, once it is final |
 | `session.py` | simulated arrival clock (1× / 5× / 20×), event bus, coalesced run scheduler |
 | `anatomy.py` + `organ_target_map.json` | the explicit organ ↔ variable ↔ cell map (anatomical organs only) |
 | `functions.py` + `functional_group_map_v1.json` | 11 clinical-function groups with primary / secondary / related splits and organ links |
@@ -140,6 +141,7 @@ GET    /api/patients/{id}/state           clocks, watermark, per-variable state,
 GET    /api/patients/{id}/timeline        the delivered timeline, or a run's exact inputs with ?run_id=
 GET    /api/patients/{id}/forecasts       cells for the live head, or ?run_id= for a historical anchor
 GET    /api/patients/{id}/forecast-history every run, newest first; ?cell= for one cell's history
+GET    /api/patients/{id}/forecast-scores  past forecasts against later measurements, with the carried-forward baseline
 GET    /api/patients/{id}/mapping-failures
 GET    /api/fhir/{type}/{id}/_history/{vid}   the raw resource from the ledger (provenance drawer)
 GET    /api/model/capabilities | health | anatomy | functions | mapping

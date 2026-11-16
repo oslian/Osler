@@ -10,7 +10,7 @@ from oslian_demo.config import (ANATOMY_ASSETS_DIR, CSS_DIR, FIXTURE_DIR, FRONTE
 HTML = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
 MODULES = {name: (JS_DIR / "stream" / name).read_text(encoding="utf-8")
            for name in ("api.js", "store.js", "anatomy.js", "chart.js", "render.js", "main.js", "format.js",
-                        "ward.js", "signals.js", "report.js")}
+                        "ward.js", "signals.js", "report.js", "scores.js")}
 STREAM_JS = "\n".join(MODULES.values())
 SHELL_JS = (JS_DIR / "shell.js").read_text(encoding="utf-8")
 STREAM_CSS = (CSS_DIR / "stream.css").read_text(encoding="utf-8")
@@ -95,7 +95,7 @@ class StreamUiContractTests(unittest.TestCase):
         self.assertIn(".dev-tools", STREAM_CSS)
 
     def test_three_level_navigation(self):
-        for view in ("anatomy", "functions", "data", "ward"):
+        for view in ("anatomy", "functions", "data", "ward", "scores"):
             self.assertIn(f"['{view}',", MODULES["render.js"])
         self.assertIn('data-act="open-metric"', MODULES["render.js"])
         self.assertIn('data-act="close-metric"', MODULES["render.js"])
@@ -1106,6 +1106,30 @@ class PrintContractTests(unittest.TestCase):
         self.assertIn(".ind-table, .ind-table tbody, .ind-table tr, .ind-table td { display: block", phone)
         self.assertIn(".ind-scroll { overflow: visible; }", phone)
         self.assertIn('.ind-row .range-cell::before { content: "Reference range · "', phone)
+
+
+class ScorecardContractTests(unittest.TestCase):
+    """The scorecard states facts about one stream and never reads as the model's accuracy."""
+
+    SCORES = MODULES["scores.js"]
+
+    def test_it_is_a_view_of_this_page_fed_by_one_endpoint(self):
+        self.assertIn("['scores', 'Scorecard']", MODULES["render.js"])
+        self.assertIn("/forecast-scores", MODULES["main.js"])
+        self.assertNotIn("fetch(", self.SCORES, "the view module never talks to the server")
+        self.assertNotIn("getJSON", self.SCORES)
+
+    def test_it_states_its_scope_and_puts_the_count_before_the_mean(self):
+        self.assertIn("It is not the model\\'s accuracy at a hospital.", self.SCORES)
+        self.assertIn("Read the count before the mean.", self.SCORES)
+        head = self.SCORES[self.SCORES.index('data-table="score-cells"'):]
+        self.assertLess(head.index("<th>Resolved</th>"), head.index("Mean abs. error · forecast"))
+
+    def test_the_baseline_stands_beside_the_forecast_and_nothing_is_judged(self):
+        self.assertIn("Mean abs. error · carried forward", self.SCORES)
+        self.assertIn("Carried forward − measured", self.SCORES)
+        for word in ("better", "worse", "beats", "wins", "accurate", "alert", "warning"):
+            self.assertNotIn(word, self.SCORES.split("*/", 1)[1].lower(), word)
 
 
 if __name__ == "__main__":

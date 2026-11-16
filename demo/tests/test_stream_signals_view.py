@@ -220,7 +220,7 @@ class IndicatorViewTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp(prefix="oslian-indicators-")
-        for name in ("store.js", "chart.js", "format.js", "render.js", "signals.js", "anatomy.js", "report.js", "ward.js"):
+        for name in ("store.js", "chart.js", "format.js", "render.js", "signals.js", "anatomy.js", "report.js", "ward.js", "scores.js"):
             shutil.copy(STREAM_JS / name, Path(cls.tmp) / name)
         (Path(cls.tmp) / "package.json").write_text('{"type": "module"}', encoding="utf-8")
         (Path(cls.tmp) / "probe.mjs").write_text(PROBE, encoding="utf-8")
