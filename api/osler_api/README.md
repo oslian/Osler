@@ -17,7 +17,8 @@ cd medical_jepa
 OSLER_API_ALLOWED_ORIGINS=https://your-site.example .venv/bin/uvicorn osler_api.app:app --host 127.0.0.1 --port 8000
 ```
 
-The server binds to this computer only. Interactive docs: `http://127.0.0.1:8000/docs`. Browser pages on other sites
+The server binds to this computer only. To serve another machine, set `OSLER_API_TOKEN` (callers then send
+`Authorization: Bearer <token>`) and put TLS in front; with no token set, callers from other machines get 403. Interactive docs: `http://127.0.0.1:8000/docs`. Browser pages on other sites
 can call it only if their origin is listed in `OSLER_API_ALLOWED_ORIGINS`. M's state lives in
 `OSLER_API_STATE` (default `osler_api_state/m_state.sqlite3`). It holds stay keys, pending forecasts and outcomes.
 Loading fails if any weight file, the registry, the frozen configurations or the scikit-learn version (1.7.2) differ

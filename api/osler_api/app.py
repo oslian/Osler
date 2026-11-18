@@ -3,17 +3,22 @@
 Cross-origin browser calls are allowed only from the origins listed in ``OSLER_API_ALLOWED_ORIGINS``
 (comma-separated); with none listed, only same-origin and server-to-server calls work.  M's per-hospital state is
 kept in SQLite at ``OSLER_API_STATE`` (default ``osler_api_state/m_state.sqlite3``).  Research-only.
+
+Callers must send ``Authorization: Bearer <OSLER_API_TOKEN>``.  With no token set, only callers on this computer are
+answered: requests carry patient measurements, so the API is never open to a network by default.
 """
 
 from __future__ import annotations
 
+import hmac
+import ipaddress
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -62,11 +67,29 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Osler forecast API", version="2.0.0", lifespan=lifespan,
+def is_loopback(host: str | None) -> bool:
+    try:
+        return ipaddress.ip_address(host or "").is_loopback
+    except ValueError:
+        return False
+
+
+def authorize(request: Request) -> None:
+    token = os.environ.get("OSLER_API_TOKEN", "")
+    if not token:
+        if not is_loopback(request.client.host if request.client else None):
+            raise HTTPException(status_code=403, detail="set OSLER_API_TOKEN to serve callers on other machines")
+        return
+    scheme, _, sent = request.headers.get("Authorization", "").partition(" ")
+    if scheme != "Bearer" or not hmac.compare_digest(sent.encode(), token.encode()):
+        raise HTTPException(status_code=401, detail="a valid bearer token is required", headers={"WWW-Authenticate": "Bearer"})
+
+
+app = FastAPI(title="Osler forecast API", version="2.0.0", lifespan=lifespan, dependencies=[Depends(authorize)],
               description="Research-only factual forecasts: the frozen expert cells, and the online marginal M with "
                           "per-hospital state.")
 origins = [origin.strip() for origin in os.environ.get("OSLER_API_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
 
 
 def timestamp(value: datetime) -> pd.Timestamp:

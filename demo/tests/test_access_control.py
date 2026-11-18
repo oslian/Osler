@@ -1,7 +1,10 @@
 """Access control, automatic logoff, the audit ledger and the fail-closed settings."""
 
+import io
 import os
+import re
 import sqlite3
+import tempfile
 import unittest
 from unittest import mock
 
@@ -11,6 +14,8 @@ os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 from oslian_demo.app import create_app  # noqa: E402
 from oslian_demo.config import AppConfig, SESSION_HOURS, external_llm_allowed  # noqa: E402
 from oslian_demo.medication import llm_client  # noqa: E402
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig  # noqa: E402
+from oslian_demo.shared import audit  # noqa: E402
 from oslian_demo.shared.audit import AuditLog  # noqa: E402
 
 OIDC = {"OSLIAN_STREAM_DB": ":memory:", "OSLIAN_AUTH": "oidc", "OSLIAN_PUBLIC_URL": "https://oslian.example.org",
@@ -37,6 +42,21 @@ class SettingsTests(unittest.TestCase):
             with self.assertRaises(ValueError, msg=bad):
                 AppConfig.from_env({**OIDC, **bad})
 
+    def test_patient_resources_are_not_printed_to_the_console_with_sign_in(self):
+        with self.assertRaises(ValueError):
+            AppConfig.from_env({**OIDC, "OSLIAN_STREAM_LOG_PAYLOAD": "full"})
+        AppConfig.from_env({"OSLIAN_STREAM_DB": ":memory:", "OSLIAN_STREAM_LOG_PAYLOAD": "full"})
+
+    def test_a_forecast_api_on_another_machine_needs_tls_and_a_token(self):
+        here = RuntimeConfig.from_env({"OSLIAN_FORECAST_RUNTIME": "api"})
+        self.assertEqual((here.api_url, here.api_token), ("http://127.0.0.1:8000", ""))
+        away = {"OSLIAN_FORECAST_RUNTIME": "api", "OSLIAN_FORECAST_API_URL": "https://forecast.example.org"}
+        for bad in (away, {**away, "OSLIAN_FORECAST_API_URL": "http://forecast.example.org", "OSLIAN_FORECAST_API_TOKEN": "t"}):
+            with self.assertRaises(ValueError, msg=bad):
+                RuntimeConfig.from_env(bad)
+        self.assertEqual(RuntimeConfig.from_env({**away, "OSLIAN_FORECAST_API_TOKEN": "t"}).api_token, "t")
+        RuntimeConfig.from_env({**away, "OSLIAN_FORECAST_RUNTIME": "detached"})
+
     def test_text_leaves_for_an_outside_model_only_when_allowed(self):
         self.assertTrue(external_llm_allowed({}))
         self.assertFalse(external_llm_allowed({"OSLIAN_AUTH": "oidc"}))
@@ -59,6 +79,28 @@ class AuditLedgerTests(unittest.TestCase):
                 log._conn.execute(statement)
         self.assertEqual([(r["actor"], r["patient_id"], r["status"]) for r in log.rows(patient_id="p1")], [("u1", "p1", 200)])
         self.assertEqual(log.rows(actor="nobody"), [])
+
+    def test_export_for_review(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "audit.sqlite3")
+            log = AuditLog(path)
+            for actor, patient in (("u1", "p1"), ("u2", "p1"), ("u1", "p2")):
+                log.record(actor=actor, actor_name=None, action="GET", path=f"/api/patients/{patient}/state",
+                           patient_id=patient, status=200, remote_addr="127.0.0.1")
+            log.close()
+            out = io.StringIO()
+            audit.main(["--db", path, "--patient", "p1"], out)
+            lines = out.getvalue().splitlines()
+            self.assertEqual(lines[0], "id,at,actor,actor_name,action,path,patient_id,status,remote_addr")
+            self.assertEqual([line.split(",")[2] for line in lines[1:]], ["u1", "u2"])
+            out = io.StringIO()
+            audit.main(["--db", path, "--since", "2999-01-01"], out)
+            self.assertEqual(len(out.getvalue().splitlines()), 1, "nothing that late")
+            out = io.StringIO()
+            audit.main(["--db", path, "--until", "2999-01-01", "--actor", "u1"], out)
+            self.assertEqual(len(out.getvalue().splitlines()), 3)
+            with self.assertRaises(SystemExit):
+                audit.main(["--db", os.path.join(folder, "missing.sqlite3")], io.StringIO())
 
 
 class LocalDemoTests(unittest.TestCase):
@@ -84,6 +126,25 @@ class LocalDemoTests(unittest.TestCase):
         self.assertNotIn("Strict-Transport-Security", api.headers)
         self.assertEqual(self.client.get("/").headers["Cache-Control"], "no-store")
         self.assertIn('data-idle-minutes="0"', self.client.get("/").get_data(as_text=True))
+
+    def test_scripts_run_only_from_this_site_or_with_the_pages_nonce(self):
+        first, second = self.client.get("/"), self.client.get("/")
+        policy = first.headers["Content-Security-Policy"]
+        nonce = re.search(r"script-src 'self' 'nonce-([A-Za-z0-9_-]{16,})' ", policy).group(1)
+        self.assertNotIn("'unsafe-inline'", policy.split("script-src")[1].split(";")[0])
+        self.assertNotIn("unsafe-eval", policy)
+        for part in ("default-src 'self'", "connect-src 'self'", "object-src 'none'", "frame-ancestors 'none'"):
+            self.assertIn(part, policy)
+        page = first.get_data(as_text=True)
+        inline = re.findall(r"<script(?![^>]*\bsrc=)([^>]*)>", page)
+        self.assertTrue(inline and all(f'nonce="{nonce}"' in attributes for attributes in inline), "every inline script has the nonce")
+        self.assertNotIn(nonce, second.headers["Content-Security-Policy"], "a new nonce per response")
+        outside = re.findall(r'<script[^>]*\bsrc="(https?://[^"]+)"([^>]*)>', page)
+        self.assertEqual(len(outside), 2)
+        for url, attributes in outside:
+            self.assertRegex(url, r"@\d+\.\d+\.\d+/", "a pinned version")
+            self.assertRegex(attributes, r'integrity="sha384-[A-Za-z0-9+/=]{64}" crossorigin="anonymous"')
+        self.assertIn("Content-Security-Policy", self.client.get("/api/demo-streams/sources").headers)
         with self.client.get("/static/js/access.js") as script:
             self.assertNotEqual(script.headers.get("Cache-Control"), "no-store")
 
@@ -137,6 +198,31 @@ class SignInTests(unittest.TestCase):
     def test_a_sign_in_without_a_subject_is_refused(self):
         self.assertEqual(self.sign_in({"name": "No Subject"}).status_code, 403)
         self.assertEqual(self.get("/api/ward").status_code, 401)
+
+    def test_only_the_allowed_group_may_sign_in(self):
+        app = create_app(AppConfig.from_env({**OIDC, "OSLIAN_OIDC_REQUIRED_GROUP": "icu-clinicians"}))
+        self.addCleanup(app.extensions["oslian_stream"].close)
+        idp = app.extensions["authlib.integrations.flask_client"].idp
+        for groups, status in ((["icu-clinicians", "staff"], 302), (["staff"], 403), (None, 403)):
+            client = app.test_client(use_cookies=True)
+            claims = {"sub": "u-17", "name": "Nurse One", **({"groups": groups} if groups is not None else {})}
+            with mock.patch.object(idp, "authorize_access_token", return_value={"userinfo": claims}):
+                self.assertEqual(client.get("/auth/callback", base_url="https://oslian.example.org").status_code, status, groups)
+            served = client.get("/api/ward", base_url="https://oslian.example.org").status_code
+            self.assertEqual(served, 200 if status == 302 else 401, groups)
+        rows = [(r["actor"], r["path"], r["status"]) for r in app.extensions["oslian_audit"].rows()]
+        self.assertIn(("u-17", "/auth/callback", 403), rows, "a refused sign-in names who tried")
+
+    def test_another_sites_page_cannot_send_a_request_as_the_user(self):
+        self.sign_in()
+        post = lambda origin: self.client.post("/api/demo-streams", json={"source": "synthetic"}, base_url="https://oslian.example.org",
+                                               headers={"Origin": origin} if origin else {}).status_code
+        self.assertEqual(post("https://elsewhere.example"), 403)
+        self.assertEqual(post("http://oslian.example.org"), 403)
+        self.assertNotEqual(post("https://oslian.example.org"), 403)
+        self.assertNotEqual(post(None), 403, "a server-side caller sends no Origin")
+        self.assertEqual(self.client.get("/api/ward", base_url="https://oslian.example.org",
+                                         headers={"Origin": "https://elsewhere.example"}).status_code, 200, "reads are not state changes")
 
     def test_an_idle_session_ends_and_activity_keeps_it(self):
         self.sign_in()

@@ -1,8 +1,10 @@
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import joblib
 import numpy as np
@@ -150,7 +152,8 @@ class HttpTests(unittest.TestCase):
         shutil.rmtree(cls.folder)
 
     def client(self):
-        client = TestClient(api.app)                       # not entered, so the lifespan does not load the real weights
+        # not entered, so the lifespan does not load the real weights; a caller on this computer
+        client = TestClient(api.app, client=("127.0.0.1", 50000))
         api.app.state.expert = self.model
         return client
 
@@ -179,6 +182,27 @@ class HttpTests(unittest.TestCase):
         response = self.client().options("/v1/expert/forecast", headers={
             "Origin": "https://elsewhere.example", "Access-Control-Request-Method": "POST"})
         self.assertNotIn("access-control-allow-origin", response.headers)
+
+    def test_without_a_token_only_this_computer_is_answered(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("OSLER_API_TOKEN", None)
+            self.assertEqual(self.client().get("/v1/expert/cells").status_code, 200)
+            api.app.state.expert = self.model
+            for host in ("10.0.0.7", "testclient"):
+                away = TestClient(api.app, client=(host, 50000))
+                self.assertEqual(away.get("/v1/expert/cells").status_code, 403, host)
+                self.assertEqual(away.get("/health").status_code, 403, host)
+
+    def test_with_a_token_every_caller_must_send_it(self):
+        with mock.patch.dict(os.environ, {"OSLER_API_TOKEN": "t" * 40}):
+            for client in (self.client(), TestClient(api.app, client=("10.0.0.7", 50000))):
+                self.assertEqual(client.get("/v1/expert/cells").status_code, 401)
+                self.assertEqual(client.post("/v1/expert/forecast", json=self.body()).status_code, 401)
+                for bad in ("Bearer wrong", "Basic " + "t" * 40, "t" * 40, "Bearer"):
+                    self.assertEqual(client.get("/v1/expert/cells", headers={"Authorization": bad}).status_code, 401, bad)
+                good = {"Authorization": "Bearer " + "t" * 40}
+                self.assertEqual(client.get("/v1/expert/cells", headers=good).status_code, 200)
+                self.assertEqual(client.post("/v1/expert/forecast", json=self.body(), headers=good).status_code, 200)
 
     def test_cells_endpoint_lists_inputs(self):
         listing = self.client().get("/v1/expert/cells").json()

@@ -3,14 +3,22 @@
 One row per API request and per sign-in event, in its own SQLite file so it can be retained and reviewed apart from
 the clinical ledger. Rows are append-only: the schema rejects UPDATE and DELETE. Request bodies and query strings are
 never recorded; they can hold patient text or a key.
+
+Review: ``python -m oslian_demo.shared.audit --patient <id>`` (or ``--actor``, ``--since``, ``--until``) writes the
+matching rows as CSV, for example to answer who opened a patient's record.
 """
 
 from __future__ import annotations
 
+import argparse
+import csv
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+import sys
 import threading
+
+from ..config import AppConfig
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS access_audit (
@@ -54,13 +62,14 @@ class AuditLog:
                 "INSERT INTO access_audit (at, actor, actor_name, action, path, patient_id, status, remote_addr) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (at, actor, actor_name, action, path, patient_id, status, remote_addr))
 
-    def rows(self, *, patient_id: str | None = None, actor: str | None = None) -> list[dict]:
-        """For review and tests, oldest first."""
+    def rows(self, *, patient_id: str | None = None, actor: str | None = None, since: str | None = None,
+             until: str | None = None) -> list[dict]:
+        """For review, oldest first. ``since`` (inclusive) and ``until`` (exclusive) are UTC ISO times or dates."""
 
         where, values = [], []
-        for column, value in (("patient_id", patient_id), ("actor", actor)):
+        for clause, value in (("patient_id = ?", patient_id), ("actor = ?", actor), ("at >= ?", since), ("at < ?", until)):
             if value is not None:
-                where.append(f"{column} = ?")
+                where.append(clause)
                 values.append(value)
         sql = "SELECT * FROM access_audit" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY id"
         with self._lock:
@@ -69,3 +78,28 @@ class AuditLog:
     def close(self) -> None:
         with self._lock:
             self._conn.close()
+
+
+COLUMNS = ("id", "at", "actor", "actor_name", "action", "path", "patient_id", "status", "remote_addr")
+
+
+def main(argv: list[str] | None = None, out=None) -> None:
+    parser = argparse.ArgumentParser(description="Write access audit rows as CSV.")
+    parser.add_argument("--db", type=Path, default=None, help="the audit ledger (default: OSLIAN_AUDIT_DB)")
+    parser.add_argument("--patient")
+    parser.add_argument("--actor")
+    parser.add_argument("--since", help="UTC ISO time or date, inclusive")
+    parser.add_argument("--until", help="UTC ISO time or date, exclusive")
+    args = parser.parse_args(argv)
+    path = args.db or AppConfig.from_env().audit_db
+    if not Path(path).is_file():
+        parser.error(f"no audit ledger at {path}")
+    log = AuditLog(path)
+    writer = csv.DictWriter(out or sys.stdout, fieldnames=COLUMNS, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(log.rows(patient_id=args.patient, actor=args.actor, since=args.since, until=args.until))
+    log.close()
+
+
+if __name__ == "__main__":
+    main()

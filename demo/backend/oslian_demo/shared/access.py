@@ -8,13 +8,17 @@ user's subject, display name and two timestamps, nothing clinical.
 With ``OSLIAN_AUTH=off`` nothing is asked of the user and the actor is ``local-demo``; ``AppConfig`` allows that on
 loopback only. The audit ledger is written in both modes.
 
-Authorisation is one level: a signed-in user sees every patient the server holds. Roles and per-patient access are
-not implemented.
+Authorisation is one level: a signed-in user sees every patient the server holds. ``OSLIAN_OIDC_REQUIRED_GROUP`` narrows
+who may sign in to one group of the provider's directory. Roles and per-patient access are not implemented.
+
+Every page carries a Content Security Policy: scripts run only from this site, from the two pinned library files, or
+with the response's nonce.
 """
 
 from __future__ import annotations
 
 from datetime import timedelta
+import secrets
 import time
 
 from flask import Flask, g, jsonify, redirect, request, session
@@ -24,6 +28,13 @@ from .audit import AuditLog
 
 LOCAL_ACTOR = "local-demo"
 OPEN_ENDPOINTS = frozenset({"access_login", "access_callback", "access_logout", "static"})
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+# The page's own scripts carry the nonce; marked and vis-network come from two CDNs, pinned by integrity hash in
+# index.html. Inline style attributes are used throughout the page, so styles stay 'unsafe-inline'.
+CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com; "
+                           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+                           "img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; "
+                           "form-action 'self'; frame-ancestors 'none'")
 SIGNED_OUT_PAGE = ('<!doctype html><meta charset="utf-8"><title>Signed out</title>'
                    '<p style="font:16px sans-serif;margin:3rem">You are signed out. <a href="/login">Sign in</a></p>')
 
@@ -53,6 +64,9 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
             claims = oauth.idp.authorize_access_token().get("userinfo") or {}
             if not claims.get("sub"):
                 return jsonify({"error": "the identity provider returned no subject"}), 403
+            g.actor, g.actor_name = str(claims["sub"]), claims.get("name")
+            if config.required_group and config.required_group not in (claims.get("groups") or []):
+                return jsonify({"error": "this account is not in the group allowed to use Oslian"}), 403
             now = time.time()
             session.clear()
             session.permanent = True
@@ -70,8 +84,12 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
     @app.before_request
     def require_user():
         g.actor, g.actor_name = (None, None) if signed_in else (LOCAL_ACTOR, None)
+        g.csp_nonce = secrets.token_urlsafe(16)
         if not signed_in or request.endpoint in OPEN_ENDPOINTS:
             return None
+        # A browser names the page that sent a state-changing request; another site's page may not send ours.
+        if request.method not in SAFE_METHODS and request.headers.get("Origin", config.public_url) != config.public_url:
+            return jsonify({"error": "cross-site request refused"}), 403
         now = time.time()
         expired = (now - session.get("seen_at", 0) > idle_seconds or now - session.get("login_at", 0) > SESSION_HOURS * 3600)
         if not session.get("sub") or expired:
@@ -88,6 +106,7 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY.format(nonce=g.get("csp_nonce", "")))
         if request.endpoint != "static":                       # pages and API answers can hold patient data
             response.headers["Cache-Control"] = "no-store"
         if signed_in and config.public_url.startswith("https://"):
@@ -100,5 +119,5 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
 
     @app.context_processor
     def page_context():
-        return {"signed_in_user": session.get("name") if signed_in else None,
+        return {"csp_nonce": g.csp_nonce, "signed_in_user": session.get("name") if signed_in else None,
                 "idle_minutes": config.idle_minutes if signed_in else 0}

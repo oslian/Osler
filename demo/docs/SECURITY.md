@@ -17,6 +17,12 @@ part of them.
 | No patient text to outside vendors by default | With sign-in on, Medication Safety does not send text to OpenAI or Gemini unless `OSLIAN_EXTERNAL_LLM=on`; it falls back to rule-based parsing. Turn it on only for a vendor under a business associate agreement. | §164.308(b), §164.502(e) |
 | Session cookie | Signed, `Secure`, `HttpOnly`, `SameSite=Lax`; holds the user's subject, display name and two timestamps. | §164.312(c), §164.312(e) |
 | Response headers | `Cache-Control: no-store` on pages and API answers, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and HSTS when served over https. | §164.312(e) |
+| Sign-in limited to one group | With `OSLIAN_OIDC_REQUIRED_GROUP` set, only a user whose `groups` claim holds that value gets a session; a refused sign-in is audited with the user's subject. | §164.312(a)(1), §164.308(a)(4) |
+| Content Security Policy | Scripts run only from this site, with the response's nonce, or from the two library files (marked 15.0.12, vis-network 10.1.5), which are pinned by SHA-384 integrity hash. No `unsafe-inline` or `unsafe-eval` for scripts. Connections go only to this site. | §164.312(c)(1) |
+| Cross-site requests refused | With sign-in on, a state-changing request whose `Origin` is not `OSLIAN_PUBLIC_URL` gets 403. | §164.312(c)(1) |
+| Forecast API token | The API in `api/` answers only callers on its own computer unless `OSLER_API_TOKEN` is set, and then only callers that send it. The demo sends `OSLIAN_FORECAST_API_TOKEN`, and refuses a forecast API on another machine without https and a token. | §164.312(d), §164.312(e) |
+| Console log | With sign-in on, `OSLIAN_STREAM_LOG_PAYLOAD=full` is refused at start: it would print patient resources. | §164.312(b) |
+| Audit review | `python -m oslian_demo.shared.audit --patient <id>` (or `--actor`, `--since`, `--until`) writes the matching audit rows as CSV, for example to answer who opened a patient's record. | §164.308(a)(1)(ii)(D), §164.528 |
 
 Code: `backend/oslian_demo/shared/access.py`, `shared/audit.py`, `config.py`. Tests: `tests/test_access_control.py`.
 
@@ -32,21 +38,23 @@ The round trip to a real identity provider has not been exercised: the tests rep
 
 Technical:
 
-- **Authorization is one level.** A signed-in user sees every patient the server holds. There are no roles, no
-  per-patient or per-unit access, and no emergency ("break glass") access procedure (§164.312(a)(2)(ii)).
-- **No encryption at rest in the application.** The SQLite ledgers are plain files; a deployment must put `var/` on an
-  encrypted volume (§164.312(a)(2)(iv)).
+- **Authorization is one level.** A signed-in user (in the required group, if one is set) sees every patient the
+  server holds. There are no roles and no per-patient or per-unit access. Per-patient access needs the hospital's
+  record of who treats whom, which arrives with an EHR launch (SMART on FHIR) and is not connected. No emergency
+  ("break glass") procedure (§164.312(a)(2)(ii)).
+- **No encryption at rest in the application.** The SQLite ledgers are plain files; a deployment must put `var/` and
+  the API's state folder on an encrypted volume (§164.312(a)(2)(iv)).
 - **TLS is the proxy's job.** The built-in server speaks plain HTTP and is a development server; a deployment needs a
   production WSGI server behind the proxy.
-- **The forecast API in `api/` has no authentication.** It must stay on loopback or a private network beside the demo.
-- **Third-party scripts and fonts load from public CDNs without integrity hashes**, and there is no Content Security
-  Policy (the page uses inline scripts).
-- **The console event log can print resource payloads** (`OSLIAN_STREAM_LOG_PAYLOAD=full`); keep it on `summary`.
-- **No rate limiting, no CSRF token** (the cookie's `SameSite=Lax` is the only cross-site protection), no single
-  sign-out at the provider.
-- **Audit review and retention are not built.** Rows are kept for good and nothing reads them; HIPAA expects regular
-  review (§164.308(a)(1)(ii)(D)) and six years of retention for documentation.
+- **The forecast API token is one shared secret.** There is no per-caller identity, rotation or audit ledger in the
+  API. With no token it trusts any caller on its own computer, which includes a proxy running there.
+- **Fonts load from Google Fonts**, so a user's browser contacts Google on each page load. Styles allow
+  `unsafe-inline` because the page sets inline style attributes.
+- **No rate limiting.** No single sign-out at the provider.
+- **Audit retention and scheduled review are not built.** Rows are kept for good; review is the manual export above.
+  HIPAA expects regular review and six years of retention for documentation.
 - **No backup, no restore test, no integrity check of the ledgers.**
+- **Not verified:** the round trip to a real identity provider, and the browser's idle timer.
 
 Organizational (no code can supply these):
 

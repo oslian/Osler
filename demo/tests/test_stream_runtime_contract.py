@@ -38,6 +38,7 @@ class StubApi:
         self.forecast_status = 200
         self.edit = lambda reply: reply
         self.requests: list[dict] = []
+        self.authorizations: list[str | None] = []
         stub = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -53,6 +54,7 @@ class StubApi:
                 self.wfile.write(data)
 
             def do_GET(self):
+                stub.authorizations.append(self.headers.get("Authorization"))
                 self._send(200, {"cells": stub.cells, "model": {"registry_sha256": stub.registry_sha256}})
 
             def do_POST(self):
@@ -140,6 +142,11 @@ class AttachedRuntimeTests(unittest.TestCase):
 
     def tearDown(self):
         self.api.close()
+
+    def test_the_api_token_is_sent_when_one_is_set(self):
+        self.runtime.health()
+        ForecastRuntime(RuntimeConfig("api", self.api.url, "secret-token")).health()
+        self.assertEqual(self.api.authorizations, [None, "Bearer secret-token"])
 
     def test_a_run_sends_the_anchor_stream_and_normalizes_every_cell(self):
         result = self.runtime.run(model_input(), STATE)
