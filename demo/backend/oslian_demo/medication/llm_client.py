@@ -19,6 +19,8 @@ from __future__ import annotations
 import os
 from typing import List, Dict, Tuple, Optional
 
+from ..config import external_llm_allowed
+
 _NO_KEY_MSG = (
     "ℹ️ No LLM key configured — chat is in fallback mode. The reasoning graph on the "
     "right is fully computed by the symbolic engine and remains valid.\n\n"
@@ -32,6 +34,8 @@ def resolve_provider(provider: Optional[str] = None) -> str:
 
 
 def resolve_key(provider: str, api_key: Optional[str] = None) -> Optional[str]:
+    if not external_llm_allowed():                    # no key, so every caller takes its deterministic fallback
+        return None
     if api_key:
         return api_key.strip()
     return os.environ.get("GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY")

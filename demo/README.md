@@ -283,6 +283,13 @@ never hold a real key.
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
 | `OSLIAN_FORECAST_RUNTIME` | `detached`, `api` | `detached` |
 | `OSLIAN_FORECAST_API_URL` | the forecast API in `api/` | `http://127.0.0.1:8000` |
+| `OSLIAN_AUTH` | `off`, `oidc` (see [docs/SECURITY.md](docs/SECURITY.md)); `off` binds to loopback only | `off` |
+| `OSLIAN_PUBLIC_URL` | the https origin users open; required with `oidc` | — |
+| `OSLIAN_OIDC_ISSUER` / `OSLIAN_OIDC_CLIENT_ID` / `OSLIAN_OIDC_CLIENT_SECRET` | the identity provider; required with `oidc` | — |
+| `OSLIAN_SESSION_SECRET` | signs the session cookie, at least 32 characters; required with `oidc` | — |
+| `OSLIAN_IDLE_MINUTES` | automatic logoff after this long idle | `15` |
+| `OSLIAN_AUDIT_DB` | SQLite access audit ledger | `var/oslian_audit.sqlite3` |
+| `OSLIAN_EXTERNAL_LLM` | `on`, `off`: may text leave for OpenAI or Gemini | `on` without sign-in, `off` with it |
 | `OSLIAN_EPIC_PRIVATE_KEY_PEM` | referenced by name only; never read | — |
 | `OSLIAN_PYTHON` | interpreter the PowerShell scripts use | `python` |
 | `LLM_PROVIDER` | `openai`, `gemini` | `openai` |
