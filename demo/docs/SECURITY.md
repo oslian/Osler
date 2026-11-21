@@ -22,15 +22,24 @@ part of them.
 | Cross-site requests refused | With sign-in on, a state-changing request whose `Origin` is not `OSLIAN_PUBLIC_URL` gets 403. | §164.312(c)(1) |
 | Forecast API token | The API in `api/` answers only callers on its own computer unless `OSLER_API_TOKEN` is set, and then only callers that send it. The demo sends `OSLIAN_FORECAST_API_TOKEN`, and refuses a forecast API on another machine without https and a token. | §164.312(d), §164.312(e) |
 | Console log | With sign-in on, `OSLIAN_STREAM_LOG_PAYLOAD=full` is refused at start: it would print patient resources. | §164.312(b) |
-| Audit review | `python -m oslian_demo.shared.audit --patient <id>` (or `--actor`, `--since`, `--until`) writes the matching audit rows as CSV, for example to answer who opened a patient's record. | §164.308(a)(1)(ii)(D), §164.528 |
+| Audit review | `python -m oslian_demo.shared.audit --patient <id>` (or `--actor`, `--since`, `--until`) writes the matching audit rows as CSV, for example to answer who opened a patient's record. `--summary` writes one line per user for a period: requests, patients opened, refused requests. | §164.308(a)(1)(ii)(D), §164.528 |
+| Audit integrity | Each audit row carries a SHA-256 over its fields and the row before it. `python -m oslian_demo.shared.audit --verify` recomputes the chain and names the first row that was changed, inserted or removed. | §164.312(c)(1), §164.312(b) |
+| Backup and restore test | `python -m oslian_demo.shared.backup --to <folder>` copies both ledgers while the server runs (SQLite online backup), checks each copy, and writes a manifest with sizes, SHA-256, row counts and the audit chain's last hash. `--check <manifest>` verifies an existing backup the same way. | §164.308(a)(7)(ii)(A), §164.308(a)(7)(ii)(D) |
+| Rate limits | With sign-in on: 600 requests a minute per user on the API, 20 a minute per address on the sign-in routes; over that the answer is 429, and it is audited. | — |
+| Production server | `python -m oslian_demo` runs Waitress, not Flask's development server. | — |
+| Client address behind the proxy | With `OSLIAN_TRUSTED_PROXY` set to the proxy's address, the audit records the address the proxy forwards; forwarded headers from any other sender are ignored. | §164.312(b) |
 
-Code: `backend/oslian_demo/shared/access.py`, `shared/audit.py`, `config.py`. Tests: `tests/test_access_control.py`.
+Code: `backend/oslian_demo/shared/access.py`, `shared/audit.py`, `shared/backup.py`, `config.py`, `__main__.py`. Tests: `tests/test_access_control.py`.
 
 ## Turning sign-in on
 
 Register the demo with the identity provider as a confidential web client with the redirect URI
 `<OSLIAN_PUBLIC_URL>/auth/callback` and the scopes `openid profile email`, then set the variables under "access" in
-`.env.example`. Serve it behind a TLS-terminating proxy at `OSLIAN_PUBLIC_URL`.
+`.env.example`. Serve it behind a TLS-terminating proxy at `OSLIAN_PUBLIC_URL`, and set `OSLIAN_TRUSTED_PROXY` to
+that proxy's address.
+
+An audit ledger made before the hash chain was added has no `chain` column and is not read by this version; start
+with a new file.
 
 The round trip to a real identity provider has not been exercised: the tests replace the provider's answer.
 
@@ -44,17 +53,25 @@ Technical:
   ("break glass") procedure (§164.312(a)(2)(ii)).
 - **No encryption at rest in the application.** The SQLite ledgers are plain files; a deployment must put `var/` and
   the API's state folder on an encrypted volume (§164.312(a)(2)(iv)).
-- **TLS is the proxy's job.** The built-in server speaks plain HTTP and is a development server; a deployment needs a
-  production WSGI server behind the proxy.
+- **TLS is the proxy's job.** Waitress speaks plain HTTP; a deployment puts a TLS-terminating proxy in front and
+  sets `OSLIAN_TRUSTED_PROXY`.
 - **The forecast API token is one shared secret.** There is no per-caller identity, rotation or audit ledger in the
   API. With no token it trusts any caller on its own computer, which includes a proxy running there.
 - **Fonts load from Google Fonts**, so a user's browser contacts Google on each page load. Styles allow
   `unsafe-inline` because the page sets inline style attributes.
-- **No rate limiting.** No single sign-out at the provider.
-- **Audit retention and scheduled review are not built.** Rows are kept for good; review is the manual export above.
-  HIPAA expects regular review and six years of retention for documentation.
-- **No backup, no restore test, no integrity check of the ledgers.**
-- **Not verified:** the round trip to a real identity provider, and the browser's idle timer.
+- **Rate limits are counted in one process's memory.** They reset on restart and are not shared between several
+  server processes; limits against a flood belong on the proxy as well. No single sign-out at the provider.
+- **Audit review is not scheduled, and nothing is alerted.** The summary and the chain check are commands a person
+  (or a scheduled job the deployment sets up) has to run. Rows are never deleted; keeping six years means keeping the
+  file and its backups.
+- **The audit chain shows tampering inside the file only.** Someone who can rewrite the whole file can rewrite the
+  chain, and rows removed from the end leave a valid shorter chain. The defense is the last hash recorded in a backup
+  kept on another machine; sending it there is not automated.
+- **Backups are not scheduled, not encrypted and not sent anywhere.** The command writes plain copies to a folder;
+  the deployment has to put that folder on an encrypted volume on another machine and run the command on a schedule.
+  The forecast API's state folder is not covered.
+- **Not verified:** the round trip to a real identity provider. The browser's idle timer is tested under Node with a
+  stand-in page and clock, not in a real browser with sign-in on.
 
 Organizational (no code can supply these):
 

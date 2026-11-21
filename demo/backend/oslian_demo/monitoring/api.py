@@ -160,7 +160,7 @@ def create_blueprint(service: StreamService) -> Blueprint:
         except ValueError:
             last_sequence = 0
         return Response(_sse(service, session, last_sequence), mimetype="text/event-stream",
-                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
+                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     # ---- patients -------------------------------------------------------------
     def _patient_context(patient_id: str):
