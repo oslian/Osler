@@ -52,6 +52,9 @@ package.
 
 ## The test suite
 
+GitHub Actions runs it on every push to `main` and every pull request (`.github/workflows/tests.yml`), on Python
+3.11 and 3.14, together with the forecast API's tests.
+
 | File | Covers |
 |---|---|
 | `tests/test_shared_ontology.py` | the state vocabulary this repository owns matches the knowledge files exactly |

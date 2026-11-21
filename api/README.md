@@ -22,12 +22,13 @@ break those bindings, so this snapshot lives beside them. Nothing in `osler/`, `
 
 ```bash
 cd api
+python -m pip install -r requirements.txt
 python -m unittest test_osler_api test_adaptive_cell_weights
 uvicorn osler_api.app:app --host 127.0.0.1 --port 8000
 ```
 
-Needs Python with the packages the modules import (fastapi, pydantic, scikit-learn in the version the manifests name,
-pandas, numpy, pyarrow, joblib, duckdb). Run from this folder: paths are relative to it. The state database
+Install the packages with `python -m pip install -r requirements.txt` (scikit-learn is pinned to the version the
+manifests name). Run from this folder: paths are relative to it. The state database
 (`osler_api_state/`) is created on first use and is not tracked.
 
 ## Known limits
