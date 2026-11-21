@@ -299,9 +299,11 @@ never hold a real key.
 | `OSLIAN_STREAM_LOG_PAYLOAD` | `summary`, `full` | `summary` |
 | `OSLIAN_FORECAST_RUNTIME` | `detached`, `api` | `detached` |
 | `OSLIAN_FORECAST_API_URL` | the forecast API in `api/` | `http://127.0.0.1:8000` |
+| `OSLIAN_FORECAST_API_TOKEN` | the API's `OSLER_API_TOKEN`; required, with https, unless the API is on this computer | — |
 | `OSLIAN_AUTH` | `off`, `oidc` (see [docs/SECURITY.md](docs/SECURITY.md)); `off` binds to loopback only | `off` |
 | `OSLIAN_PUBLIC_URL` | the https origin users open; required with `oidc` | — |
 | `OSLIAN_OIDC_ISSUER` / `OSLIAN_OIDC_CLIENT_ID` / `OSLIAN_OIDC_CLIENT_SECRET` | the identity provider; required with `oidc` | — |
+| `OSLIAN_OIDC_REQUIRED_GROUP` | only users whose `groups` claim holds this may sign in | anyone the provider admits |
 | `OSLIAN_SESSION_SECRET` | signs the session cookie, at least 32 characters; required with `oidc` | — |
 | `OSLIAN_IDLE_MINUTES` | automatic logoff after this long idle | `15` |
 | `OSLIAN_AUDIT_DB` | SQLite access audit ledger | `var/oslian_audit.sqlite3` |

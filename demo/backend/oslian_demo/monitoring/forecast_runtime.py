@@ -39,9 +39,10 @@ import os
 import time
 from typing import Any
 import urllib.error
+from urllib.parse import urlsplit
 import urllib.request
 
-from ..config import FORECAST_CONTRACT_FIXTURE as CONTRACT_FIXTURE
+from ..config import FORECAST_CONTRACT_FIXTURE as CONTRACT_FIXTURE, is_loopback
 from .fhir import parse_instant
 from .timeline import EPISODE_MAX_HOURS, ModelInput
 
@@ -71,6 +72,16 @@ NOT_SHOWN: dict[str, str] = {
 class RuntimeConfig:
     mode: str
     api_url: str
+    api_token: str = ""
+
+    def __post_init__(self) -> None:
+        # Requests carry patient measurements: beyond this computer they go over TLS, to an API that asks for a token.
+        parts = urlsplit(self.api_url)
+        if self.mode == MODE_API and not is_loopback(parts.hostname or ""):
+            if parts.scheme != "https":
+                raise ValueError("OSLIAN_FORECAST_API_URL must be https unless the API runs on this computer")
+            if not self.api_token:
+                raise ValueError("OSLIAN_FORECAST_API_TOKEN is required unless the API runs on this computer")
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "RuntimeConfig":
@@ -78,7 +89,8 @@ class RuntimeConfig:
         mode = env.get("OSLIAN_FORECAST_RUNTIME", MODE_DETACHED).strip().lower()
         if mode not in {MODE_DETACHED, MODE_API}:
             raise ValueError("OSLIAN_FORECAST_RUNTIME must be 'detached' or 'api'")
-        return cls(mode=mode, api_url=env.get("OSLIAN_FORECAST_API_URL", "http://127.0.0.1:8000").rstrip("/"))
+        return cls(mode=mode, api_url=env.get("OSLIAN_FORECAST_API_URL", "http://127.0.0.1:8000").rstrip("/"),
+                   api_token=env.get("OSLIAN_FORECAST_API_TOKEN", ""))
 
 
 @dataclass(frozen=True)
@@ -117,7 +129,8 @@ class ForecastRuntime:
         request = urllib.request.Request(
             self.config.api_url + path, method="POST" if body is not None else "GET",
             data=json.dumps(body).encode("utf-8") if body is not None else None,
-            headers={"Content-Type": "application/json"})
+            headers={"Content-Type": "application/json",
+                     **({"Authorization": f"Bearer {self.config.api_token}"} if self.config.api_token else {})})
         try:
             with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))

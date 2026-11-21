@@ -24,10 +24,12 @@ Environment variables (all optional; see ``.env.example``):
     OSLIAN_STREAM_LOG_PAYLOAD       summary|full                (summary)
     OSLIAN_FORECAST_RUNTIME         detached|api                (detached)
     OSLIAN_FORECAST_API_URL         the forecast API in api/    (http://127.0.0.1:8000)
+    OSLIAN_FORECAST_API_TOKEN       its OSLER_API_TOKEN; required, with https, unless the API is on this computer
     OSLIAN_AUTH                     off|oidc                    (off; off binds to loopback only)
     OSLIAN_PUBLIC_URL               the https origin users open (required with oidc)
     OSLIAN_OIDC_ISSUER              the identity provider's issuer URL (required with oidc)
     OSLIAN_OIDC_CLIENT_ID / OSLIAN_OIDC_CLIENT_SECRET          (required with oidc)
+    OSLIAN_OIDC_REQUIRED_GROUP      only users whose "groups" claim holds this may sign in  (anyone the provider admits)
     OSLIAN_SESSION_SECRET           signs the session cookie, >= 32 characters (required with oidc)
     OSLIAN_IDLE_MINUTES             automatic logoff after this long idle      (15)
     OSLIAN_AUDIT_DB                 SQLite access audit ledger  (var/oslian_audit.sqlite3)
@@ -108,6 +110,7 @@ class AppConfig:
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
     session_secret: str = ""
+    required_group: str = ""
 
     def __post_init__(self) -> None:
         if self.auth not in ("off", "oidc"):
@@ -134,6 +137,8 @@ class AppConfig:
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "AppConfig":
         env = os.environ if env is None else env
+        if env.get("OSLIAN_AUTH", "off") != "off" and env.get("OSLIAN_STREAM_LOG_PAYLOAD", "summary") == "full":
+            raise ValueError("OSLIAN_STREAM_LOG_PAYLOAD=full would print patient resources to the console; use summary with sign-in")
         stream_db = env.get("OSLIAN_STREAM_DB") or DEFAULT_STREAM_DB
         # a ledger kept in memory (the tests) gets an audit ledger in memory too
         audit_db = env.get("OSLIAN_AUDIT_DB") or (":memory:" if str(stream_db) == ":memory:" else DEFAULT_AUDIT_DB)
@@ -147,4 +152,5 @@ class AppConfig:
                    oidc_issuer=env.get("OSLIAN_OIDC_ISSUER", "").rstrip("/"),
                    oidc_client_id=env.get("OSLIAN_OIDC_CLIENT_ID", ""),
                    oidc_client_secret=env.get("OSLIAN_OIDC_CLIENT_SECRET", ""),
-                   session_secret=env.get("OSLIAN_SESSION_SECRET", ""))
+                   session_secret=env.get("OSLIAN_SESSION_SECRET", ""),
+                   required_group=env.get("OSLIAN_OIDC_REQUIRED_GROUP", ""))
