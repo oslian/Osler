@@ -7,6 +7,9 @@ but this app object:
     monitoring.api      Monitoring — synthetic FHIR R4 stream and replay
     monitoring.ward     Ward attention order — observations only, no runtime
 
+``shared.access`` sits in front of all of them: sign-in when the deployment turns
+it on, automatic logoff, and one audit row per API request (``shared.audit``).
+
 The browser assets are not package data: Flask serves the sibling ``frontend/``
 tree as both its static folder and its template folder, so the front end stays
 one obvious directory rather than something buried inside the Python package.
@@ -22,6 +25,8 @@ from .config import AppConfig, FRONTEND_DIR
 from .medication import routes as medication_routes
 from .monitoring.api import StreamService, create_blueprint as create_monitoring_blueprint
 from .monitoring.ward import create_blueprint as create_ward_blueprint
+from .shared.access import init_access
+from .shared.audit import AuditLog
 
 
 def create_app(config: AppConfig | None = None, stream_service: StreamService | None = None) -> Flask:
@@ -34,6 +39,10 @@ def create_app(config: AppConfig | None = None, stream_service: StreamService | 
 
     service = stream_service or StreamService(db_path=config.stream_db)
     app.extensions["oslian_stream"] = service
+
+    audit = AuditLog(config.audit_db)
+    app.extensions["oslian_audit"] = audit
+    init_access(app, config, audit)
 
     app.register_blueprint(medication_routes.bp)
     app.register_blueprint(create_monitoring_blueprint(service))

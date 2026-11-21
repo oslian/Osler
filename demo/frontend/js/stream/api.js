@@ -2,8 +2,14 @@
  * every control action is a REST call. Reconnects carry Last-Event-ID
  * automatically; a page reload passes the last known sequence explicitly. */
 
+/* 401 means the session ended (signed out, or idle too long): go and sign in again. */
+function signInIfEnded(r) {
+  if (r.status === 401) window.location.assign('/login');
+  return r;
+}
+
 export async function getJSON(url) {
-  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  const r = signInIfEnded(await fetch(url, { headers: { Accept: 'application/json' } }));
   const ct = r.headers.get('content-type') || '';
   const body = ct.includes('application/json') ? await r.json() : null;
   if (!r.ok && !(r.status === 503 && body)) {
@@ -15,10 +21,10 @@ export async function getJSON(url) {
 }
 
 export async function postJSON(url, payload) {
-  const r = await fetch(url, {
+  const r = signInIfEnded(await fetch(url, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: payload === undefined ? undefined : JSON.stringify(payload),
-  });
+  }));
   const body = await r.json().catch(() => null);
   if (!r.ok) throw new Error((body && body.error) || `${r.status} ${r.statusText} for ${url}`);
   return body;

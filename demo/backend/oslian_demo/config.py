@@ -24,6 +24,14 @@ Environment variables (all optional; see ``.env.example``):
     OSLIAN_STREAM_LOG_PAYLOAD       summary|full                (summary)
     OSLIAN_FORECAST_RUNTIME         detached|api                (detached)
     OSLIAN_FORECAST_API_URL         the forecast API in api/    (http://127.0.0.1:8000)
+    OSLIAN_AUTH                     off|oidc                    (off; off binds to loopback only)
+    OSLIAN_PUBLIC_URL               the https origin users open (required with oidc)
+    OSLIAN_OIDC_ISSUER              the identity provider's issuer URL (required with oidc)
+    OSLIAN_OIDC_CLIENT_ID / OSLIAN_OIDC_CLIENT_SECRET          (required with oidc)
+    OSLIAN_SESSION_SECRET           signs the session cookie, >= 32 characters (required with oidc)
+    OSLIAN_IDLE_MINUTES             automatic logoff after this long idle      (15)
+    OSLIAN_AUDIT_DB                 SQLite access audit ledger  (var/oslian_audit.sqlite3)
+    OSLIAN_EXTERNAL_LLM             on|off: may text leave for OpenAI/Gemini   (on without auth, off with oidc)
     OSLIAN_EPIC_PRIVATE_KEY_PEM     referenced by name only; never read here
     LLM_PROVIDER                    openai|gemini               (openai)
     OPENAI_API_KEY / OPENAI_MODEL   Medication Safety chat and free-text parsing
@@ -33,8 +41,10 @@ Environment variables (all optional; see ``.env.example``):
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ipaddress
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 # ---- repository layout -----------------------------------------------------
 PACKAGE_DIR = Path(__file__).resolve().parent          # backend/oslian_demo
@@ -58,20 +68,83 @@ FORECAST_CONTRACT_FIXTURE = FIXTURE_DIR / "forecast_api_contract_v1.json"
 # ---- runtime state ---------------------------------------------------------
 VAR_DIR = REPO_ROOT / "var"
 DEFAULT_STREAM_DB = VAR_DIR / "oslian_stream.sqlite3"
+DEFAULT_AUDIT_DB = VAR_DIR / "oslian_audit.sqlite3"
+SESSION_HOURS = 12                                     # sign in again at least once a shift
+
+
+def is_loopback(host: str) -> bool:
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host.strip("[]")).is_loopback
+    except ValueError:
+        return False
+
+
+def external_llm_allowed(env: dict[str, str] | None = None) -> bool:
+    """May request text be sent to OpenAI or Gemini?  With sign-in on, only if the deployment says so: text typed about a
+    patient is protected health information, and it may go only to a vendor under a business associate agreement."""
+
+    env = os.environ if env is None else env
+    default = "on" if env.get("OSLIAN_AUTH", "off") == "off" else "off"
+    return env.get("OSLIAN_EXTERNAL_LLM", default) == "on"
 
 
 @dataclass(frozen=True)
 class AppConfig:
-    """Deployment settings, read from the environment exactly once."""
+    """Deployment settings, read from the environment exactly once.
+
+    Fail closed: without sign-in the server binds to loopback only, and sign-in refuses to start half-configured.
+    """
 
     host: str
     port: int
     stream_db: Path
+    auth: str = "off"
+    audit_db: Path = DEFAULT_AUDIT_DB
+    idle_minutes: int = 15
+    public_url: str = ""
+    oidc_issuer: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+    session_secret: str = ""
+
+    def __post_init__(self) -> None:
+        if self.auth not in ("off", "oidc"):
+            raise ValueError(f"OSLIAN_AUTH must be off or oidc, not {self.auth!r}")
+        if self.idle_minutes < 1:
+            raise ValueError("OSLIAN_IDLE_MINUTES must be at least 1")
+        if self.auth == "off":
+            if not is_loopback(self.host):
+                raise ValueError(f"OSLIAN_HOST={self.host} is reachable from other machines; set OSLIAN_AUTH=oidc or bind to 127.0.0.1")
+            return
+        missing = [name for name, value in (("OSLIAN_PUBLIC_URL", self.public_url), ("OSLIAN_OIDC_ISSUER", self.oidc_issuer),
+                                            ("OSLIAN_OIDC_CLIENT_ID", self.oidc_client_id),
+                                            ("OSLIAN_OIDC_CLIENT_SECRET", self.oidc_client_secret),
+                                            ("OSLIAN_SESSION_SECRET", self.session_secret)) if not value]
+        if missing:
+            raise ValueError(f"OSLIAN_AUTH=oidc needs {', '.join(missing)}")
+        if len(self.session_secret) < 32:
+            raise ValueError("OSLIAN_SESSION_SECRET must be at least 32 characters")
+        for name, url in (("OSLIAN_PUBLIC_URL", self.public_url), ("OSLIAN_OIDC_ISSUER", self.oidc_issuer)):
+            parts = urlsplit(url)
+            if parts.scheme != "https" and not (parts.scheme == "http" and is_loopback(parts.hostname or "")):
+                raise ValueError(f"{name} must be an https URL")
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "AppConfig":
         env = os.environ if env is None else env
-        db = env.get("OSLIAN_STREAM_DB") or DEFAULT_STREAM_DB
+        stream_db = env.get("OSLIAN_STREAM_DB") or DEFAULT_STREAM_DB
+        # a ledger kept in memory (the tests) gets an audit ledger in memory too
+        audit_db = env.get("OSLIAN_AUDIT_DB") or (":memory:" if str(stream_db) == ":memory:" else DEFAULT_AUDIT_DB)
         return cls(host=env.get("OSLIAN_HOST", "127.0.0.1"),
                    port=int(env.get("OSLIAN_PORT", "5000")),
-                   stream_db=Path(db))
+                   stream_db=Path(stream_db),
+                   auth=env.get("OSLIAN_AUTH", "off"),
+                   audit_db=Path(audit_db),
+                   idle_minutes=int(env.get("OSLIAN_IDLE_MINUTES", "15")),
+                   public_url=env.get("OSLIAN_PUBLIC_URL", "").rstrip("/"),
+                   oidc_issuer=env.get("OSLIAN_OIDC_ISSUER", "").rstrip("/"),
+                   oidc_client_id=env.get("OSLIAN_OIDC_CLIENT_ID", ""),
+                   oidc_client_secret=env.get("OSLIAN_OIDC_CLIENT_SECRET", ""),
+                   session_secret=env.get("OSLIAN_SESSION_SECRET", ""))
