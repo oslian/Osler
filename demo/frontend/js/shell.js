@@ -40,7 +40,7 @@
               '<li>Live synthetic FHIR R4 stream, not a hospital connection</li>' +
               '<li>Retrospective replay of a deidentified public eICU demo case</li>' +
               '<li>Anatomy and clinical-function navigation with a full chart for every signal</li>' +
-              '<li>45 forecast cells that were frozen and then replicated on external hospital databases</li>' +
+              '<li>42 forecast cells that were frozen and then replicated on external hospital databases</li>' +
               '<li>A forecast every 6 hours of stay; points only, no interval; no clinical alerts</li>' +
             '</ul>' +
             '<div class="wcard-foot">' +

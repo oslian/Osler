@@ -1,4 +1,4 @@
-"""Forecast runtime adapter contract: the 45-cell catalog, statuses, detached mode and fail-closed checks.
+"""Forecast runtime adapter contract: the catalog (42 of the API's 45 cells), statuses, detached mode and fail-closed checks.
 
 The attached mode is exercised against a stub of the forecast API served on a
 local port, so these tests need no model files.
@@ -13,7 +13,7 @@ import unittest
 
 from oslian_demo.monitoring import anatomy
 from oslian_demo.monitoring.forecast_runtime import (
-    INTERVAL_STATUS, REASON_NOT_ATTACHED, REASON_OUTSIDE_EPISODE, ForecastRuntime, RuntimeConfig, RuntimeUnavailable,
+    INTERVAL_STATUS, NOT_SHOWN, REASON_NOT_ATTACHED, REASON_OUTSIDE_EPISODE, ForecastRuntime, RuntimeConfig, RuntimeUnavailable,
     load_contract_fixture,
 )
 from oslian_demo.monitoring.timeline import build_model_input
@@ -63,6 +63,8 @@ class StubApi:
                 last = body["anchors"][-1]
                 forecasts = []
                 for cell in stub.cells:
+                    if "cells" in body and cell["cell"] not in body["cells"]:
+                        continue
                     current = last["values"].get(f"{cell['target']}_t")
                     forecasts.append({"cell": cell["cell"], "status": "ok" if current is not None else "current_value_missing",
                                       "point": current + 1.0 if current is not None else None})
@@ -104,7 +106,7 @@ class DetachedRuntimeTests(unittest.TestCase):
         runtime = ForecastRuntime(DETACHED)
         self.assertFalse(runtime.attached())
         result = runtime.run(model_input(), STATE)
-        self.assertEqual(result.summary, {"catalog_cells": 45, "model_cells": 0, "missing_cells": 0, "degraded_cells": 45})
+        self.assertEqual(result.summary, {"catalog_cells": 42, "model_cells": 0, "missing_cells": 0, "degraded_cells": 42})
         for cell in result.cells:
             self.assertEqual(cell["status"], "degraded")
             self.assertEqual(cell["fallback_reason"], REASON_NOT_ATTACHED)
@@ -120,7 +122,12 @@ class DetachedRuntimeTests(unittest.TestCase):
 
     def test_capabilities_come_from_the_contract(self):
         capabilities = ForecastRuntime(DETACHED).capabilities()
-        self.assertEqual(capabilities["catalog_cells"], 45)
+        self.assertEqual((capabilities["catalog_cells"], capabilities["served_cells"]), (42, 45))
+        self.assertEqual([item["cell"] for item in capabilities["not_shown"]], ["creatinine@48h", "urine_output@3h", "urine_output@6h"])
+        self.assertTrue(all(item["reason"] for item in capabilities["not_shown"]))
+        shown = {c["cell"] for c in capabilities["cells"]}
+        self.assertFalse(shown & set(NOT_SHOWN))
+        self.assertIn("urine_output@1h", shown, "the 1-hour urine cell follows the current rate and stays")
         self.assertEqual(capabilities["interval_cells"], 0)
         self.assertEqual(capabilities["anchor_spacing_hours"], 6.0)
         self.assertFalse(capabilities["causal_claim_allowed"])
@@ -148,7 +155,9 @@ class AttachedRuntimeTests(unittest.TestCase):
         self.assertEqual([a["time"] for a in anchors], ["2026-03-14T12:00:00.000Z"])
         self.assertEqual(anchors[0]["values"], {"creatinine_t": 1.5, "creatinine_age_hr": 0.0,
                                                 "heart_rate_t": 88.0, "heart_rate_age_hr": 2.0})
-        self.assertEqual(len(result.cells), 45)
+        self.assertEqual(len(result.cells), 42)
+        self.assertEqual(len(self.api.requests[-1]["cells"]), 42)
+        self.assertFalse(set(self.api.requests[-1]["cells"]) & set(NOT_SHOWN), "a cell that is not shown is never requested")
         cell = next(c for c in result.cells if c["cell"] == "creatinine@6h")
         self.assertEqual((cell["status"], cell["forecast_point"], cell["unit"]), ("model", 2.5, "mg/dL"))
         self.assertEqual(cell["interval_status"], INTERVAL_STATUS)
@@ -156,7 +165,7 @@ class AttachedRuntimeTests(unittest.TestCase):
         missing = next(c for c in result.cells if c["cell"] == "map@6h")
         self.assertEqual((missing["status"], missing["forecast_point"], missing["fallback_reason"]),
                          ("missing", None, "current_value_missing"))
-        self.assertEqual(result.summary["model_cells"] + result.summary["missing_cells"], 45)
+        self.assertEqual(result.summary["model_cells"] + result.summary["missing_cells"], 42)
         self.assertEqual(result.summary["degraded_cells"], 0)
 
     def test_a_value_older_than_the_lookback_is_missing_at_the_anchor(self):
@@ -170,7 +179,7 @@ class AttachedRuntimeTests(unittest.TestCase):
         result = self.runtime.run(model_input("2026-03-17T12:00:00.000Z"), STATE)      # onset + 78 h
         self.assertEqual(self.api.requests, [])
         self.assertEqual({c["fallback_reason"] for c in result.cells}, {REASON_OUTSIDE_EPISODE})
-        self.assertEqual(result.summary["degraded_cells"], 45)
+        self.assertEqual(result.summary["degraded_cells"], 42)
 
     def test_another_registry_fails_closed(self):
         self.api.registry_sha256 = "0" * 64

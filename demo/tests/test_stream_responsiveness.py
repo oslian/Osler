@@ -249,8 +249,8 @@ class ForecastStatesAreDistinguishableTests(unittest.TestCase):
 
     def test_every_catalog_cell_names_the_recipe_that_forecasts_it(self):
         runtime = ForecastRuntime(FIXTURE)
-        self.assertEqual(len(runtime.cells), 45)
-        self.assertEqual(len({c["cell"] for c in runtime.cells}), 45)
+        self.assertEqual(len(runtime.cells), 42)
+        self.assertEqual(len({c["cell"] for c in runtime.cells}), 42)
         for cell in runtime.cells:
             self.assertTrue(cell["source_model"] and cell["source_model"] != "none", cell["cell"])
             self.assertEqual(cell["cell"], f"{cell['target']}@{cell['horizon_hours']}h")

@@ -119,7 +119,7 @@ class StreamApiTests(unittest.TestCase):
         # live head vs historical anchor
         live = self.client.get(f"/api/patients/{pid}/forecasts").get_json()
         self.assertEqual(live["anchor"], "live_head")
-        self.assertEqual(len(live["cells"]), 45)
+        self.assertEqual(len(live["cells"]), 42)
         self.assertTrue(all(c["status"] == "degraded" and c["lower"] is None and c["upper"] is None for c in live["cells"]))
         old_run = history["runs"][-1]["run_id"]
         old = self.client.get(f"/api/patients/{pid}/forecasts?run_id={old_run}").get_json()
@@ -154,7 +154,7 @@ class StreamApiTests(unittest.TestCase):
         self.assertEqual(health.status_code, 503)
         self.assertEqual(health.get_json()["status"], "runtime_not_attached")
         cap = self.client.get("/api/model/capabilities").get_json()
-        self.assertEqual(cap["catalog_cells"], 45)
+        self.assertEqual(cap["catalog_cells"], 42)
         self.assertFalse(cap["causal_claim_allowed"])
         anatomy = self.client.get("/api/model/anatomy").get_json()
         self.assertEqual(len(anatomy["organs"]), 14)

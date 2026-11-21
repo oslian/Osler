@@ -107,7 +107,7 @@ cd Osler\demo
 ## Quick start (detached mode)
 
 Detached mode is the safe default: no API, no weights, no configuration. Every
-run completes with 45 `degraded` cells and `forecast_point: null`, and the UI says
+run completes with 42 `degraded` cells and `forecast_point: null`, and the UI says
 *forecast API not attached*.
 
 ```powershell
@@ -183,7 +183,7 @@ Attached mode must answer HTTP 200 with `runtime_mode: api`,
 the API was unreachable or served other cells or another registry; `reason` and
 `checks` in the same response say which.
 
-### The 45 cells
+### The cells: 42 shown of 45 served
 
 The contract has 45 target × horizon cells over 15 targets (MAP, heart rate,
 respiratory rate, SpO₂, glucose, potassium, sodium, chloride, bicarbonate,
@@ -196,7 +196,20 @@ creatinine, BUN, hemoglobin, hematocrit, platelets, urine output). Each one is
 - `degraded`: no forecast was requested (detached, or past the fitted window).
 
 There is no carried-forward baseline and no event probability in this runtime.
-`lower` and `upper` are always `null`. All 45 carry `causal_claim_allowed: false`.
+`lower` and `upper` are always `null`. Every cell carries `causal_claim_allowed: false`.
+
+**Three served cells are not shown** (`NOT_SHOWN` in `monitoring/forecast_runtime.py`).
+Each passed its validation on average error and was then found to say little for the
+patients it is most often asked about:
+
+- `urine_output@3h` and `urine_output@6h`: the forecast is close to 80 mL/hour whatever
+  the current rate is. Below a current rate of 100 mL/hour it is further from what is
+  measured than the current rate itself.
+- `creatinine@48h`: the forecast predicts a rise at normal creatinine values that the
+  data do not show.
+
+They are left out of the catalog and never requested. `/api/model/capabilities` lists
+them under `not_shown` with the reason.
 
 ---
 

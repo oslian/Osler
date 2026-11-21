@@ -2,7 +2,8 @@
 
 The demo owns no model. Forecasts come from the forecast API in ``api/`` of this
 repository (``POST /v1/expert/forecast``): 45 target x horizon cells that were
-frozen and then replicated on external hospital databases. Two modes, chosen by
+frozen and then replicated on external hospital databases. The demo shows 42 of
+them; ``NOT_SHOWN`` names the three it leaves out and why. Two modes, chosen by
 ``OSLIAN_FORECAST_RUNTIME``:
 
 ``detached`` (default)
@@ -54,6 +55,16 @@ INTERVAL_POLICY = ("no interval is shown: the validated interval is fitted onlin
 REASON_NOT_ATTACHED = "forecast_api_not_attached"
 REASON_OUTSIDE_EPISODE = "outside_fitted_episode_window"
 REQUEST_TIMEOUT_SECONDS = 30.0
+# Cells the API serves and the demo does not show. Each passed its validation on average error
+# and was then found to say little for the patients it is most often asked about. They are left
+# out of the catalog and never requested; the capabilities document lists them with the reason.
+NOT_SHOWN: dict[str, str] = {
+    "urine_output@3h": "the forecast is close to 80 mL/hour whatever the current rate is; below a current rate of "
+                       "100 mL/hour it is further from what is measured than the current rate itself",
+    "urine_output@6h": "the forecast is close to 80 mL/hour whatever the current rate is; below a current rate of "
+                       "100 mL/hour it is further from what is measured than the current rate itself",
+    "creatinine@48h": "the forecast predicts a rise at normal creatinine values that the data do not show",
+}
 
 
 @dataclass(frozen=True)
@@ -93,7 +104,10 @@ class ForecastRuntime:
     def __init__(self, config: RuntimeConfig | None = None, contract_path=CONTRACT_FIXTURE):
         self.config = config or RuntimeConfig.from_env()
         self.contract = load_contract_fixture(contract_path)
-        self.cells: list[dict[str, Any]] = list(self.contract["cells"])
+        served = {c["cell"] for c in self.contract["cells"]}
+        if not set(NOT_SHOWN) <= served:
+            raise ValueError(f"cells marked not shown are not in the contract: {sorted(set(NOT_SHOWN) - served)}")
+        self.cells: list[dict[str, Any]] = [c for c in self.contract["cells"] if c["cell"] not in NOT_SHOWN]
         self.catalog: dict[str, dict[str, Any]] = {c["cell"]: c for c in self.cells}
         self._verified = False
         self.error: str | None = None
@@ -124,7 +138,7 @@ class ForecastRuntime:
             served = self._call("/v1/expert/cells")
             self._check_model(served.get("model") or {})
             cells = {(c["cell"], c["target"], int(c["horizon_hours"])) for c in served["cells"]}
-            if cells != {(c["cell"], c["target"], int(c["horizon_hours"])) for c in self.cells}:
+            if cells != {(c["cell"], c["target"], int(c["horizon_hours"])) for c in self.contract["cells"]}:
                 raise RuntimeUnavailable("the forecast API's cells differ from the pinned contract's")
         except RuntimeUnavailable as exc:
             self.error = str(exc)
@@ -162,6 +176,8 @@ class ForecastRuntime:
             "anchor_spacing_hours": self.contract["anchor_spacing_hours"],
             "episode_max_hours": EPISODE_MAX_HOURS,
             "cells": [dict(c) for c in self.cells],
+            "served_cells": len(self.contract["cells"]),
+            "not_shown": [{"cell": cell, "reason": reason} for cell, reason in sorted(NOT_SHOWN.items())],
             "interval_policy": INTERVAL_POLICY,
             "boundary": self.contract["boundary"],
             "causal_claim_allowed": False,
@@ -197,7 +213,7 @@ class ForecastRuntime:
         if hours > EPISODE_MAX_HOURS:
             return done(self._cells(state, {}, REASON_OUTSIDE_EPISODE))
         self.verify()                                             # raises RuntimeUnavailable -> the run fails closed
-        reply = self._call("/v1/expert/forecast", {"anchors": list(model_input.anchors)})
+        reply = self._call("/v1/expert/forecast", {"anchors": list(model_input.anchors), "cells": sorted(self.catalog)})
         self._check_model(reply.get("model") or {})
         if parse_instant(reply["anchor_time"] + "Z", "anchor_time") != parse_instant(model_input.cutoff, "cutoff"):
             raise RuntimeUnavailable("the forecast API answered for an anchor other than the run's input cutoff")
