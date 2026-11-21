@@ -7,9 +7,7 @@
  * Every plotted observation is a timeline row; every forecast marker is a cell
  * of one persisted model run, and the lead line starts at the observation that
  * run actually used as the cell's basis - no value is invented at the cutoff.
- * A carried-forward cell is a grey dashed baseline with hollow squares and says
- * "Baseline only · not a model forecast"; a withheld cell draws nothing and says
- * why; a variable with no runtime cell says so in the future region.
+ * A withheld cell draws nothing and says why; a variable with no runtime cell says so in the future region.
  * A 90% interval is drawn only around a model forecast whose cell the release
  * calibrated (the runtime refuses any other bound); it is a hatched band with
  * end caps, never the pale future region, which is time, not uncertainty.
@@ -18,7 +16,7 @@
 
 import { esc, fmtNum, INTERVAL_NOTE, TRAJECTORY, unavailableReason } from './format.js';
 
-const COLORS = { ink: '#171A1C', ink2: '#626762', blue: '#344F69', baseline: '#6F746F', divider: '#D1CCC2', soft: '#E7E3DA',
+const COLORS = { ink: '#171A1C', ink2: '#626762', blue: '#344F69', divider: '#D1CCC2', soft: '#E7E3DA',
   surface: '#FCFAF5', history: '#FFFFFF', future: '#EDF2F7', cutoff: '#3D4449', teal: '#27645E', nul: '#8B8F89',
   // a current value outside its supplied interval, and a forecast that leaves it:
   // two different claims, so two different colours, each also carrying a shape
@@ -98,8 +96,7 @@ export function sparkline(points, width = 120, height = 32) {
 /** The accessible description: the same facts the picture shows, in order. */
 function describe(t, points, fmt, unit, label, headline) {
   const model = t.forecasts.filter((f) => f.status === 'model' && Number.isFinite(f.forecast_point));
-  const baseline = t.forecasts.filter((f) => f.status === 'persistence' && Number.isFinite(f.forecast_point));
-  const withheld = t.forecasts.filter((f) => f.status !== 'model' && f.status !== 'persistence');
+  const withheld = t.forecasts.filter((f) => f.status !== 'model');
   const hs = (list) => list.map((f) => `${f.horizon_hours}h`).join(', ');
   const observationsOnly = t.kind === 'observations';
   const parts = [observationsOnly
@@ -115,7 +112,6 @@ function describe(t, points, fmt, unit, label, headline) {
   else if (t.kind === 'none') parts.push(`${TRAJECTORY.noModel}; observations only.`);
   else {
     if (model.length) parts.push(`Future forecast: model point forecasts ${model.map((f) => `${f.horizon_hours}h ${fmtNum(f.forecast_point)}`).join(', ')} ${unit}.`);
-    if (baseline.length) parts.push(`${TRAJECTORY.baselineOnly} for ${hs(baseline)}: the last observed value carried forward.`);
     if (withheld.length) parts.push(`${TRAJECTORY.unavailable} for ${hs(withheld)}: ${Array.from(new Set(withheld.map((f) => unavailableReason(f.status, f.fallback_reason)))).join('; ')}.`);
   }
   const bounded = model.filter((f) => Number.isFinite(f.lower) && Number.isFinite(f.upper));
@@ -190,9 +186,7 @@ export function trajectoryChart(opts) {
   const all = t.points || [];
   const forecasts = t.forecasts || [];
   const model = forecasts.filter((f) => f.status === 'model' && Number.isFinite(f.forecast_point));
-  const baseline = forecasts.filter((f) => f.status === 'persistence' && Number.isFinite(f.forecast_point));
-  const withheld = forecasts.filter((f) => f.status !== 'model' && f.status !== 'persistence');
-  const drawn = model.concat(baseline);
+  const withheld = forecasts.filter((f) => f.status !== 'model');
 
   let points = all;
   if (opts.window === 'recent' && all.length) {
@@ -227,7 +221,7 @@ export function trajectoryChart(opts) {
   xMin -= xPad; xMax += xPad;
 
   const band = opts.range && (Number.isFinite(opts.range.low) || Number.isFinite(opts.range.high)) ? opts.range : null;
-  const ys = points.map((p) => p.value).concat(bases.map((b) => b.value), drawn.map((f) => f.forecast_point),
+  const ys = points.map((p) => p.value).concat(bases.map((b) => b.value), model.map((f) => f.forecast_point),
     model.flatMap((f) => [f.lower, f.upper])).filter((v) => Number.isFinite(v));
   if (!ys.length) return { svg: '', empty: true };
   // the band is kept in view, so "inside" and "outside" are visible and not implied
@@ -353,21 +347,7 @@ export function trajectoryChart(opts) {
     });
   }
 
-  // carried-forward baselines: grey, horizontal, dashed, hollow squares, and named as a baseline
   const point = (f) => `data-kind="forecast" data-cell="${esc(f.cell)}" data-run="${esc(f.run_id)}" data-status="${esc(f.status)}" data-value="${f.forecast_point}" data-ms="${f.due_ms}" data-source="${esc(f.source_model)}" data-horizon="${f.horizon_hours}"${f.basis ? ` data-basis-value="${f.basis.value}" data-basis-ms="${f.basis.ms}"` : ''}`;
-  if (baseline.length && cx !== null) {
-    s += `<g data-note="baseline">${caption([TRAJECTORY.baselineOnly], PT + 16, 'cl', COLORS.baseline)}</g>`;
-    placeLabels(baseline.map((f) => ({ x: X(f.due_ms), y: Y(f.forecast_point), text: `${f.horizon_hours}h · ${fmtNum(f.forecast_point)}`, f }))).forEach(({ x, y, text, f, w, lane }) => {
-      const x1 = f.basis ? X(f.basis.ms) : cx;
-      s += `<line data-series="baseline" x1="${n1(x1)}" y1="${n1(y)}" x2="${n1(x)}" y2="${n1(y)}" stroke="${COLORS.baseline}" stroke-width="1.4" stroke-dasharray="3 4"/>`;
-      const { anchor, tx } = labelAnchor(x, w, labelLeft, W - PR - 2);
-      const ty = y + 17 + (lane + (anchor === 'middle' ? 0 : 1)) * 13;
-      const leader = lane > 0 ? `<line x1="${n1(x)}" y1="${n1(y + 5)}" x2="${n1(x)}" y2="${n1(ty - 9)}" stroke="${COLORS.divider}"/>` : '';
-      const aria = `${f.horizon_hours}h baseline only, last value carried forward, not a model forecast: ${fmtNum(f.forecast_point)} ${unit} at ${fmt.short(f.due_ms)}`;
-      s += `<g class="chart-pt" tabindex="0" role="button" aria-label="${esc(aria)}" ${point(f)}>${leader}<rect x="${n1(x - 4.5)}" y="${n1(y - 4.5)}" width="9" height="9" fill="${COLORS.surface}" stroke="${COLORS.baseline}" stroke-width="1.6"/><text x="${n1(tx)}" y="${n1(ty)}" text-anchor="${anchor}" class="cl" fill="${COLORS.baseline}">${esc(text)}</text></g>`;
-    });
-  }
-
   // model forecast: one dashed path per run, from the cell's own basis observation to each horizon
   if (model.length) {
     const lead = model.find((f) => f.basis);
@@ -426,7 +406,6 @@ export function trajectoryChart(opts) {
  * as the future - never as a confidence band; a calibrated interval has its own entry. */
 export function chartLegend(t, range) {
   const hasModel = t.forecasts.some((f) => f.status === 'model');
-  const hasBaseline = t.forecasts.some((f) => f.status === 'persistence');
   const hasProjected = t.forecasts.some((f) => f.projected);
   const hasInterval = t.forecasts.some((f) => f.status === 'model' && Number.isFinite(f.lower) && Number.isFinite(f.upper));
   return `<div class="chart-legend" aria-label="Chart legend">
@@ -435,7 +414,6 @@ export function chartLegend(t, range) {
     <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.ink}" stroke-width="1.8"/><circle cx="13" cy="5" r="3.5" fill="${COLORS.ink}"/></svg>Observed · FHIR observation</span>
     ${hasModel ? `<span><svg width="26" height="12" aria-hidden="true"><line x1="1" y1="6" x2="25" y2="6" stroke="${COLORS.blue}" stroke-width="1.5" stroke-dasharray="5 4"/><polygon points="13,1 18,6 13,11 8,6" fill="${COLORS.surface}" stroke="${COLORS.blue}" stroke-width="1.5"/></svg>Model forecast · point forecast</span>` : ''}
     ${hasInterval ? `<span><svg width="26" height="12" aria-hidden="true"><rect x="1" y="2" width="24" height="8" fill="${COLORS.blue}" fill-opacity="0.12"/><line x1="13" y1="1" x2="13" y2="11" stroke="${COLORS.blue}" stroke-width="1"/></svg>Calibrated 90% interval</span>` : ''}
-    ${hasBaseline ? `<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${COLORS.baseline}" stroke-width="1.4" stroke-dasharray="3 4"/><rect x="9" y="1" width="8" height="8" fill="${COLORS.surface}" stroke="${COLORS.baseline}" stroke-width="1.4"/></svg>${TRAJECTORY.baselineOnly}</span>` : ''}
     ${t.cutoff_ms ? `<span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="0" x2="6" y2="12" stroke="${COLORS.cutoff}" stroke-dasharray="4 3"/></svg>${TRAJECTORY.cutoffLabel} · ${TRAJECTORY.cutoffSub.toLowerCase()}</span>
     <span><i class="lg-band"></i>${TRAJECTORY.futureRegion}</span>` : ''}
     <span class="lg-note">${INTERVAL_NOTE}</span>

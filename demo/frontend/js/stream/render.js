@@ -1,6 +1,6 @@
 /* DOM rendering for the monitoring page. Pure functions of the store; event
  * wiring lives in main.js. Wording rules: the mode ("synthetic", "not a live
- * feed" / "retrospective replay") stays on screen; persistence, missing and
+ * feed" / "retrospective replay") stays on screen; missing and
  * degraded are data boundaries, never alerts; nothing is drawn that is not a
  * ledger row or a persisted run. */
 
@@ -15,7 +15,7 @@ import { renderDataView } from './signals.js';
 import { mountReportAnatomy, renderReport } from './report.js';
 import { esc, fmtNum, DATA_VIEW, FLAG, FORECAST_LABEL, NO_FORECAST_MODEL, OBSERVED_HISTORY,
   INTERVAL_NOTE, PROJECTED, RANGE, STATUS_MARK, TRAJECTORY, UPDATING_FORECAST, flagOf, forecastLabel,
-  fmtForecastValue, fmtInterval, forecastNote, isAbstained, unavailableReason } from './format.js';
+  fmtForecastValue, fmtInterval, forecastNote, unavailableReason } from './format.js';
 
 const el = (id) => document.getElementById(id);
 const LABELS = {
@@ -27,13 +27,10 @@ const LABELS = {
   bilirubin_direct: 'Direct bilirubin', inr: 'INR', ptt: 'aPTT', bnp: 'BNP', troponin_i: 'Troponin I', ck_mb: 'CK-MB',
   cpk: 'Creatine kinase', ldh: 'LDH', crp: 'CRP', crp_hs: 'hs-CRP', esr: 'ESR', tsh: 'TSH', free_t4: 'Free T4',
   uric_acid: 'Uric acid', ionized_calcium: 'Ionized calcium', serum_osmolality: 'Serum osmolality',
-  total_protein: 'Total protein', hypoxemia_event: 'Hypoxemia event (SpO₂ ≤ 92%)',
+  total_protein: 'Total protein',
 };
 export const label = (v) => LABELS[v] || String(v || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
-const SOURCE_LABELS = { frozen_whole_body_jepa: 'frozen JEPA', unified_shared_jepa_target_head: 'shared target head',
-  multisource_shared_jepa_target_head: 'multi-source head', calibrated_event_risk_head: 'event-risk head',
-  patient_persistence_anchor: 'persistence anchor', stale_target_abstained: 'stale observation',
-  event_risk_abstained: 'event head abstained', none: 'none', missing: 'missing' };
+const SOURCE_LABELS = { none: 'none' };
 const STATUS_WORDS = FORECAST_LABEL;
 
 const fmtTime = () => makeTimeFormatter(timeAxis(), onsetMs());
@@ -55,9 +52,8 @@ export function fmtAge(h) {
   return `${h.toFixed(1)} h`;
 }
 const statusChip = (status) => `<span class="status ${esc(status)}"><i></i>${esc(STATUS_WORDS[status] || status)}</span>`;
-/** A cell's badge, read from its status and its reason: a shared head that abstained
- *  is "carried forward — model abstained", styled as every other baseline, never as a model. */
-export const cellChip = (c) => `<span class="status ${esc(c.status)}"${isAbstained(c) ? ' data-abstained="true"' : ''}><i></i>${esc(forecastLabel(c))}</span>`;
+/** A cell's badge, read from its status. */
+export const cellChip = (c) => `<span class="status ${esc(c.status)}"><i></i>${esc(forecastLabel(c))}</span>`;
 const unitOf = (v) => (S.anatomy && S.anatomy.variable_units[v]) || '';
 const isRetro = () => sourceInfo().mode === 'retrospective';
 
@@ -291,8 +287,7 @@ function signalTile(v, opts = {}) {
   const fcText = !horizons.length ? NO_FORECAST_MODEL : (() => {
     const statuses = new Set(liveCells.map((c) => c.status));
     const word = statuses.size === 0 ? UPDATING_FORECAST
-      : statuses.has('model') ? (statuses.size === 1 ? FORECAST_LABEL.model : `${FORECAST_LABEL.model} + carried forward`)
-      : statuses.has('persistence') ? FORECAST_LABEL.persistence
+      : statuses.has('model') ? FORECAST_LABEL.model
       : statuses.has('degraded') ? FORECAST_LABEL.degraded : FORECAST_LABEL.missing;
     return `${horizons.map((h) => h + 'h').join(' · ')} · <span class="${statuses.has('model') ? 'm' : 'p'}">${esc(word)}</span>`;
   })();
@@ -387,7 +382,7 @@ export function renderWorkspace() {
     ${secondaryBlock}
     ${spec.related.length ? `<div class="sec">Related indicators · <span class="soft">${esc(spec.relatedNote)}</span></div><div class="rows">${variablesByAttention(spec.related, rows).map((v) => signalRow(v, rows)).join('')}</div>` : ''}
     ${evidenceTable([...spec.primary, ...spec.secondary], spec.label)}
-    <p class="foot">Grouping is navigation and explanation only; it never states that an organ or function is normal or abnormal. Persistence is a baseline fallback, not a prediction · 90% intervals only where the release calibrated the cell · causal_claim_allowed: false.</p>`;
+    <p class="foot">Grouping is navigation and explanation only; it never states that an organ or function is normal or abnormal. Forecasts are points from the 6-hour anchor, with no interval · causal_claim_allowed: false.</p>`;
 }
 
 /* ── metric workspace (level 3) ─────────────────────────────────────────── */
@@ -418,13 +413,11 @@ function comparisonSummary(t, v) {
   else t.forecasts.forEach((f) => {
     if (f.status === 'model' && Number.isFinite(f.forecast_point)) {
       rows.push(`<div class="cmp-row" data-status="model"><span class="k">${f.horizon_hours}h forecast</span><span class="v mono">${esc(fmtNum(f.forecast_point))} <small>${esc(unit)}</small></span><span class="d mono">${f.basis ? esc(deltaText(f)) : 'no basis · delta not computed'}</span></div>`);
-    } else if (f.status === 'persistence' && Number.isFinite(f.forecast_point)) {
-      rows.push(`<div class="cmp-row" data-status="persistence"${isAbstained(f) ? ' data-abstained="true"' : ''}><span class="k">${f.horizon_hours}h baseline</span><span class="v mono">${esc(fmtNum(f.forecast_point))} <small>${esc(unit)}</small></span><span class="d">${isAbstained(f) ? `${esc(forecastLabel(f))} · ` : ''}${TRAJECTORY.baselineOnly}</span></div>`);
     } else {
       rows.push(`<div class="cmp-row" data-status="${esc(f.status)}"><span class="k">${f.horizon_hours}h</span><span class="v na">${TRAJECTORY.unavailable}</span><span class="d">${esc(unavailableReason(f.status, f.fallback_reason))}</span></div>`);
     }
   });
-  return `<section class="compare" aria-label="Comparison summary"><h3>Comparison summary</h3>${rows.join('')}<p class="note">Change is measured against the observation each forecast cell used. It is a difference, not a clinical judgement. A persistence baseline repeats that observation and is not a model forecast.</p></section>`;
+  return `<section class="compare" aria-label="Comparison summary"><h3>Comparison summary</h3>${rows.join('')}<p class="note">Change is measured against the observation each forecast cell used. It is a difference, not a clinical judgement.</p></section>`;
 }
 
 /** The chart's pixel width: the workspace minus its own and the card's padding, so
@@ -547,7 +540,7 @@ export function renderDrawer() {
   if (d.kind === 'cell') {
     const c = d.cell, run = d.run;
     body.innerHTML = `<div class="prov"><div class="h-sec">Cell ${esc(c.cell)}</div>
-      <dl class="kv"><dt>Status</dt><dd>${cellChip(c)}</dd><dt>Forecast</dt><dd class="mono">${esc(fmtForecastValue(c))}${c.target === 'hypoxemia_event' ? '' : ` ${esc(c.unit || '')}`}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>90% interval</dt><dd>${fmtInterval(c) ? `<span class="mono">${esc(fmtInterval(c))} ${esc(c.unit || '')}</span> · ` : 'none · '}${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
+      <dl class="kv"><dt>Status</dt><dd>${cellChip(c)}</dd><dt>Forecast</dt><dd class="mono">${esc(fmtForecastValue(c))} ${esc(c.unit || '')}</dd><dt>Observed</dt><dd class="mono">${esc(c.observed_value === null ? '—' : fmtNum(c.observed_value))} ${esc(c.unit || '')} · age ${esc(fmtAge(c.measurement_age_hours))} · ${esc(c.observations)} obs</dd><dt>Source model</dt><dd class="mono">${esc(c.source_model)}</dd><dt>Fallback reason</dt><dd>${esc(c.fallback_reason || 'none')}</dd><dt>90% interval</dt><dd>${fmtInterval(c) ? `<span class="mono">${esc(fmtInterval(c))} ${esc(c.unit || '')}</span> · ` : 'none · '}${esc(c.interval_status)}</dd><dt>Causal claim</dt><dd class="mono">causal_claim_allowed: ${esc(String(c.causal_claim_allowed))}</dd></dl>
       <div class="h-sec">Run</div>
       <dl class="kv"><dt>Run id</dt><dd class="mono">${esc(run.run_id)}</dd><dt>Input cutoff</dt><dd class="mono">${esc(run.input_cutoff)}</dd><dt>Watermark</dt><dd class="mono">${esc(run.input_watermark || '—')}</dd><dt>Input</dt><dd class="mono">${esc(run.input_resource_count)} resources · sha256 ${esc((run.input_hash || '').slice(0, 16))}…</dd><dt>Model commit</dt><dd class="mono">${esc(run.model_commit)}</dd><dt>Registry</dt><dd class="mono">${esc(run.registry_sha256)}</dd><dt>Runtime</dt><dd>${esc(run.runtime_mode)} · attached ${esc(String(rt.runtime_attached))}</dd><dt>Duration</dt><dd class="mono">${esc(run.duration_ms ?? '—')} ms</dd></dl>
       <div class="h-sec">Point history for ${esc(c.cell)}</div>
@@ -574,7 +567,7 @@ export function renderAll(anatomyBuilt) {
   // producing forecasts. With the runtime unattached every cell is degraded, which is a
   // property of the deployment, already stated in the header, and not a per-organ signal.
   const run = currentRun();
-  const producing = !!(run && run.summary && (run.summary.model_cells > 0 || run.summary.persistence_cells > 0));
+  const producing = !!(run && run.summary && run.summary.model_cells > 0);
   if (anatomyBuilt) anatomyBuilt.update({ selected: S.selectedOrgan, byOrgan: organSummary(),
     organEvents: currentOrganEvents(), streamNow: clinicalNow(), runtimeProducing: producing,
     frozen: !!S.anchor, paused: !!(S.session && S.session.status !== 'running'),

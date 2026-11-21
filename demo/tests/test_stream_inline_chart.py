@@ -56,13 +56,13 @@ const iso = (ms) => new Date(ms).toISOString();
 const obs = (h, v) => ({ ms: T0 + h * H, value: v, effective_time: iso(T0 + h * H), resource_id: `o-${h}`, version_id: '1' });
 const cell = (h, status, point) => ({ cell: `respiratory_rate@${h}h`, target: 'respiratory_rate', horizon_hours: h,
   status, forecast_point: point, unit: 'breaths/min', due_ms: T0 + (6 + h) * H,
-  basis: { ms: T0 + 6 * H, value: 22 }, source_model: status === 'model' ? 'frozen_whole_body_jepa' : 'patient_persistence_anchor' });
+  basis: { ms: T0 + 6 * H, value: 22 }, source_model: 'measurement_pure_ridge' });
 
 const traj = {
   points: [obs(0, 18), obs(2, 19.5), obs(4, 21), obs(6, 22)],
   cutoff_ms: T0 + 6 * H, kind: 'model', frozen: false,
   forecasts: [cell(1, 'model', 23.4), cell(3, 'model', 24.1), cell(6, 'model', 25.8),
-              cell(12, 'model', 27.2), cell(24, 'persistence', 22)],
+              cell(12, 'model', 27.2), cell(24, 'model', 26.0)],
 };
 
 const sweep = {};

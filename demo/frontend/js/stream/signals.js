@@ -17,14 +17,13 @@
  * interval it supplied is deep red, bold, marked ▲ or ▼ and sorted first; a
  * model forecast that leaves the same interval is amber, hollow and marked △ or
  * ▽, is counted apart and never called an alert (AHRQ: an interface that flags
- * everything is read as flagging nothing). A carried-forward value - a head that
- * abstained included - is never a model forecast and is never projected.
+ * everything is read as flagging nothing). Only a model forecast is ever projected.
  */
 
 import { S, activeHorizon, currentRun, indicatorView, sourceInfo, trajectoryFor } from './store.js';
 import { chartFrame, chartLegend, trajectoryChart } from './chart.js';
 import { esc, fmtNum, DATA_VIEW, FLAG, NO_FORECAST_MODEL, INTERVAL_NOTE, PROJECTED, RANGE, TRAJECTORY,
-  UPDATING_FORECAST, forecastLabel, forecastState, flagOf, isAbstained, unavailableReason } from './format.js';
+  UPDATING_FORECAST, forecastState, flagOf, unavailableReason } from './format.js';
 import { cellChip, fmtAge, fmtClinical, label } from './render.js';
 
 const CRITICAL = ['HH', 'LL', 'AA'];
@@ -91,10 +90,6 @@ function forecastCell(row) {
     return `<span class="fc model">${esc(fmtNum(cell.forecast_point))} <small>${esc(cell.unit || row.unit)}</small></span>`
       + `<span class="why">${esc(vs)}</span><span class="why">${h}h · model</span>${projected}`;
   }
-  if (cell.status === 'persistence') {
-    return `<span class="fc carried">${isAbstained(cell) ? forecastLabel(cell) : esc(fmtNum(cell.forecast_point))}${isAbstained(cell) ? '' : ` <small>${esc(cell.unit || row.unit)}</small>`}</span>`
-      + `<span class="why">${isAbstained(cell) ? 'repeats the observation' : DATA_VIEW.unchanged}</span><span class="why">${h}h · carried forward</span>`;
-  }
   return `<span class="fc na">${RANGE.unavailable}</span><span class="why">${h}h · ${esc(unavailableReason(cell.status, cell.fallback_reason))}</span>`;
 }
 
@@ -116,12 +111,12 @@ function detailPanel(row) {
       const empty = f.forecast_point === null || f.forecast_point === undefined;
       const base = row.state ? row.state.value : NaN;
       const d = f.status === 'model' && Number.isFinite(f.forecast_point) && Number.isFinite(base) ? f.forecast_point - base : null;
-      const change = d === null ? (f.status === 'persistence' ? '±0 · repeats the observation' : '—')
+      const change = d === null ? '—'
         : d === 0 ? DATA_VIEW.unchanged : `${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d))}`;
       const projected = f.projected ? `<span class="proj">${mark(PROJECTED[f.projectedSide].mark)}${PROJECTED[f.projectedSide].text}</span>` : '';
-      const why = !f.projected && f.status !== 'model' && f.status !== 'persistence'
+      const why = !f.projected && f.status !== 'model'
         ? `<span class="why">${esc(unavailableReason(f.status, f.fallback_reason))}</span>` : '';
-      return `<tr data-status="${esc(f.status)}"${f.abstained ? ' data-abstained="true"' : ''}${f.projected ? ` data-projected="${esc(f.projectedSide)}"` : ''}${f.horizon_hours === row.horizon ? ' data-compared="true"' : ''}>`
+      return `<tr data-status="${esc(f.status)}"${f.projected ? ` data-projected="${esc(f.projectedSide)}"` : ''}${f.horizon_hours === row.horizon ? ' data-compared="true"' : ''}>`
         + `<td class="v">${f.horizon_hours}h</td><td class="v${f.status === 'model' ? ' model' : ''}">${empty ? 'null' : esc(fmtNum(f.forecast_point))}</td>`
         + `<td>${cellChip(f)}${projected}${why}</td><td class="v">${esc(change)}</td></tr>`;
     }).join('')}</tbody></table>`
@@ -149,7 +144,7 @@ function detailPanel(row) {
         <p class="why">A retracted or superseded version never reaches this series.</p>
       </section>
       <section><h4>Forecast cells · ${esc(run ? run.runtime_mode : 'no run')}</h4>${cells}
-        <p class="why">${INTERVAL_NOTE} A carried-forward value repeats the observation and is not a model forecast.</p>
+        <p class="why">${INTERVAL_NOTE}</p>
       </section>
     </div>
     <div class="detail-chart">${chart.empty ? '<p class="empty-note">Nothing to plot yet.</p>' : chart.svg}<div class="chart-tip" id="chartTip" role="status" hidden></div></div>
@@ -251,5 +246,5 @@ export function renderDataView(host) {
       ${view.other.length ? table(view.other, DATA_VIEW.otherHeading) : `<p class="empty-note quiet">${DATA_VIEW.emptySearch}.</p>`}
     </section>
     ${unobservedSection(view)}
-    <p class="foot">A flag is the observation's own statement: a reference range it supplies, compared in the unit it was written in, or a reading the source coded. This page writes no threshold, and the multi-stay reading order's grouping is not applied here. ${INTERVAL_NOTE} A carried-forward value, a head that abstained included, is never a model forecast and is never projected. causal_claim_allowed: false · no clinical alert.</p>`;
+    <p class="foot">A flag is the observation's own statement: a reference range it supplies, compared in the unit it was written in, or a reading the source coded. This page writes no threshold, and the multi-stay reading order's grouping is not applied here. ${INTERVAL_NOTE} Only a model forecast is ever projected. causal_claim_allowed: false · no clinical alert.</p>`;
 }

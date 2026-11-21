@@ -144,13 +144,13 @@ export const currentSeries = () => (S.anchor ? S.anchor.series : S.series);
 export const clinicalNow = () => (S.anchor ? S.anchor.run.input_cutoff : S.clock.latest_clinical_event_time);
 
 export function cellsForVariable(variable, cells) {
-  return (cells || []).filter((c) => (c.target === 'hypoxemia_event' ? 'o2sat' : c.target) === variable);
+  return (cells || []).filter((c) => c.target === variable);
 }
 
 /** Every catalog cell (from capabilities) attributed to a variable, whether or not a run exists. */
 export function catalogCellsForVariable(variable) {
   if (!S.capabilities) return [];
-  return S.capabilities.cells.filter((c) => (c.target === 'hypoxemia_event' ? 'o2sat' : c.target) === variable);
+  return S.capabilities.cells.filter((c) => c.target === variable);
 }
 
 const HOUR = 3600000;
@@ -167,10 +167,7 @@ const HOUR = 3600000;
  *    'no-run'       no completed run yet: observations only, no cutoff
  *    'none'         no target × horizon cell for this variable in the pinned registry
  *    'model'        at least one horizon is a model point forecast
- *    'persistence'  every drawn horizon is the last value carried forward
- *    'unavailable'  every horizon is withheld (missing or degraded)
- *  Cells whose target is a derived event (hypoxemia_event on the SpO₂ chart) are
- *  listed as `derived` and never plotted on the variable's own axis. */
+ *    'unavailable'  every horizon is withheld (missing or degraded) */
 export function trajectoryFor(variable, horizons) {
   const run = currentRun();
   const cutoff_ms = run ? Date.parse(run.input_cutoff) : null;
@@ -178,11 +175,10 @@ export function trajectoryFor(variable, horizons) {
     ms: Date.parse(p.effective_time), value: p.value, unit: p.unit, resource_id: p.resource_id,
     version_id: p.version_id, received_at: p.received_at,
   }));
-  const own = (c) => c.target === variable;
   const catalog = catalogCellsForVariable(variable);
   const runCells = run ? cellsForVariable(variable, currentCells()) : [];
   const keep = (c) => !horizons || horizons.has(c.horizon_hours);
-  const forecasts = runCells.filter(own).filter(keep).map((c) => {
+  const forecasts = runCells.filter(keep).map((c) => {
     const hasBasis = c.observed_value !== null && c.observed_value !== undefined
       && c.measurement_age_hours !== null && c.measurement_age_hours !== undefined;
     const basis_ms = hasBasis ? cutoff_ms - c.measurement_age_hours * HOUR : null;
@@ -199,15 +195,13 @@ export function trajectoryFor(variable, horizons) {
       basis: hasBasis ? { ms: basis_ms, value: c.observed_value, resource_id: matched ? matched.resource_id : null } : null,
     };
   }).sort((a, b) => a.horizon_hours - b.horizon_hours);
-  const derived = runCells.filter((c) => !own(c));
   let kind;
   if (!run) kind = 'no-run';
-  else if (!catalog.some(own)) kind = 'none';
+  else if (!catalog.length) kind = 'none';
   else if (forecasts.some((f) => f.status === 'model')) kind = 'model';
-  else if (forecasts.some((f) => f.status === 'persistence')) kind = 'persistence';
   else kind = 'unavailable';
-  return { variable, run, cutoff_ms, points, forecasts, derived, kind,
-    catalogHorizons: Array.from(new Set(catalog.filter(own).map((c) => c.horizon_hours))).sort((a, b) => a - b),
+  return { variable, run, cutoff_ms, points, forecasts, kind,
+    catalogHorizons: Array.from(new Set(catalog.map((c) => c.horizon_hours))).sort((a, b) => a - b),
     frozen: !!S.anchor };
 }
 
@@ -315,7 +309,7 @@ export function observationAttention(state) {
 
 /** A model point forecast against the same supplied range, in a unit it can be
  *  read in. Only a `model` cell with a value can be projected anywhere: a
- *  carried-forward value repeats the observation and a withheld cell has none. */
+ *  withheld cell has none. */
 export function forecastAttention(cell, state) {
   if (!cell || cell.status !== 'model' || !Number.isFinite(cell.forecast_point)) return { projected: false, side: null };
   let range = rangeIn(state, cell.unit);
@@ -328,7 +322,6 @@ export function forecastAttention(cell, state) {
   return { projected: !!side, side, range };
 }
 
-const ABSTAINED = 'continuous_head_abstained';
 
 /* The reading order of every indicator list on this page. Only the first three
  * are "needs attention"; the rest are ordinary rows in a quiet order. */
@@ -392,14 +385,12 @@ export function indicatorRows() {
   const horizon = activeHorizon();
   return Object.keys(units).map((variable) => {
     const state = vars[variable] || null;
-    const own = (c) => c.target === variable;
-    const catalogHorizons = Array.from(new Set(catalogCellsForVariable(variable).filter(own).map((c) => c.horizon_hours))).sort((a, b) => a - b);
-    const forecasts = (run ? cellsForVariable(variable, cells).filter(own) : []).slice()
+    const catalogHorizons = Array.from(new Set(catalogCellsForVariable(variable).map((c) => c.horizon_hours))).sort((a, b) => a - b);
+    const forecasts = (run ? cellsForVariable(variable, cells) : []).slice()
       .sort((a, b) => a.horizon_hours - b.horizon_hours)
       .map((c) => {
         const fa = forecastAttention(c, state);
-        return { ...c, abstained: c.status === 'persistence' && c.fallback_reason === ABSTAINED,
-          projected: fa.projected, projectedSide: fa.side };
+        return { ...c, projected: fa.projected, projectedSide: fa.side };
       });
     const attention = observationAttention(state);
     const points = (allSeries[variable] || []).filter((p) => Number.isFinite(p.value));
@@ -415,9 +406,7 @@ export function indicatorRows() {
       atHorizon: horizon === null ? null : (forecasts.find((f) => f.horizon_hours === horizon) || null),
       hasHorizonCell: catalogHorizons.includes(horizon),
       modelCount: forecasts.filter((f) => f.status === 'model').length,
-      carriedCount: forecasts.filter((f) => f.status === 'persistence').length,
-      abstainedCount: forecasts.filter((f) => f.abstained).length,
-      withheldCount: forecasts.filter((f) => f.status !== 'model' && f.status !== 'persistence').length,
+      withheldCount: forecasts.filter((f) => f.status !== 'model').length,
       projectedSide: (forecasts.find((f) => f.projected) || {}).projectedSide || null,
     };
     row.tier = indicatorTier(row);
@@ -466,8 +455,6 @@ export function indicatorView(labelOf) {
     supplied: observed.filter((r) => r.attention.kind === 'outside' || r.attention.kind === 'within').length,
     unsupplied: observed.filter((r) => r.attention.kind === 'unsupplied' || r.attention.kind === 'unit').length,
     modelCells: all.reduce((n, r) => n + r.modelCount, 0),
-    carriedCells: all.reduce((n, r) => n + r.carriedCount, 0),
-    abstainedCells: all.reduce((n, r) => n + r.abstainedCount, 0),
     withheldCells: all.reduce((n, r) => n + r.withheldCount, 0),
     horizon: activeHorizon(),
     horizons: horizonCoverage().horizons,
@@ -662,7 +649,7 @@ export function applyEvent(type, data, sequence) {
       S.lastRunFailed = null;
       S.freshRun = now;
       upsertRun({ ...run, status: 'completed' });
-      pushFeed({ at: run.completed_at, kind: 'run', title: `Run completed · ${run.runtime_mode}`, detail: `cutoff ${run.input_cutoff} · ${run.input_resource_count} resources · model ${run.summary.model_cells} · persistence ${run.summary.persistence_cells} · missing ${run.summary.missing_cells} · degraded ${run.summary.degraded_cells}` });
+      pushFeed({ at: run.completed_at, kind: 'run', title: `Run completed · ${run.runtime_mode}`, detail: `cutoff ${run.input_cutoff} · ${run.input_resource_count} resources · model ${run.summary.model_cells} · missing ${run.summary.missing_cells} · degraded ${run.summary.degraded_cells}` });
       return 'run-completed';
     }
     case 'model.run.failed':

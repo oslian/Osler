@@ -13,8 +13,7 @@ screen relies on:
 - current, previous and forecast are three separate comparisons, and the
   forecast column compares at one horizon the reader chooses;
 - a current result outside its range sorts before a forecast projected outside
-  one, and a carried-forward value - a head that abstained included - is never a
-  model forecast and is never projected;
+  one, and only a model forecast with a value is ever projected;
 - one organ-attention rule feeds the rail, the figure and the report;
 - a report is frozen when it is opened: later stream events do not reach it.
 
@@ -38,7 +37,7 @@ import { S, TIER, activeHorizon, applyEvent, horizonCoverage, indicatorRows, ind
   observationAttention, forecastAttention, organAttentionState, organAttentionMap, organsByAttention,
   trajectoryFor, variablesByAttention } from './store.js';
 import { trajectoryChart } from './chart.js';
-import { isAbstained, flagOf, forecastLabel } from './format.js';
+import { flagOf, forecastLabel } from './format.js';
 import { freezeReport, openReport } from './report.js';
 const H = 3600000, T0 = Date.UTC(2026, 2, 14, 6);
 const iso = (ms) => new Date(ms).toISOString();
@@ -68,7 +67,6 @@ S.capabilities = { cells: [
   { cell: 'glucose@12h', target: 'glucose', horizon_hours: 12 },
   { cell: 'potassium@12h', target: 'potassium', horizon_hours: 12 },
   { cell: 'lactate@6h', target: 'lactate', horizon_hours: 6 },
-  { cell: 'hypoxemia_event@1h', target: 'hypoxemia_event', horizon_hours: 1 },
 ] };
 const at = (hours) => iso(T0 + hours * H);
 const state = (variable, value, unit, hours, extra) => ({ variable, value, unit, effective_time: at(hours),
@@ -113,17 +111,17 @@ const cell = (name, target, h, status, point, observed, source, reason, unit) =>
   horizon_hours: h, observed_value: observed, measurement_age_hours: 0, observations: 3, forecast_point: point,
   source_model: source, status, fallback_reason: reason, interval_status: 'none', lower: null, upper: null,
   causal_claim_allowed: false });
-S.live = { run: { run_id: 'run-1', input_cutoff: at(30), epoch: 1, runtime_mode: 'release', input_resource_count: 9,
-                  summary: { model_cells: 5, persistence_cells: 2, missing_cells: 1, degraded_cells: 0 } },
+S.live = { run: { run_id: 'run-1', input_cutoff: at(30), epoch: 1, runtime_mode: 'api', input_resource_count: 9,
+                  summary: { model_cells: 6, missing_cells: 2, degraded_cells: 1 } },
   cells: [
-    cell('bun@24h', 'bun', 24, 'model', 24.5, 26, 'unified_shared_jepa_target_head', null, 'mg/dL'),
-    cell('sodium@12h', 'sodium', 12, 'model', 146.2, 139, 'unified_shared_jepa_target_head', null, 'mEq/L'),
-    cell('sodium@24h', 'sodium', 24, 'model', 141.0, 139, 'unified_shared_jepa_target_head', null, 'mEq/L'),
-    cell('chloride@12h', 'chloride', 12, 'persistence', 107, 107, 'patient_persistence_anchor', 'continuous_head_abstained', 'mEq/L'),
-    cell('creatinine@6h', 'creatinine', 6, 'model', 1.25, 1.2, 'frozen_whole_body_jepa', null, 'mg/dL'),
-    cell('creatinine@12h', 'creatinine', 12, 'persistence', 1.2, 1.2, 'patient_persistence_anchor', 'shared_jepa_head_not_external_validated', 'mg/dL'),
-    cell('glucose@12h', 'glucose', 12, 'model', 171, 171, 'frozen_whole_body_jepa', null, 'mg/dL'),
-    cell('potassium@12h', 'potassium', 12, 'model', 9.9, 4.1, 'unified_shared_jepa_target_head', null, 'mEq/L'),
+    cell('bun@24h', 'bun', 24, 'model', 24.5, 26, 'measurement_pure_ridge', null, 'mg/dL'),
+    cell('sodium@12h', 'sodium', 12, 'model', 146.2, 139, 'measurement_pure_ridge', null, 'mEq/L'),
+    cell('sodium@24h', 'sodium', 24, 'model', 141.0, 139, 'measurement_pure_ridge', null, 'mEq/L'),
+    cell('chloride@12h', 'chloride', 12, 'missing', null, 107, 'measurement_pure_ridge', 'current_value_missing', 'mEq/L'),
+    cell('creatinine@6h', 'creatinine', 6, 'model', 1.25, 1.2, 'measurement_pure_ridge', null, 'mg/dL'),
+    cell('creatinine@12h', 'creatinine', 12, 'missing', null, 1.2, 'measurement_pure_ridge', 'current_value_missing', 'mg/dL'),
+    cell('glucose@12h', 'glucose', 12, 'model', 171, 171, 'measurement_pure_ridge', null, 'mg/dL'),
+    cell('potassium@12h', 'potassium', 12, 'model', 9.9, 4.1, 'measurement_pure_ridge', null, 'mEq/L'),
     cell('lactate@6h', 'lactate', 6, 'degraded', null, 1.1, 'none', 'forecast_api_not_attached', 'mmol/L'),
   ] };
 S.freshVariables = { o2sat: Date.now() };
@@ -134,7 +132,7 @@ const slim = (r) => ({ variable: r.variable, tier: r.tier, flag: flagOf(r), flag
   range: r.range ? { low: r.range.low, high: r.range.high, unit: r.range.unit } : null,
   previous: r.previous, horizon: r.horizon, hasHorizonCell: r.hasHorizonCell,
   atHorizon: r.atHorizon ? { h: r.atHorizon.horizon_hours, status: r.atHorizon.status, point: r.atHorizon.forecast_point,
-    abstained: r.atHorizon.abstained, projected: r.atHorizon.projected, side: r.atHorizon.projectedSide,
+    projected: r.atHorizon.projected, side: r.atHorizon.projectedSide,
     label: forecastLabel(r.atHorizon) } : null,
   points: r.series.length, projectedSide: r.projectedSide });
 out.coverage = horizonCoverage();
@@ -143,7 +141,7 @@ const view = indicatorView((v) => v);
 out.view = { attention: view.attention.map((r) => r.variable), other: view.other.map((r) => r.variable),
   unobserved: view.unobserved.map((r) => r.variable), outside: view.outside, projected: view.projected,
   fresh: view.fresh, unsupplied: view.unsupplied, observed: view.observed, total: view.total,
-  modelCells: view.modelCells, carriedCells: view.carriedCells, abstainedCells: view.abstainedCells,
+  modelCells: view.modelCells, withheldCells: view.withheldCells,
   horizon: view.horizon, horizons: view.horizons };
 out.rows = Object.fromEntries(indicatorRows().map((r) => [r.variable, slim(r)]));
 // switching the compared horizon changes only the forecast column
@@ -193,8 +191,8 @@ const refreshed = openReport(report);
 out.refreshed = { bun: refreshed.frozen.rows.find((r) => r.variable === 'bun').state.value,
   scope: refreshed.scope, charts: refreshed.charts, horizon: refreshed.horizon };
 // the anchor freezes the organs too
-S.anchor = { run: { run_id: 'old', input_cutoff: at(12), epoch: 1, runtime_mode: 'release', input_resource_count: 4 },
-  cells: [cell('bun@24h', 'bun', 24, 'model', 30.5, 32, 'unified_shared_jepa_target_head', null, 'mg/dL')],
+S.anchor = { run: { run_id: 'old', input_cutoff: at(12), epoch: 1, runtime_mode: 'api', input_resource_count: 4 },
+  cells: [cell('bun@24h', 'bun', 24, 'model', 30.5, 32, 'measurement_pure_ridge', null, 'mg/dL')],
   series: { bun: [pt('bun', 0, 32, 'mg/dL')] },
   variables: { bun: state('bun', 32, 'mg/dL', 12, { reference_range: [range(6, 20, 'mg/dL')], interpretation: [derived('H')] }),
                glucose: state('glucose', 90, 'mg/dL', 12) },
@@ -207,7 +205,7 @@ out.unitless = observationAttention(state('x', 5, 'u', 1, { reference_range: [{ 
 out.ambiguous = observationAttention(state('x', 1, 'u', 1, { reference_range: [range(0, 1, 'u', { applies_to: true }), range(0, 2, 'u', { applies_to: true })] }));
 out.qualifiedAlone = observationAttention(state('x', 3, 'u', 1, { reference_range: [range(0, 2, 'u', { age: true })] }));
 out.derivedNeverCritical = observationAttention(state('x', 99, 'u', 1, { reference_range: [range(0, 2, 'u')], interpretation: [derived('HH')] })).critical;
-out.projectedPersistence = forecastAttention({ status: 'persistence', forecast_point: 99, unit: 'mg/dL', fallback_reason: 'continuous_head_abstained' }, S.variables.bun).projected;
+out.projectedMissing = forecastAttention({ status: 'missing', forecast_point: 99, unit: 'mg/dL', fallback_reason: 'current_value_missing' }, S.variables.bun).projected;
 out.projectedNull = forecastAttention({ status: 'model', forecast_point: null, unit: 'mg/dL' }, S.variables.bun).projected;
 out.projectedDegraded = forecastAttention({ status: 'degraded', forecast_point: 99, unit: 'mg/dL' }, S.variables.bun).projected;
 out.tiers = TIER;
@@ -279,7 +277,7 @@ class IndicatorViewTests(unittest.TestCase):
     def test_the_forecast_column_compares_at_one_horizon(self):
         # 12h covers the most indicators in this registry, so it is the default
         self.assertEqual(self.out["defaultHorizon"], 12)
-        self.assertEqual(sorted(h["hours"] for h in self.out["coverage"]["horizons"]), [1, 6, 12, 24])
+        self.assertEqual(sorted(h["hours"] for h in self.out["coverage"]["horizons"]), [6, 12, 24])
         sodium = self.out["rows"]["sodium"]
         self.assertEqual((sodium["horizon"], sodium["atHorizon"]["h"], sodium["atHorizon"]["point"]), (12, 12, 146.2))
         # an indicator with no cell at the compared horizon says so instead of borrowing one
@@ -301,18 +299,18 @@ class IndicatorViewTests(unittest.TestCase):
         self.assertIn("sodium", self.out["view24"]["attention"])
 
     # ---- forecast states ----------------------------------------------------
-    def test_a_head_that_abstained_is_carried_forward_and_never_projected(self):
+    def test_a_cell_without_a_value_is_withheld_and_never_projected(self):
         chloride = self.out["rows"]["chloride"]["atHorizon"]
-        self.assertEqual((chloride["status"], chloride["abstained"], chloride["projected"]), ("persistence", True, False))
-        self.assertEqual(chloride["label"], "Carried forward — model abstained")
-        self.assertEqual(self.out["view"]["abstainedCells"], 1)
-        self.assertFalse(self.out["projectedPersistence"])
+        self.assertEqual((chloride["status"], chloride["point"], chloride["projected"]), ("missing", None, False))
+        self.assertEqual(chloride["label"], "No forecast available")
+        self.assertEqual((self.out["view"]["modelCells"], self.out["view"]["withheldCells"]), (6, 3))
+        self.assertFalse(self.out["projectedMissing"])
         self.assertFalse(self.out["projectedNull"])
         self.assertFalse(self.out["projectedDegraded"])
 
-    def test_a_frozen_backbone_forecast_equal_to_the_observation_stays_a_model_forecast(self):
+    def test_a_forecast_equal_to_the_observation_stays_a_model_forecast(self):
         glucose = self.out["rows"]["glucose"]["atHorizon"]
-        self.assertEqual((glucose["status"], glucose["abstained"]), ("model", False))
+        self.assertEqual(glucose["status"], "model")
         self.assertEqual(glucose["label"], "Model forecast")
 
     # ---- the reading order --------------------------------------------------
@@ -389,7 +387,7 @@ class IndicatorViewTests(unittest.TestCase):
         self.assertNotIn("temperature", report["rows"])    # never observed, never a result
         self.assertEqual(report["organs"]["kidneys"], "abnormal")
         self.assertEqual(report["counts"]["outside"], 4)
-        self.assertEqual(report["counts"]["abstainedCells"], 1)
+        self.assertEqual(report["counts"]["withheldCells"], 3)
         self.assertTrue(report["hasTraj"])                 # its own chart data, frozen with it
         self.assertRegex(report["id"], r"^OSL-\d{8}-\d{6}$")
         self.assertEqual((report["charts"], report["anatomy"], report["provenance"]), (True, True, False))
