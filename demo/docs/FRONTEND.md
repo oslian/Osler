@@ -20,6 +20,7 @@ frontend/
     signals.js   Signals & forecasts: the single-patient indicator list.
     report.js    the report builder and the printed research report.
     ward.js      Ward order: the multi-patient reading order, observations only.
+    scores.js    Scorecard: this stream's past forecasts against what was measured.
     anatomy.js   builds the figure from organ-layout.json and applies organ state.
     render.js    all DOM writing. Pure functions of the store.
     main.js      lifecycle: boot, SSE wiring, controls, navigation, deep links.

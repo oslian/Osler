@@ -10,6 +10,7 @@ import { S, catalogCellsForVariable, cellsForVariable, clinicalNow, currentCells
   workspaceFor } from './store.js';
 import { chartLegend, makeTimeFormatter, sparkline, trajectoryChart } from './chart.js';
 import { renderWardRail, renderWardWorkspace } from './ward.js';
+import { renderScoresWorkspace } from './scores.js';
 import { renderDataView } from './signals.js';
 import { mountReportAnatomy, renderReport } from './report.js';
 import { esc, fmtNum, DATA_VIEW, FLAG, FORECAST_LABEL, NO_FORECAST_MODEL, OBSERVED_HISTORY,
@@ -178,7 +179,7 @@ export function renderViewBar() {
   const host = el('viewBar');
   if (!host) return;
   const modes = S.sources.length ? S.sources : [{ source_key: 'synthetic', label: 'Live synthetic stream' }, { source_key: 'retrospective', label: 'Retrospective replay' }];
-  const views = [['anatomy', 'Anatomy'], ['functions', 'Functions'], ['data', DATA_VIEW.title], ['ward', 'Ward order']];
+  const views = [['anatomy', 'Anatomy'], ['functions', 'Functions'], ['data', DATA_VIEW.title], ['ward', 'Ward order'], ['scores', 'Scorecard']];
   // A ward stay is its own source key (`retrospective:<case id>`). The bar names it,
   // so a reader can see whose data every view below is showing.
   const src = sourceInfo();
@@ -271,6 +272,7 @@ export function renderRail() {
     }).join('') : '';
   } else if (S.view === 'ward') {
     renderWardRail(head, list);
+
   } else {
     head.innerHTML = '';
     list.innerHTML = '';
@@ -365,6 +367,7 @@ export function renderWorkspace() {
   if (S.metric) { renderMetric(host); return; }
   if (S.view === 'data') { renderDataView(host); return; }
   if (S.view === 'ward') { renderWardWorkspace(host); return; }
+  if (S.view === 'scores') { renderScoresWorkspace(host); return; }
   const spec = S.view === 'functions' ? workspaceFor('function', S.selectedFunction) : workspaceFor('organ', S.selectedOrgan);
   if (!spec) { host.innerHTML = '<p class="empty-note">Loading…</p>'; return; }
   const rows = indicatorRows();

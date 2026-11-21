@@ -79,6 +79,8 @@ async function loadSnapshot() {
 async function openSession(mode) {
   if (channel) { channel.close(); channel = null; }
   resetSessionState();
+  S.scores = null;
+  S.scoresError = null;
   S.mode = mode;
   // Throws on a rejected source key; openWardStay relies on that to report a
   // broken link instead of leaving the reader on a session that never opened.
@@ -89,6 +91,7 @@ async function openSession(mode) {
   S.lastSequence = session.last_event_sequence || 0;
   await loadSnapshot();
   openChannel();
+  if (S.view === 'scores') loadScores();
   scheduleRender();
 }
 
@@ -112,7 +115,7 @@ async function boot() {
   // `signals` and `cells` were the two views Signals & forecasts replaced; an old link still lands
   const LEGACY_VIEWS = { signals: 'data', cells: 'data' };
   const view = LEGACY_VIEWS[params.view] || params.view;
-  if (view && ['anatomy', 'functions', 'data', 'ward'].includes(view)) S.view = view;
+  if (view && ['anatomy', 'functions', 'data', 'ward', 'scores'].includes(view)) S.view = view;
   if (params.organ && anatomy.organs.some((o) => o.id === params.organ)) S.selectedOrgan = params.organ;
   if (params.function && functions.groups.some((g) => g.id === params.function)) S.selectedFunction = params.function;
   anatomyBuilt = buildAnatomy(document.getElementById('anatomyHost'), anatomy.organs, organLayout, selectOrgan);
@@ -122,6 +125,7 @@ async function boot() {
   if (params.lower === '1') S.lowerOpen = true;
   if (params.patient) S.wardPatient = params.patient;
   if (S.view === 'ward') openWard();
+  if (S.view === 'scores') loadScores();
   scheduleRender();
 }
 
@@ -143,6 +147,7 @@ function openChannel() {
     onEvent(type, data, sequence) {
       const hint = applyEvent(type, data, sequence);
       if (hint === 'reset' || hint === 'superseded') loadSnapshot().then(scheduleRender);
+      if (S.view === 'scores' && (type === 'model.run.completed' || type === 'stream.state')) loadScores();
       scheduleStreamRender();
     },
   });
@@ -163,6 +168,20 @@ async function loadWard() {
 }
 
 function openWard() { if (!S.ward && !S.wardError) loadWard(); }
+
+/* The scorecard is read fresh each time: every delivered result can resolve a
+ * forecast, so it is fetched when the view opens and again after each run. */
+async function loadScores() {
+  if (!S.session) return;
+  try {
+    S.scoresError = null;
+    S.scores = await getJSON(`/api/patients/${S.session.patient_id}/forecast-scores?session_id=${encodeURIComponent(S.session.session_id)}`);
+  } catch (e) {
+    S.scores = null;
+    S.scoresError = e.message;
+  }
+  scheduleRender();
+}
 
 /* Leaving the ward keeps where the reader was. The board, the selected row and
  * the open bands stay in the store (nothing in a session reset touches them);
@@ -185,6 +204,7 @@ function switchView(next) {
   S.view = next;
   S.metric = null;
   if (next === 'ward') openWard();
+  if (next === 'scores') loadScores();
   scheduleRender();
 }
 

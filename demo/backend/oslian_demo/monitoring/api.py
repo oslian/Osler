@@ -11,6 +11,7 @@ Endpoints
     GET  /api/patients/<id>/timeline            delivered timeline (optionally up to a run's cutoff)
     GET  /api/patients/<id>/forecasts           cells for the live head or ?run_id=
     GET  /api/patients/<id>/forecast-history    every run, newest first
+    GET  /api/patients/<id>/forecast-scores     past forecasts against later measurements
     GET  /api/patients/<id>/mapping-failures
     GET  /api/fhir/<type>/<id>/_history/<vid>   raw resource from the ledger (provenance drawer)
     GET  /api/model/capabilities | health | anatomy | mapping
@@ -33,6 +34,7 @@ from .eventlog import DELIVERY_LIVE, DELIVERY_REPLAY, StreamEventLogger
 from .functions import functions_document
 from .mapping import registry_document
 from .repository import Repository, ResourceVersionConflict
+from .scoring import score_forecasts
 from .session import SPEEDS, SessionManager, StreamSession
 from .source import SOURCES, is_known_source_key, make_source
 from .timeline import (attach_observation_statements, delivered_timeline, organ_state, organ_state_for_run,
@@ -272,6 +274,13 @@ def create_blueprint(service: StreamService) -> Blueprint:
             "current_epoch": session.epoch, "runs": runs,
             "cell_history": service.repo.cell_history(patient_id, cell) if cell else None,
         })
+
+    @bp.get("/api/patients/<patient_id>/forecast-scores")
+    def patient_forecast_scores(patient_id: str):
+        session, _, error = _patient_context(patient_id)
+        if error:
+            return error
+        return jsonify(score_forecasts(service.repo, session.session_id, session.epoch, patient_id))
 
     @bp.get("/api/patients/<patient_id>/mapping-failures")
     def patient_mapping_failures(patient_id: str):
