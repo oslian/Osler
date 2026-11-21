@@ -1,8 +1,12 @@
 """Access control, automatic logoff, the audit ledger and the fail-closed settings."""
 
 import io
+import json
 import os
+from pathlib import Path
 import re
+import shutil
+import subprocess
 import sqlite3
 import tempfile
 import unittest
@@ -15,7 +19,8 @@ from oslian_demo.app import create_app  # noqa: E402
 from oslian_demo.config import AppConfig, SESSION_HOURS, external_llm_allowed  # noqa: E402
 from oslian_demo.medication import llm_client  # noqa: E402
 from oslian_demo.monitoring.forecast_runtime import RuntimeConfig  # noqa: E402
-from oslian_demo.shared import audit  # noqa: E402
+from oslian_demo.__main__ import server_options  # noqa: E402
+from oslian_demo.shared import audit, backup  # noqa: E402
 from oslian_demo.shared.audit import AuditLog  # noqa: E402
 
 OIDC = {"OSLIAN_STREAM_DB": ":memory:", "OSLIAN_AUTH": "oidc", "OSLIAN_PUBLIC_URL": "https://oslian.example.org",
@@ -57,6 +62,14 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(RuntimeConfig.from_env({**away, "OSLIAN_FORECAST_API_TOKEN": "t"}).api_token, "t")
         RuntimeConfig.from_env({**away, "OSLIAN_FORECAST_RUNTIME": "detached"})
 
+    def test_only_the_named_proxy_may_say_where_a_request_came_from(self):
+        plain = server_options(AppConfig.from_env({"OSLIAN_STREAM_DB": ":memory:", "OSLIAN_PORT": "5123"}))
+        self.assertEqual((plain["host"], plain["port"]), ("127.0.0.1", 5123))
+        self.assertNotIn("trusted_proxy", plain, "Waitress then drops forwarded headers from everyone")
+        behind = server_options(AppConfig.from_env({**OIDC, "OSLIAN_TRUSTED_PROXY": "10.0.0.2"}))
+        self.assertEqual((behind["trusted_proxy"], behind["trusted_proxy_count"]), ("10.0.0.2", 1))
+        self.assertEqual(behind["trusted_proxy_headers"], {"x-forwarded-for", "x-forwarded-proto"})
+
     def test_text_leaves_for_an_outside_model_only_when_allowed(self):
         self.assertTrue(external_llm_allowed({}))
         self.assertFalse(external_llm_allowed({"OSLIAN_AUTH": "oidc"}))
@@ -92,6 +105,7 @@ class AuditLedgerTests(unittest.TestCase):
             audit.main(["--db", path, "--patient", "p1"], out)
             lines = out.getvalue().splitlines()
             self.assertEqual(lines[0], "id,at,actor,actor_name,action,path,patient_id,status,remote_addr")
+            self.assertEqual(len(lines[1].split(",")), 9, "the chain hash is not part of the export")
             self.assertEqual([line.split(",")[2] for line in lines[1:]], ["u1", "u2"])
             out = io.StringIO()
             audit.main(["--db", path, "--since", "2999-01-01"], out)
@@ -101,6 +115,153 @@ class AuditLedgerTests(unittest.TestCase):
             self.assertEqual(len(out.getvalue().splitlines()), 3)
             with self.assertRaises(SystemExit):
                 audit.main(["--db", os.path.join(folder, "missing.sqlite3")], io.StringIO())
+
+
+    def filled(self, folder, statuses=(200, 200, 403, 200)):
+        path = os.path.join(folder, "audit.sqlite3")
+        log = AuditLog(path)
+        for index, status in enumerate(statuses):
+            log.record(actor=f"u{index % 2}", actor_name=f"User {index % 2}", action="GET", path=f"/api/patients/p{index}/state",
+                       patient_id=f"p{index}", status=status, remote_addr="127.0.0.1")
+        log.close()
+        return path
+
+    def test_summary_for_the_regular_review(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = io.StringIO()
+            audit.main(["--db", self.filled(folder), "--summary"], out)
+            lines = [line.split(",") for line in out.getvalue().splitlines()]
+            self.assertEqual(lines[0], ["actor", "actor_name", "requests", "patients", "refused", "first_at", "last_at"])
+            self.assertEqual([line[:5] for line in lines[1:]], [["u0", "User 0", "2", "2", "1"], ["u1", "User 1", "2", "2", "0"]])
+            out = io.StringIO()
+            audit.main(["--db", self.filled(folder), "--summary", "--since", "2999-01-01"], out)
+            self.assertEqual(len(out.getvalue().splitlines()), 1)
+
+    def test_a_changed_inserted_or_removed_row_breaks_the_chain(self):
+        def tamper(path, statement):
+            conn = sqlite3.connect(path)
+            conn.executescript("DROP TRIGGER access_audit_no_update; DROP TRIGGER access_audit_no_delete; " + statement)
+            conn.close()
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.filled(folder)
+            out = io.StringIO()
+            audit.main(["--db", path, "--verify"], out)
+            self.assertRegex(out.getvalue(), r"^ok rows=4 head=[0-9a-f]{64}\n$")
+            head = out.getvalue().split("head=")[1]
+            log = AuditLog(path)                                # a restart continues the same chain
+            log.record(actor="u9", actor_name=None, action="GET", path="/api/ward", patient_id=None, status=200, remote_addr=None)
+            self.assertEqual(log.verify()[::2], (5, None))
+            self.assertNotEqual(log.verify()[1], head.strip())
+            log.close()
+        for statement, bad in (("UPDATE access_audit SET actor = 'someone-else' WHERE id = 2", 2),
+                               ("UPDATE access_audit SET status = 200 WHERE id = 3", 3),
+                               ("DELETE FROM access_audit WHERE id = 2", 3),
+                               ("INSERT INTO access_audit (at, actor, action, path, status, chain) VALUES ('2026', 'x', 'GET', '/', 200, 'made-up')", 5)):
+            with tempfile.TemporaryDirectory() as folder:
+                path = self.filled(folder)
+                tamper(path, statement)
+                with self.assertRaises(SystemExit, msg=statement) as stopped:
+                    audit.main(["--db", path, "--verify"], io.StringIO())
+                self.assertIn(f"row id {bad} ", str(stopped.exception), statement)
+
+
+class BackupTests(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.env = {"OSLIAN_STREAM_DB": os.path.join(self.folder.name, "var", "stream.sqlite3"),
+                    "OSLIAN_AUDIT_DB": os.path.join(self.folder.name, "var", "audit.sqlite3")}
+        app = create_app(AppConfig.from_env(self.env))
+        app.test_client().get("/api/patients/p-404/state?session_id=x")
+        self.assertEqual(app.test_client().get("/api/ward").status_code, 200)
+        self.app = app                                          # the server stays open: a backup is taken while it runs
+        self.addCleanup(app.extensions["oslian_stream"].close)
+        self.addCleanup(app.extensions["oslian_audit"].close)
+        self.to = os.path.join(self.folder.name, "backups")
+
+    def back_up(self):
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, self.env):
+            backup.main(["--to", self.to], out)
+        return out.getvalue().strip()
+
+    def test_a_backup_of_the_running_ledgers_can_be_read_back(self):
+        manifest = self.back_up()
+        recorded = json.loads(Path(manifest).read_text())
+        self.assertEqual(len(recorded["files"]), 2)
+        audit_copy = next(entry for name, entry in recorded["files"].items() if name.startswith("audit-"))
+        self.assertEqual(audit_copy["rows"]["access_audit"], 2)
+        self.assertEqual(audit_copy["audit_head"], self.app.extensions["oslian_audit"].verify()[1])
+        for name in recorded["files"]:
+            self.assertEqual(os.stat(os.path.join(self.to, name)).st_mode & 0o777, 0o600)
+        out = io.StringIO()
+        backup.main(["--check", manifest], out)
+        self.assertRegex(out.getvalue(), r"^ok 2 files from \d{8}T\d{6}Z\n$")
+        restored = AuditLog(os.path.join(self.to, next(name for name in recorded["files"] if name.startswith("audit-"))))
+        self.addCleanup(restored.close)
+        self.assertEqual([row["path"] for row in restored.rows()], ["/api/patients/p-404/state", "/api/ward"])
+
+    def test_a_damaged_or_missing_copy_fails_the_check(self):
+        manifest = self.back_up()
+        name = next(name for name in json.loads(Path(manifest).read_text())["files"] if name.startswith("audit-"))
+        copy = os.path.join(self.to, name)
+        with open(copy, "r+b") as handle:
+            handle.seek(200)
+            handle.write(b"\xff" * 16)
+        with self.assertRaises(SystemExit) as stopped:
+            backup.main(["--check", manifest], io.StringIO())
+        self.assertIn("differs", str(stopped.exception))
+        os.rename(copy, copy + ".gone")
+        with self.assertRaises(SystemExit) as stopped:
+            backup.main(["--check", manifest], io.StringIO())
+        self.assertIn("missing", str(stopped.exception))
+
+    def test_nothing_to_back_up(self):
+        empty = {"OSLIAN_STREAM_DB": os.path.join(self.folder.name, "none.sqlite3"),
+                 "OSLIAN_AUDIT_DB": os.path.join(self.folder.name, "none-audit.sqlite3")}
+        with mock.patch.dict(os.environ, empty), self.assertRaises(SystemExit):
+            backup.main(["--to", self.to], io.StringIO())
+
+
+class IdleTimerTests(unittest.TestCase):
+    """frontend/js/access.js, executed under Node with a stand-in page and clock."""
+
+    HARNESS = """
+const fs = require('fs');
+let now = 0, timers = [], listeners = {}, left = null;
+global.document = { body: { dataset: { idleMinutes: process.argv[2] } } };
+global.window = { location: { assign: (url) => { left = url; } },
+                  addEventListener: (type, fn) => { listeners[type] = fn; } };
+global.setTimeout = (fn, ms) => { const t = { fn, at: now + ms, on: true }; timers.push(t); return t; };
+global.clearTimeout = (t) => { if (t) t.on = false; };
+const advance = (minutes) => { now += minutes * 60000;
+  for (const t of timers) if (t.on && t.at <= now) { t.on = false; t.fn(); } };
+eval(fs.readFileSync(process.argv[1], 'utf8'));
+const out = { listening: Object.keys(listeners).sort() };
+advance(14); out.after14 = left;
+if (listeners.keydown) listeners.keydown();
+advance(14); out.after28WithAKeyAt14 = left;
+advance(1); out.after29 = left;
+console.log(JSON.stringify(out));
+"""
+
+    def run_page(self, minutes):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not on PATH")
+        script = os.path.join(os.path.dirname(__file__), "..", "frontend", "js", "access.js")
+        done = subprocess.run([node, "-e", self.HARNESS, script, str(minutes)], capture_output=True, text=True, check=True)
+        return json.loads(done.stdout)
+
+    def test_the_page_signs_out_after_the_idle_time_and_activity_restarts_it(self):
+        seen = self.run_page(15)
+        self.assertEqual(seen["listening"], ["keydown", "pointerdown", "pointermove", "touchstart", "wheel"])
+        self.assertEqual((seen["after14"], seen["after28WithAKeyAt14"], seen["after29"]), (None, None, "/logout"))
+
+    def test_no_timer_without_sign_in(self):
+        seen = self.run_page(0)
+        self.assertEqual((seen["listening"], seen["after29"]), ([], None))
 
 
 class LocalDemoTests(unittest.TestCase):
@@ -247,6 +408,45 @@ class SignInTests(unittest.TestCase):
         self.assertIn("signed out", self.get("/logout").get_data(as_text=True))
         self.assertEqual(self.get("/api/ward").status_code, 401)
         self.assertEqual(self.audit()[1], ("u-17", "/logout", 200))
+
+    def test_requests_are_rate_limited_per_user_and_sign_in_per_address(self):
+        self.sign_in()
+        with mock.patch("oslian_demo.shared.access.API_LIMIT", "3 per minute"):
+            app = create_app(AppConfig.from_env(OIDC))
+        self.addCleanup(app.extensions["oslian_stream"].close)
+        idp = app.extensions["authlib.integrations.flask_client"].idp
+        clients = [app.test_client(use_cookies=True) for _ in range(2)]
+        for client, sub in zip(clients, ("u-1", "u-2")):
+            with mock.patch.object(idp, "authorize_access_token", return_value={"userinfo": {"sub": sub}}):
+                client.get("/auth/callback", base_url="https://oslian.example.org")
+        ward = lambda client: client.get("/api/ward", base_url="https://oslian.example.org")
+        self.assertEqual([ward(clients[0]).status_code for _ in range(4)], [200, 200, 200, 429])
+        self.assertEqual(ward(clients[0]).get_json(), {"error": "too many requests; wait a minute"})
+        self.assertEqual(ward(clients[1]).status_code, 200, "another user has their own count")
+        with clients[0].get("/static/js/access.js", base_url="https://oslian.example.org") as script:
+            self.assertEqual(script.status_code, 200)
+        rows = [(r["actor"], r["path"], r["status"]) for r in app.extensions["oslian_audit"].rows()]
+        self.assertIn(("u-1", "/api/ward", 429), rows, "a refused request is audited with the user")
+        statuses = [self.get("/logout").status_code for _ in range(21)]
+        self.assertEqual((statuses[:20], statuses[20]), ([200] * 20, 429), "the sign-in routes are counted per address")
+
+    def test_the_audit_names_the_client_only_on_the_proxys_word(self):
+        from waitress.proxy_headers import proxy_headers_middleware
+        from werkzeug.test import Client
+
+        def remote_addr_seen(options, sender):
+            app = create_app(AppConfig.from_env(OIDC))
+            self.addCleanup(app.extensions["oslian_stream"].close)
+            wrapped = proxy_headers_middleware(app, trusted_proxy=options.get("trusted_proxy"), clear_untrusted=True,
+                                               trusted_proxy_count=options.get("trusted_proxy_count"),
+                                               trusted_proxy_headers=options.get("trusted_proxy_headers"))
+            Client(wrapped).get("/api/ward", environ_base={"REMOTE_ADDR": sender}, headers={"X-Forwarded-For": "203.0.113.9"})
+            return app.extensions["oslian_audit"].rows()[-1]["remote_addr"]
+
+        behind = server_options(AppConfig.from_env({**OIDC, "OSLIAN_TRUSTED_PROXY": "10.0.0.2"}))
+        self.assertEqual(remote_addr_seen(behind, "10.0.0.2"), "203.0.113.9", "the proxy names the client")
+        self.assertEqual(remote_addr_seen(behind, "10.0.0.66"), "10.0.0.66", "anyone else's header is dropped")
+        self.assertEqual(remote_addr_seen(server_options(AppConfig.from_env(OIDC)), "10.0.0.66"), "10.0.0.66")
 
     def test_a_forged_cookie_is_not_a_session(self):
         self.client.set_cookie("oslian_session", "eyJzdWIiOiJ1LTE3In0.forged.signature", domain="oslian.example.org")

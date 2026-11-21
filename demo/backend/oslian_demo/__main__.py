@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
-import logging
+from waitress import serve
 
 from .app import create_app
-from .config import AppConfig
+from .config import SERVER_THREADS, AppConfig
 from .medication.routes import DRUGS_PKPD, SAMPLE_CASES
 from .medication import llm_client
+
+
+def server_options(config: AppConfig) -> dict:
+    """What Waitress is started with. Only the proxy named in ``OSLIAN_TRUSTED_PROXY`` may say which address a request
+    came from and whether it arrived over https; from anyone else those headers are dropped."""
+
+    options = {"host": config.host, "port": config.port, "threads": SERVER_THREADS, "ident": None}
+    if config.trusted_proxy:
+        options.update(trusted_proxy=config.trusted_proxy, trusted_proxy_count=1,
+                       trusted_proxy_headers={"x-forwarded-for", "x-forwarded-proto"}, clear_untrusted_proxy_headers=True)
+    return options
 
 
 def main() -> None:
@@ -15,25 +26,19 @@ def main() -> None:
     app = create_app(config)
     service = app.extensions["oslian_stream"]
 
-    # The demo's console is the two-stage event log, not one line per asset
-    # request. Werkzeug's access log writes from the request thread, so leaving
-    # it on makes every response wait on terminal throughput; warnings and
-    # errors still come through.
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
     print(f"[oslian-demo] drugs={len(DRUGS_PKPD)} cases={len(SAMPLE_CASES)} "
           f"env_llm={'on' if llm_client.available() else 'off'} "
           f"runtime={service.runtime.config.mode} db={config.stream_db}")
     print(f"[oslian-demo] http://{config.host}:{config.port}")
-    # threaded so SSE subscribers never block control requests; no reloader so
-    # the playback threads are not duplicated by a second interpreter.
+    # Waitress is a production WSGI server; it speaks plain HTTP, so TLS is the proxy's. One thread per request, so an
+    # open event stream never blocks control requests. It returns on Ctrl+C.
     try:
-        app.run(host=config.host, port=config.port, debug=False, threaded=True, use_reloader=False)
-    except KeyboardInterrupt:
-        print("[oslian-demo] stopping")
+        serve(app, **server_options(config))
     finally:
         # Ctrl+C must leave nothing behind: this cancels any pending run, waits
         # only for a run already executing, and flushes the console writer.
         service.close()
+        print("[oslian-demo] stopped")
 
 
 if __name__ == "__main__":

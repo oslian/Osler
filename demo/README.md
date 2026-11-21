@@ -356,7 +356,7 @@ session-creation route answers 409) instead of being served from the old copy.
 | `/api/model/health` returns 503 `runtime_not_attached` | Detached mode. Correct and intended; set `OSLIAN_FORECAST_RUNTIME=api`. |
 | Attached health is `degraded`, `ready: false` | The API is not running at `OSLIAN_FORECAST_API_URL`, or it serves other cells or another registry than the contract. Read `reason`. |
 | No forecast in the first hours of a stream | Intended: the first anchor is 6 hours after the encounter start. |
-| Every request takes ~300 ms in the browser, even when idle | You opened `http://localhost:<port>`. The server binds IPv4 loopback only, so on Windows the browser tries `::1` first and pays the fallback on every request — measured at 314 ms median via `localhost` against 15 ms via `127.0.0.1`. Use the URL the launcher prints (`http://127.0.0.1:<port>`). Werkzeug's development server always closes the connection, so keep-alive cannot amortise it. |
+| Every request takes ~300 ms in the browser, even when idle | You opened `http://localhost:<port>`. The server binds IPv4 loopback only, so on Windows the browser tries `::1` first and pays the fallback on every request — measured at 314 ms median via `localhost` against 15 ms via `127.0.0.1`. Use the URL the launcher prints (`http://127.0.0.1:<port>`).  |
 | The page looks stale after editing an ES module | Chrome caches modules per document. Open a new tab, or hard-reload. |
 | Backend edits have no effect | The server does not hot-reload. Stop it and start it again. |
 

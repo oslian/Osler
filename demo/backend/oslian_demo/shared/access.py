@@ -13,6 +13,9 @@ who may sign in to one group of the provider's directory. Roles and per-patient 
 
 Every page carries a Content Security Policy: scripts run only from this site, from the two pinned library files, or
 with the response's nonce.
+
+With sign-in on, requests are rate limited (Flask-Limiter): per user for the API, per address for the sign-in routes.
+The counters live in this process's memory, so they hold for one server process.
 """
 
 from __future__ import annotations
@@ -29,6 +32,8 @@ from .audit import AuditLog
 LOCAL_ACTOR = "local-demo"
 OPEN_ENDPOINTS = frozenset({"access_login", "access_callback", "access_logout", "static"})
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+API_LIMIT = "600 per minute"                                # one user's page polls a few times a second at most
+SIGN_IN_LIMIT = "20 per minute"                             # per address, on the routes open before sign-in
 # The page's own scripts carry the nonce; marked and vis-network come from two CDNs, pinned by integrity hash in
 # index.html. Inline style attributes are used throughout the page, so styles stay 'unsafe-inline'.
 CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com; "
@@ -44,8 +49,12 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
     idle_seconds = config.idle_minutes * 60
 
     if signed_in:
-        from authlib.integrations.flask_client import OAuth   # only a deployment with sign-in needs Authlib
+        from authlib.integrations.flask_client import OAuth   # only a deployment with sign-in needs these two
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
 
+        limiter = Limiter(key_func=lambda: g.get("actor") or get_remote_address(), default_limits=[API_LIMIT],
+                          storage_uri="memory://")
         app.secret_key = config.session_secret
         app.config.update(SESSION_COOKIE_NAME="oslian_session", SESSION_COOKIE_SECURE=config.public_url.startswith("https://"),
                           SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
@@ -56,10 +65,12 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
                        client_kwargs={"scope": "openid profile email"})
 
         @app.get("/login", endpoint="access_login")
+        @limiter.limit(SIGN_IN_LIMIT, key_func=get_remote_address)
         def login():
             return oauth.idp.authorize_redirect(f"{config.public_url}/auth/callback")
 
         @app.get("/auth/callback", endpoint="access_callback")
+        @limiter.limit(SIGN_IN_LIMIT, key_func=get_remote_address)
         def callback():
             claims = oauth.idp.authorize_access_token().get("userinfo") or {}
             if not claims.get("sub"):
@@ -76,6 +87,7 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
             return redirect("/")
 
         @app.get("/logout", endpoint="access_logout")
+        @limiter.limit(SIGN_IN_LIMIT, key_func=get_remote_address)
         def logout():
             g.actor, g.actor_name = session.get("sub"), session.get("name")
             session.clear()
@@ -100,6 +112,13 @@ def init_access(app: Flask, config: AppConfig, audit: AuditLog) -> None:
         session["seen_at"] = now                               # also re-issues the cookie with a fresh expiry
         g.actor, g.actor_name = session["sub"], session["name"]
         return None
+
+    if signed_in:
+        limiter.init_app(app)                                  # after require_user, so the limit is counted per user
+
+        @app.errorhandler(429)
+        def too_many(error):
+            return jsonify({"error": "too many requests; wait a minute"}), 429
 
     @app.after_request
     def headers_and_audit(response):

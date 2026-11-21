@@ -33,6 +33,7 @@ Environment variables (all optional; see ``.env.example``):
     OSLIAN_SESSION_SECRET           signs the session cookie, >= 32 characters (required with oidc)
     OSLIAN_IDLE_MINUTES             automatic logoff after this long idle      (15)
     OSLIAN_AUDIT_DB                 SQLite access audit ledger  (var/oslian_audit.sqlite3)
+    OSLIAN_TRUSTED_PROXY            address of the TLS proxy in front; only it may name the client's address and scheme  (none)
     OSLIAN_EXTERNAL_LLM             on|off: may text leave for OpenAI/Gemini   (on without auth, off with oidc)
     OSLIAN_EPIC_PRIVATE_KEY_PEM     referenced by name only; never read here
     LLM_PROVIDER                    openai|gemini               (openai)
@@ -72,6 +73,7 @@ VAR_DIR = REPO_ROOT / "var"
 DEFAULT_STREAM_DB = VAR_DIR / "oslian_stream.sqlite3"
 DEFAULT_AUDIT_DB = VAR_DIR / "oslian_audit.sqlite3"
 SESSION_HOURS = 12                                     # sign in again at least once a shift
+SERVER_THREADS = 32                                    # each open event stream holds one for as long as the page is open
 
 
 def is_loopback(host: str) -> bool:
@@ -111,6 +113,7 @@ class AppConfig:
     oidc_client_secret: str = ""
     session_secret: str = ""
     required_group: str = ""
+    trusted_proxy: str = ""
 
     def __post_init__(self) -> None:
         if self.auth not in ("off", "oidc"):
@@ -153,4 +156,5 @@ class AppConfig:
                    oidc_client_id=env.get("OSLIAN_OIDC_CLIENT_ID", ""),
                    oidc_client_secret=env.get("OSLIAN_OIDC_CLIENT_SECRET", ""),
                    session_secret=env.get("OSLIAN_SESSION_SECRET", ""),
-                   required_group=env.get("OSLIAN_OIDC_REQUIRED_GROUP", ""))
+                   required_group=env.get("OSLIAN_OIDC_REQUIRED_GROUP", ""),
+                   trusted_proxy=env.get("OSLIAN_TRUSTED_PROXY", ""))
