@@ -1,7 +1,8 @@
 # Oslian Demo
 
-A research-only demonstration of two independent clinical-informatics workflows
-that share a browser shell and nothing else:
+A research-only demonstration of two clinical-informatics workflows in one
+browser shell. They are independent unless a request opts in to one narrow link,
+described below:
 
 - **Medication Safety** — a deterministic symbolic engine ranks drug candidates
   for an indication and explains the ranking. An LLM only parses free text and
@@ -12,8 +13,10 @@ that share a browser shell and nothing else:
   **live synthetic stream** and a **retrospective replay** of a deidentified
   public eICU demo stay.
 
-The drug engine never reads the stream, and the stream never touches the drug
-ranking. There is a test that proves it.
+No forecast reaches the drug engine, and the stream never reads the drug ranking.
+On request, the engine reads three *measured* values of the monitored patient
+(heart rate, SpO₂, potassium) in place of the case's own, and the result lists
+each with its source observation. There are tests for both.
 
 ---
 

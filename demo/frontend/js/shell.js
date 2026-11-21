@@ -16,8 +16,9 @@
         '<div class="home-lead">' +
           '<h1 class="display">Two independent research demonstrations</h1>' +
           '<p class="note">Oslian contains two separate research demonstrations. They use different cases, different ' +
-          'engines and different evidence. They are not two stages of one patient, and neither reads the other\'s ' +
-          'output. Pick the one you want to look at.</p>' +
+          'engines and different evidence. They are not two stages of one patient. No forecast reaches the ' +
+          'medication engine; on request it reads three measured values of the monitored patient and lists them. ' +
+          'Pick the one you want to look at.</p>' +
         '</div>' +
         '<div class="workflow-cards">' +
           '<div class="wcard">' +

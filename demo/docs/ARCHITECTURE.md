@@ -1,7 +1,9 @@
 # Architecture
 
-Oslian Demo is one Flask process with two blueprints that share nothing but the
-app object, serving one static frontend tree. This document covers the
+Oslian Demo is one Flask process with two blueprints, serving one static frontend
+tree. The blueprints share the app object and one read-only link: on request, the
+Medication Safety route reads three measured values of a monitored patient through
+`monitoring/measured.py` (heart rate, SpO₂, potassium; never a forecast). This document covers the
 internals; [../README.md](../README.md) is the starting point.
 
 ## Composition

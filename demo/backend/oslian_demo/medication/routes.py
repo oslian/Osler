@@ -3,6 +3,10 @@
 Import a case (free text or form) -> the agent parses it and the symbolic engine
 ranks candidates -> a mind-map reasoning graph -> chat to ask why.
 
+A request may opt in to a monitored patient's measured values (``stream_patient_id``):
+the latest recent heart rate, SpO2 and potassium replace the case's own, with their
+provenance in the bundle. Observations only; a forecast never reaches the engine.
+
 The ranking is produced by ``engine.reasoning_engine`` and is fully
 deterministic. The LLM only parses free text and explains a result that is
 already fixed; it never changes the ranking, invents a dose, or makes a medical
@@ -15,9 +19,10 @@ Nothing here diagnoses, prescribes or raises a clinical alert.
 from __future__ import annotations
 import json
 
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, current_app, request, jsonify, Response
 
 from ..config import MEDICATION_DATA_DIR
+from ..monitoring.measured import measured_inputs
 from . import agent, case_targets, llm_client
 from .engine import reasoning_engine as RE
 
@@ -42,6 +47,17 @@ SAMPLE_CASES = json.loads((MEDICATION_DATA_DIR / "sample_cases.json").read_text(
 _CACHE: dict[str, dict] = {}
 
 
+def _measured(d: dict):
+    """The monitored patient's measured values when the request opts in; (None, None) when it does not."""
+    patient_id = d.get("stream_patient_id")
+    if not patient_id:
+        return None, None
+    measured = measured_inputs(current_app.extensions["oslian_stream"], str(patient_id), d.get("stream_session_id"))
+    if measured is None:
+        return None, (jsonify({"error": "unknown monitored patient"}), 404)
+    return measured, None
+
+
 @bp.route("/api/cases")
 def api_cases():
     return jsonify({"cases": SAMPLE_CASES, "indications": case_targets.list_indications(),
@@ -51,9 +67,13 @@ def api_cases():
 @bp.route("/api/analyze", methods=["POST"])
 def api_analyze():
     d = request.get_json(force=True) or {}
+    measured, error = _measured(d)
+    if error:
+        return error
     out = agent.analyze(d.get("fields") or {}, DRUGS_PKPD, dict(CLINICAL),
                         text=d.get("text") or "", api_key=(d.get("api_key") or "").strip() or None,
-                        provider=d.get("provider") or None, use_openfda=bool(d.get("use_openfda")))
+                        provider=d.get("provider") or None, use_openfda=bool(d.get("use_openfda")),
+                        measured=measured)
     if "error" in out:
         return jsonify(out), 400
     pid = d.get("patient_id") or out["indication"]
@@ -67,6 +87,9 @@ def api_analyze_stream():
     """NDJSON stream: one JSON object per line, one per workflow step, ending with
     {type:final, bundle}. Lets the UI render the agent's steps live (Claude-Code style)."""
     d = request.get_json(force=True) or {}
+    measured, error = _measured(d)
+    if error:
+        return error
     pid = d.get("patient_id") or "p"
     api_key = (d.get("api_key") or "").strip() or None
     provider = d.get("provider") or None
@@ -83,7 +106,7 @@ def api_analyze_stream():
             for ev in stream_fn(
                     d.get("fields") or {}, DRUGS_PKPD, dict(CLINICAL),
                     text=d.get("text") or "", api_key=api_key,
-                    provider=provider, use_openfda=bool(d.get("use_openfda"))):
+                    provider=provider, use_openfda=bool(d.get("use_openfda")), measured=measured):
                 if ev["type"] == "step" and not ev.get("running"):
                     trace.append({"icon": ev["icon"], "title": ev["title"], "detail": ev.get("detail", "")})
                 if ev["type"] == "final":
