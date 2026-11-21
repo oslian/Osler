@@ -1,8 +1,7 @@
-"""Clinical-function navigation: the 11 checkpoint modules as explicit, versioned groups.
+"""Clinical-function navigation: 11 explicit, versioned groups of the 53 variables.
 
 Loaded from ``functional_group_map_v1.json`` and validated against the mapping
-registry (every variable must exist) and the pinned contract (every module id
-and its variable membership must match the checkpoint). Organ workspaces use
+registry (every variable must exist, and the groups must partition them). Organ workspaces use
 the organ's primary function to split its variables into primary / related.
 """
 
@@ -18,7 +17,7 @@ from .mapping import CANONICAL_UNITS
 
 
 
-def load_function_map(path: Path = FUNCTION_MAP_PATH, modules: list[str] | None = None) -> dict[str, Any]:
+def load_function_map(path: Path = FUNCTION_MAP_PATH) -> dict[str, Any]:
     document = json.loads(path.read_text(encoding="utf-8"))
     if document.get("schema") != "oslian.functional-group-map.v1":
         raise ValueError("unsupported functional group map schema")
@@ -45,10 +44,8 @@ def load_function_map(path: Path = FUNCTION_MAP_PATH, modules: list[str] | None 
             if organ not in CANONICAL_ORGANS:
                 raise ValueError(f"{gid}: {organ} is not an anatomical organ")
         covered |= module_vars
-    if modules is not None and seen != set(modules):
-        raise ValueError(f"functional groups {sorted(seen)} do not match checkpoint modules {sorted(modules)}")
     if covered != set(CANONICAL_UNITS):
-        raise ValueError("functional groups must partition the 53 checkpoint variables")
+        raise ValueError("functional groups must partition the 53 variables")
     for organ, gid in document["organ_primary_function"].items():
         if organ not in CANONICAL_ORGANS:
             raise ValueError(f"organ_primary_function: {organ} is not an anatomical organ")
@@ -57,16 +54,15 @@ def load_function_map(path: Path = FUNCTION_MAP_PATH, modules: list[str] | None 
     return document
 
 
-def functions_document(catalog_cells: list[dict[str, Any]], modules: list[str] | None = None) -> dict[str, Any]:
-    document = load_function_map(modules=modules)
+def functions_document(catalog_cells: list[dict[str, Any]]) -> dict[str, Any]:
+    document = load_function_map()
     organ_map = load_organ_map()
     organ_labels = {o["id"]: o["label"] for o in organ_map["organs"]}
     cells_by_variable: dict[str, list[dict[str, Any]]] = {}
     for cell in catalog_cells:
-        variable = "o2sat" if cell["target"] == "hypoxemia_event" else cell["target"]
-        cells_by_variable.setdefault(variable, []).append({
+        cells_by_variable.setdefault(cell["target"], []).append({
             "cell": cell["cell"], "target": cell["target"], "horizon_hours": cell["horizon_hours"],
-            "can_move": cell["can_move"], "source_model": cell["source_model"],
+            "source_model": cell["source_model"],
         })
     groups = []
     for group in document["groups"]:

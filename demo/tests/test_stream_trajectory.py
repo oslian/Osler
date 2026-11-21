@@ -63,9 +63,9 @@ out.narrow = draw('urine_output', { width: 320 });
 out.recent = draw('urine_output', { window: 'recent' });
 S.live.cells = [cell(1, 'persistence', 58), cell(3, 'persistence', 58)];
 out.persistence = draw('urine_output');
-S.live.cells = [cell(1, 'degraded', null, { fallback_reason: 'wholebody_runtime_not_attached' }), cell(3, 'missing', null)];
+S.live.cells = [cell(1, 'degraded', null, { fallback_reason: 'forecast_api_not_attached' }), cell(3, 'missing', null)];
 out.unavailable = draw('urine_output');
-S.live.cells = [cell(1, 'model', 68.5), cell(3, 'degraded', null, { fallback_reason: 'shared_jepa_head_not_external_validated' })];
+S.live.cells = [cell(1, 'model', 68.5), cell(3, 'missing', null, { fallback_reason: 'current_value_missing' })];
 out.mixed = draw('urine_output');
 out.none = draw('temperature');
 S.live.cells = [cell(1, 'model', 68.5), cell(3, 'model', 56.4)];
@@ -154,7 +154,7 @@ class TrajectoryChartTests(unittest.TestCase):
         pts = _points(svg)
         self.assertAlmostEqual(pts[("observed", self.ms(6))], float(rule.group(1)), delta=0.15)
         self.assertEqual(sum(1 for (kind, ms) in pts if ms == self.ms(6)), 1, "exactly one point at the cutoff: the real observation")
-        for text in ("OBSERVED HISTORY", "FHIR observations", "FUTURE FORECAST", "Forecasts · 90% interval where calibrated",
+        for text in ("OBSERVED HISTORY", "FHIR observations", "FUTURE FORECAST", "Forecasts · points from the 6 h anchor",
                      "Forecast starts here", "Model input cutoff · Mar 14 12:00Z"):
             self.assertIn(text, svg, text)
         self.assertNotIn("historical anchor", svg.lower())     # the state word lives in the header badge, not on the rule
@@ -209,8 +209,8 @@ class TrajectoryChartTests(unittest.TestCase):
         s = self.out["unavailable"]
         self.assertEqual(s["kind"], "unavailable")
         self.assertIn("Forecast unavailable", s["svg"])
-        self.assertIn("The model runtime is not attached", s["svg"])
-        self.assertNotIn("wholebody_runtime_not_attached", s["svg"], "the audit reason stays in provenance")
+        self.assertIn("The forecast API is not attached", s["svg"])
+        self.assertNotIn("forecast_api_not_attached", s["svg"], "the audit reason stays in provenance")
         self.assertNotIn('data-kind="forecast"', s["svg"], "nothing is drawn for a value that does not exist")
         self.assertNotIn('data-series=', s["svg"].split('data-series="observed"')[0])
         # partially withheld: the drawn horizon is drawn, the withheld one is named
@@ -219,7 +219,7 @@ class TrajectoryChartTests(unittest.TestCase):
         self.assertIn("1h · 68.5", m["svg"])
         self.assertNotRegex(m["svg"], r"3h · \d", "no value is drawn or labelled for the withheld horizon")
         self.assertIn("3h · Forecast unavailable", m["svg"])
-        self.assertIn("not externally validated", m["svg"])
+        self.assertIn("nothing to forecast from", m["svg"])
 
     def test_no_run_means_observations_only_and_no_future_region(self):
         s = self.out["norun"]
@@ -272,7 +272,7 @@ class TrajectoryChartTests(unittest.TestCase):
             fills = [re.search(r'fill="(#[0-9A-Fa-f]{6})"', a).group(1) for a in shapes
                      if 'data-series="interval"' not in a and re.search(r'fill="(#[0-9A-Fa-f]{6})"', a)]
             self.assertFalse([f for f in fills if f.upper() not in {"#FFFFFF", "#EDF2F7", "#FCFAF5", "#171A1C", "#3D4449"}], name)
-        self.assertIn("every other forecast is a point", self.out["model"]["legend"])
+        self.assertIn("Forecasts are points", self.out["model"]["legend"])
 
     def test_an_interval_is_drawn_only_around_a_calibrated_model_forecast(self):
         bounded = self.out["bounded"]

@@ -39,8 +39,8 @@
               '<li>Live synthetic FHIR R4 stream, not a hospital connection</li>' +
               '<li>Retrospective replay of a deidentified public eICU demo case</li>' +
               '<li>Anatomy and clinical-function navigation with a full chart for every signal</li>' +
-              '<li>oslian/Model 2026-09-02 release, 41 cells, behind an explicit runtime gate</li>' +
-              '<li>Calibrated 90% intervals only where the release validated them; no clinical alerts</li>' +
+              '<li>45 forecast cells that were frozen and then replicated on external hospital databases</li>' +
+              '<li>A forecast every 6 hours of stay; points only, no interval; no clinical alerts</li>' +
             '</ul>' +
             '<div class="wcard-foot">' +
               '<button class="btn primary" type="button" data-shell="go-stream">Open monitoring</button>' +

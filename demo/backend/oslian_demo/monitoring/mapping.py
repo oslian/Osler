@@ -1,4 +1,4 @@
-"""Explicit, versioned FHIR -> WholeBody variable mapping registry.
+"""Explicit, versioned FHIR -> canonical variable mapping registry.
 
 Rules are keyed on (code system, code, resource shape, input UCUM unit). Display
 text is never used for matching. Every conversion is a linear
@@ -23,7 +23,7 @@ SHAPE_QUANTITY = "valueQuantity"
 SHAPE_PERIOD_VOLUME = "valueQuantity+effectivePeriod"
 SHAPE_BP_PANEL = "component:8480-6+8462-4"
 
-# Canonical WholeBody units (must match the release contract VARIABLE_UNITS).
+# Canonical units: the units the forecast cells were fitted in.
 CANONICAL_UNITS: dict[str, str] = {
     "albumin": "g/dL", "alkaline_phos": "U/L", "alt": "U/L", "amylase": "U/L",
     "anion_gap": "mEq/L", "ast": "U/L", "bicarbonate": "mEq/L", "bilirubin": "mg/dL",

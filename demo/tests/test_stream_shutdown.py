@@ -17,19 +17,19 @@ import time
 import unittest
 
 os.environ.setdefault("OSLIAN_STREAM_DB", ":memory:")
-os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
+os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 
 from flask import Flask  # noqa: E402
 
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.eventlog import LOG_QUEUE_MAXSIZE, StreamEventLogger  # noqa: E402
 from oslian_demo.monitoring.session import RUN_DEBOUNCE_SECONDS  # noqa: E402
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime  # noqa: E402
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime  # noqa: E402
 
-FIXTURE = RuntimeConfig("fixture", None, "python", None)
+FIXTURE = RuntimeConfig("detached", "http://127.0.0.1:1")
 
 
-class SlowRuntime(WholeBodyRuntime):
+class SlowRuntime(ForecastRuntime):
     def __init__(self, delay: float):
         super().__init__(FIXTURE)
         self.delay = delay
@@ -44,7 +44,7 @@ class SlowRuntime(WholeBodyRuntime):
 
 
 def _app(runtime=None, logger=None):
-    service = StreamService(":memory:", runtime=runtime or WholeBodyRuntime(FIXTURE), logger=logger)
+    service = StreamService(":memory:", runtime=runtime or ForecastRuntime(FIXTURE), logger=logger)
     app = Flask(__name__)
     app.register_blueprint(create_blueprint(service))
     return service, app.test_client()
@@ -90,7 +90,8 @@ class SchedulerShutdownTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams", json={"source": "synthetic"}).get_json()["session_id"]
             session = service.sessions.get(sid)
-            client.post(f"/api/demo-streams/{sid}/step")
+            for _ in range(13):     # the 13th synthetic event reaches the first 6-hour anchor
+                client.post(f"/api/demo-streams/{sid}/step")
             self.assertTrue(runtime.busy.wait(20), "no run started")
 
             started = time.monotonic()
@@ -189,7 +190,8 @@ class PendingStateIsBoundedTests(unittest.TestCase):
         try:
             sid = client.post("/api/demo-streams", json={"source": "synthetic"}).get_json()["session_id"]
             session = service.sessions.get(sid)
-            client.post(f"/api/demo-streams/{sid}/step")
+            for _ in range(13):     # the 13th synthetic event reaches the first 6-hour anchor
+                client.post(f"/api/demo-streams/{sid}/step")
             session.scheduler.wait_idle(timeout=30)
             history = client.get(f"/api/patients/syn-pat-0001/forecast-history?session_id={sid}").get_json()
             run = history["runs"][0]

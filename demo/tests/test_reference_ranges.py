@@ -18,7 +18,7 @@ from oslian_demo.monitoring import build_synthetic_fixture as builder
 from oslian_demo.monitoring.api import StreamService, create_blueprint
 from oslian_demo.monitoring.reference_ranges import (DEMO_REFERENCE_RANGES, INTERPRETATION_PROVENANCE,
                                                      NOT_SUPPLIED, V3_INTERPRETATION, provenance_document)
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime
 
 FIXTURE = FIXTURE_DIR / "synthetic_patient_v1.json"
 LOINC_TO_VARIABLE = {"2951-2": "sodium", "2823-3": "potassium", "2075-0": "chloride", "1963-8": "bicarbonate",
@@ -142,7 +142,7 @@ class FixtureTests(unittest.TestCase):
 
 class PassthroughTests(unittest.TestCase):
     def setUp(self):
-        self.service = StreamService(":memory:", runtime=WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)))
+        self.service = StreamService(":memory:", runtime=ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")))
         app = Flask(__name__)
         app.register_blueprint(create_blueprint(self.service))
         self.client = app.test_client()

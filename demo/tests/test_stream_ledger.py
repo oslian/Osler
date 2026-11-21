@@ -1,13 +1,14 @@
 """Append-only ledger, versioning, ordering, no-future-leak, and restart recovery."""
 
 import copy
+from datetime import timedelta
 import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
 
-from oslian_demo.monitoring.fhir import now_iso
+from oslian_demo.monitoring.fhir import iso, now_iso, parse_instant
 from oslian_demo.monitoring.ingest import Ingestor
 from oslian_demo.monitoring.repository import Repository
 from oslian_demo.monitoring.source import MockFhirSource
@@ -15,6 +16,7 @@ from oslian_demo.monitoring.timeline import (build_model_input, delivered_timeli
                                   organ_state_for_run, run_timeline, series, variable_state)
 
 SOURCE = "synthetic-fhir-r4"
+ONSET = "2026-03-14T06:00:00.000Z"
 
 
 def _session(repo, session_id="s1"):
@@ -43,14 +45,14 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
         self.repo.record_delivery("s1", 1, result.raw_id, self.sequence, f"e{self.sequence}", now_iso())
         return result
 
-    def make_run(self, run_id):
-        """Record a run over everything delivered so far, exactly as the session does."""
-        timeline = delivered_timeline(self.repo, "s1", 1)
-        cutoff = max(row["effective_time"] for row in timeline)
-        model_input = build_model_input(timeline, cutoff, "2026-03-14T06:00:00.000Z")
+    def make_run(self, run_id, anchor_hours):
+        """Record a run at the anchor ``anchor_hours`` after the onset, over what is delivered up to it."""
+        cutoff = iso(parse_instant(ONSET, "onset") + timedelta(hours=anchor_hours))
+        timeline = delivered_timeline(self.repo, "s1", 1, cutoff)
+        model_input = build_model_input(timeline, cutoff, ONSET)
         self.repo.create_run({
             "run_id": run_id, "session_id": "s1", "epoch": 1, "patient_id": "syn-pat-0001", "status": "running",
-            "runtime_mode": "fixture", "model_commit": None, "registry_sha256": None, "release_date": None,
+            "runtime_mode": "detached", "model_commit": None, "registry_sha256": None, "release_date": None,
             "input_cutoff": cutoff, "input_watermark": model_input.watermark,
             "input_resource_count": len(model_input.resource_refs), "input_hash": model_input.input_hash,
             "input_refs_json": json.dumps(list(model_input.resource_refs)),
@@ -60,7 +62,7 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
     def test_a_run_snapshot_covers_the_organs_of_the_observations_it_used(self):
         self.deliver(self.events["syn-obs-heart_rate-h02@1"].resource)
         self.deliver(self.events["syn-obs-creatinine-h06@1"].resource)
-        run = self.make_run("run-a")
+        run = self.make_run("run-a", 6)
         organs = organ_state_for_run(self.repo, run)
         self.assertIn("heart", organs)
         self.assertIn("kidneys", organs)
@@ -75,19 +77,19 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
 
     def test_later_deliveries_never_reach_an_earlier_run(self):
         self.deliver(self.events["syn-obs-heart_rate-h02@1"].resource)
-        early = self.make_run("run-early")
+        early = self.make_run("run-early", 6)
         before = organ_state_for_run(self.repo, early)
         self.assertNotIn("kidneys", before)
 
         self.deliver(self.events["syn-obs-creatinine-h06@1"].resource)
-        late = self.make_run("run-late")
+        late = self.make_run("run-late", 6)
         self.assertEqual(organ_state_for_run(self.repo, early), before, "an earlier run must not move")
         self.assertIn("kidneys", organ_state_for_run(self.repo, late))
 
     def test_a_late_arrival_with_an_early_effective_time_does_not_leak_backwards(self):
         """The classic causal leak: delivered after the run, but timestamped before its cutoff."""
         self.deliver(self.events["syn-obs-heart_rate-h20@1"].resource)
-        run = self.make_run("run-x")
+        run = self.make_run("run-x", 24)
         before = organ_state_for_run(self.repo, run)
         self.assertNotIn("lungs", before)
 
@@ -105,7 +107,7 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
         """Whatever freezes the organs must freeze the series and the variable state."""
         self.deliver(self.events["syn-obs-heart_rate-h20@1"].resource)
         self.deliver(self.events["syn-obs-creatinine-h06@1"].resource)
-        run = self.make_run("run-frozen")
+        run = self.make_run("run-frozen", 24)
         rows = run_timeline(self.repo, run)
         before = {
             "rows": [(r["resource_id"], r["version_id"], r["value"]) for r in rows],
@@ -133,7 +135,7 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
         from oslian_demo.monitoring.routing import variable_routing
         for name in ("syn-obs-heart_rate-h02@1", "syn-obs-creatinine-h06@1", "syn-obs-o2sat-h12@1"):
             self.deliver(self.events[name].resource)
-        run = self.make_run("run-one-set")
+        run = self.make_run("run-one-set", 12)
         rows = run_timeline(self.repo, run)
         routing = variable_routing()
         expected = {o for r in rows for o in routing.organs_for(r["variable"])}
@@ -145,7 +147,7 @@ class HistoricalOrganSnapshotTests(unittest.TestCase):
     def test_an_amendment_after_the_run_does_not_rewrite_its_snapshot(self):
         self.deliver(self.events["syn-obs-temperature-h26@1"].resource)
         self.deliver(self.events["syn-obs-heart_rate-h20@1"].resource)
-        run = self.make_run("run-v1")
+        run = self.make_run("run-v1", 30)
         before = organ_state_for_run(self.repo, run)
         self.deliver(self.events["syn-obs-temperature-h26@2"].resource)   # entered-in-error amendment
         self.assertEqual(organ_state_for_run(self.repo, run), before)
@@ -216,22 +218,27 @@ class LedgerTests(unittest.TestCase):
         timeline = delivered_timeline(self.repo, "s1", 1)
         order = [r["resource_id"] for r in timeline if r["resource_id"] in {"syn-obs-lactate-h18", "syn-obs-heart_rate-h20"}]
         self.assertEqual(order, ["syn-obs-lactate-h18", "syn-obs-heart_rate-h20"])
-        model_input = build_model_input(timeline, "2026-03-15T02:00:00.000Z", "2026-03-14T06:00:00.000Z")
-        self.assertIn("18.000000,lactate", model_input.csv_text)
+        model_input = build_model_input(timeline, "2026-03-15T06:00:00.000Z", ONSET)   # the 24 h anchor
+        self.assertEqual(model_input.anchors[-1]["values"]["lactate_age_hr"], 6.0)
+        self.assertNotIn("lactate_t", model_input.anchors[1]["values"])                # 12 h: not measured yet
         self.assertIn("Observation/syn-obs-lactate-h18/_history/2", model_input.resource_refs)
 
     def test_no_future_leak_past_input_cutoff(self):
-        self.deliver(self.events["syn-obs-heart_rate-h02@1"].resource)
         self.deliver(self.events["syn-obs-heart_rate-h04@1"].resource)
-        cutoff = "2026-03-14T08:00:00.000Z"
+        self.deliver(self.events["syn-obs-o2sat-h12@1"].resource)
+        cutoff = "2026-03-14T12:00:00.000Z"                                            # the first anchor, onset + 6 h
         timeline = delivered_timeline(self.repo, "s1", 1, cutoff)
         self.assertTrue(all(r["effective_time"] <= cutoff for r in timeline))
-        self.assertFalse(any(r["resource_id"] == "syn-obs-heart_rate-h04" for r in timeline))
-        model_input = build_model_input(timeline, cutoff, "2026-03-14T06:00:00.000Z")
-        self.assertNotIn("4.000000,heart_rate", model_input.csv_text)
-        self.assertEqual(model_input.watermark, cutoff)
+        self.assertFalse(any(r["resource_id"] == "syn-obs-o2sat-h12" for r in timeline))
+        model_input = build_model_input(timeline, cutoff, ONSET)
+        self.assertEqual(len(model_input.anchors), 1)
+        self.assertEqual(model_input.anchors[0]["values"]["heart_rate_age_hr"], 2.0)
+        self.assertNotIn("o2sat_t", model_input.anchors[0]["values"])
+        self.assertEqual(model_input.watermark, "2026-03-14T10:00:00.000Z")
         with self.assertRaises(ValueError):
-            build_model_input(delivered_timeline(self.repo, "s1", 1), cutoff, "2026-03-14T06:00:00.000Z")
+            build_model_input(delivered_timeline(self.repo, "s1", 1), cutoff, ONSET)
+        with self.assertRaises(ValueError):                                            # not an anchor time
+            build_model_input(timeline, "2026-03-14T08:00:00.000Z", ONSET)
 
     def test_reset_epoch_keeps_ledger_and_replays_without_new_rows(self):
         self.deliver(self.events["syn-obs-heart_rate-h02@1"].resource)
@@ -271,9 +278,9 @@ class RestartRecoveryTests(unittest.TestCase):
             repo.close()
 
             from oslian_demo.monitoring.session import SessionManager
-            from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime
+            from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime
             reopened = Repository(path)
-            manager = SessionManager(reopened, WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)))
+            manager = SessionManager(reopened, ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")))
             session = manager.get("s1")
             self.assertIsNotNone(session)
             self.assertEqual(session.status, "paused", "a running session is recovered as paused after restart")

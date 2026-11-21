@@ -9,7 +9,7 @@ import time
 import unittest
 
 os.environ.setdefault("OSLIAN_STREAM_DB", ":memory:")
-os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
+os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 
 from flask import Flask  # noqa: E402
 
@@ -18,11 +18,11 @@ from oslian_demo.monitoring.eventlog import (  # noqa: E402
     FORMAT_JSON, LOG_OFF, PAYLOAD_FULL, PREFIX, StreamEventLogger,
 )
 from oslian_demo.monitoring.source import EpicFhirSource, SYNTHETIC_SOURCE_SYSTEM  # noqa: E402
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime  # noqa: E402
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime  # noqa: E402
 
 
 def _service(logger):
-    service = StreamService(":memory:", runtime=WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)),
+    service = StreamService(":memory:", runtime=ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")),
                             logger=logger)
     app = Flask(__name__)
     app.register_blueprint(create_blueprint(service))
@@ -114,13 +114,13 @@ class ConsoleStageTests(unittest.TestCase):
 
     def test_model_run_lines_report_cutoff_and_cell_summary(self):
         sid = self.client.post("/api/demo-streams").get_json()["session_id"]
-        for _ in range(4):
+        for _ in range(13):     # the 13th synthetic event is the first at onset + 6 h, the first anchor
             self.client.post(f"/api/demo-streams/{sid}/step")
         time.sleep(2.0)
         completed = [l for l in _lines(self.service, self.sink) if "type=model.run.completed" in l]
         self.assertTrue(completed, "a debounced run should have completed")
         line = completed[-1]
-        for key in ("run", "cutoff", "runtime", "model", "persistence", "missing", "degraded", "duration_ms"):
+        for key in ("run", "cutoff", "runtime", "model", "missing", "degraded", "duration_ms"):
             self.assertIsNotNone(_field(line, key), f"{key} missing from: {line}")
 
 

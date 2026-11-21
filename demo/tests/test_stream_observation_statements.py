@@ -13,7 +13,7 @@ from flask import Flask
 
 from oslian_demo.monitoring.api import StreamService, create_blueprint
 from oslian_demo.monitoring.timeline import attach_observation_statements, observation_statements, variable_state
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime
 
 RESOURCE = {
     "resourceType": "Observation", "id": "obs-1", "status": "final",
@@ -86,7 +86,7 @@ class ObservationStatementsTests(unittest.TestCase):
 
 class StateRouteTests(unittest.TestCase):
     def setUp(self):
-        self.service = StreamService(":memory:", runtime=WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)))
+        self.service = StreamService(":memory:", runtime=ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")))
         app = Flask(__name__)
         app.register_blueprint(create_blueprint(self.service))
         self.client = app.test_client()

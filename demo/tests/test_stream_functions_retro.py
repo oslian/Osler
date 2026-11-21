@@ -6,7 +6,7 @@ import time
 import unittest
 
 os.environ.setdefault("OSLIAN_STREAM_DB", ":memory:")
-os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
+os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 
 from flask import Flask  # noqa: E402
 
@@ -14,23 +14,22 @@ from oslian_demo.monitoring import fhir, mapping  # noqa: E402
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.functions import functions_document, load_function_map  # noqa: E402
 from oslian_demo.monitoring.source import RetrospectiveCaseSource, make_source  # noqa: E402
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime, load_contract_fixture  # noqa: E402
+from oslian_demo.monitoring.forecast_runtime import RuntimeConfig, ForecastRuntime, load_contract_fixture  # noqa: E402
 
 
 def _app():
-    service = StreamService(":memory:", runtime=WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)))
+    service = StreamService(":memory:", runtime=ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")))
     app = Flask(__name__)
     app.register_blueprint(create_blueprint(service))
     return service, app.test_client()
 
 
 class FunctionalGroupTests(unittest.TestCase):
-    def test_groups_partition_the_checkpoint_modules_and_variables(self):
-        contract = load_contract_fixture()
-        document = load_function_map(modules=contract["modules"])
+    def test_groups_partition_the_variables(self):
+        document = load_function_map()
         ids = [g["id"] for g in document["groups"]]
-        self.assertEqual(set(ids), set(contract["modules"]))
         self.assertEqual(len(ids), 11)
+        self.assertEqual(len(set(ids)), 11)
         covered = [v for g in document["groups"] for v in g["module_variables"]]
         self.assertEqual(len(covered), 53)
         self.assertEqual(set(covered), set(mapping.CANONICAL_UNITS))
@@ -42,13 +41,13 @@ class FunctionalGroupTests(unittest.TestCase):
 
     def test_functions_document_joins_cells_and_anatomy(self):
         contract = load_contract_fixture()
-        document = functions_document(contract["catalog"]["cells"], contract["modules"])
+        document = functions_document(contract["cells"])
         renal = next(g for g in document["groups"] if g["id"] == "renal_urinary")
         self.assertEqual([o["id"] for o in renal["organs"]], ["kidneys"])
         self.assertIn("creatinine@6h", {c["cell"] for c in renal["cells"]})
         self.assertIn("potassium@12h", {c["cell"] for c in renal["related_cells"]})
         total = sum(len(g["cells"]) for g in document["groups"])
-        self.assertEqual(total, len(contract["catalog"]["cells"]), "every registry cell belongs to exactly one module")
+        self.assertEqual(total, len(contract["cells"]), "every contract cell belongs to exactly one group")
         for group in document["groups"]:
             for word in ("kidney", "liver", "lung"):
                 self.assertNotIn(word, group["id"], "functional groups are not organs")
@@ -120,21 +119,24 @@ class RetrospectiveReplayApiTests(unittest.TestCase):
         snapshot = self.client.get(f"/api/patients/{pid}/state?session_id={sid}").get_json()
         self.assertEqual(len(snapshot["variables"]), 12)
         self.assertNotIn("urine_output", snapshot["variables"], "row 2 is withheld")
-        run = self.service.repo.latest_completed_run(sid, 1)
-        self.assertIsNotNone(run)
-        self.assertEqual(run["input_resource_count"], 12)
+        self.assertIsNone(self.service.repo.latest_completed_run(sid, 1),
+                          "row 1 is 0.25 h into the stay: no forecast before the first 6-hour anchor")
         step2 = self.client.post(f"/api/demo-streams/{sid}/step").get_json()
         self.assertEqual(step2["cursor"], 25)
         self.service.sessions.get(sid).scheduler.wait_idle(10)
         timeline = self.client.get(f"/api/patients/{pid}/timeline?session_id={sid}").get_json()
         self.assertIn("urine_output", timeline["series"])
         self.assertEqual(len(timeline["series"]["creatinine"]), 2)
-        latest = self.service.repo.latest_completed_run(sid, 1)
-        self.assertGreater(latest["input_cutoff"], run["input_cutoff"], "anchor moves forward with the revealed prefix")
-        history = self.client.get(f"/api/patients/{pid}/forecast-history?session_id={sid}").get_json()
-        self.assertGreaterEqual(len(history["runs"]), 2, "every anchor keeps its run")
+        run = self.service.repo.latest_completed_run(sid, 1)
+        self.assertIsNotNone(run, "row 2 is past 6 h, so the 6-hour anchor is forecast")
+        self.assertLessEqual(run["input_cutoff"], max(r["effective_time"] for v in timeline["series"].values() for r in v))
         step3 = self.client.post(f"/api/demo-streams/{sid}/step").get_json()
         self.assertEqual(step3["cursor"], 38)
+        self.service.sessions.get(sid).scheduler.wait_idle(10)
+        latest = self.service.repo.latest_completed_run(sid, 1)
+        self.assertGreater(latest["input_cutoff"], run["input_cutoff"], "the anchor moves forward with the revealed prefix")
+        history = self.client.get(f"/api/patients/{pid}/forecast-history?session_id={sid}").get_json()
+        self.assertGreaterEqual(len(history["runs"]), 2, "every anchor keeps its run")
         self.assertEqual(self.client.post(f"/api/demo-streams/{sid}/step").get_json()["cursor"], 38, "step at the end is a no-op")
 
     def test_modes_have_separate_sessions_and_do_not_mix(self):

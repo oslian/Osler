@@ -59,9 +59,9 @@ class StreamUiContractTests(unittest.TestCase):
             self.assertIn(word, STREAM_JS)
         for clock in ("Latest clinical event", "Last received", "Model input watermark", "Causal anchor"):
             self.assertIn(clock, STREAM_JS)
-        self.assertIn("runtime not attached", STREAM_JS)
+        self.assertIn("forecast API not attached", STREAM_JS)
         self.assertIn("runtime failure", STREAM_JS)
-        self.assertIn("persistence baseline", STREAM_JS)
+        self.assertIn("6-hour anchor", STREAM_JS)
 
     def test_controls_speeds_and_transport(self):
         for act in ('data-act="start"', 'data-act="pause"', 'data-act="reset"', 'data-act="speed"', 'data-act="step"'):
@@ -146,13 +146,13 @@ class StreamUiContractTests(unittest.TestCase):
         self.assertNotIn("S.series", traj)
         self.assertNotIn("S.live", traj)
 
-    def test_bounded_research_demo_wording_and_forbidden_claims(self):
+    def test_research_only_wording_and_forbidden_claims(self):
         render = MODULES["render.js"]
-        for phrase in ("bounded research demo", "research-only", "90% intervals only where calibrated", "no clinical alert"):
+        for phrase in ("research-only", "points only, no interval", "no clinical alert", "not clinically validated"):
             self.assertIn(phrase, render)
         self.assertNotIn("production runtime", STREAM_JS)
         self.assertNotIn("formal adjacent", STREAM_JS)
-        self.assertNotIn("validated model", STREAM_JS.replace("not a formal or clinically validated model", ""))
+        self.assertNotIn("validated model", STREAM_JS)
         self.assertNotIn("formal adjacent", HTML)
 
     def test_horizon_labels_avoid_collisions(self):
@@ -176,7 +176,7 @@ class StreamUiContractTests(unittest.TestCase):
 
     def test_no_fabrication_and_no_intervals_or_alerts(self):
         self.assertIn("Nothing is fabricated", STREAM_JS)
-        self.assertIn("A 90% interval appears only where the release calibrated that cell", STREAM_JS)
+        self.assertIn("No interval is shown: the validated interval needs the hospital\\'s own outcomes", STREAM_JS)
         self.assertIn("causal_claim_allowed: false", STREAM_JS)
         self.assertNotIn("alert(", STREAM_JS)
         self.assertNotRegex(STREAM_JS, r"\b(deteriorat|sepsis risk|diagnostic|diagnosed)", "no diagnostic narrative")
@@ -450,7 +450,7 @@ class HygieneScanTests(unittest.TestCase):
                 self.assertIsNone(pattern.search(text), f"{name} in {path}")
 
     def test_fixtures_are_synthetic_or_public_deidentified_only(self):
-        for name in ("synthetic_patient_v1.json", "wholebody_release_contract_v2.json", "retrospective_eicu_demo_case.json"):
+        for name in ("synthetic_patient_v1.json", "forecast_api_contract_v1.json", "retrospective_eicu_demo_case.json"):
             text = (FIXTURE_DIR / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, r"\b(MRN|SSN)\b")
             self.assertNotRegex(text, r"\b\d{3}-\d{2}-\d{4}\b")
@@ -857,7 +857,7 @@ class ReportContractTests(unittest.TestCase):
         for word in ("'Carried forward — model abstained'", "'Model forecast'", "'Carried forward'",
                      "'Missing'", "'Degraded'"):
             self.assertIn(word, forecast, word)
-        self.assertIn("forecastNote: 'Research-only forecasts. A 90% interval appears only for a cell whose own release calibrator", MODULES["format.js"])
+        self.assertIn("forecastNote: 'Research-only forecasts, issued at each 6-hour anchor of the stay. Points only", MODULES["format.js"])
         self.assertIn("A carried-forward value is not a model forecast.", self.REPORT)
 
     def test_trend_charts_are_drawn_only_where_they_earn_the_paper(self):

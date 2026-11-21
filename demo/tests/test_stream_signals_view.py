@@ -124,7 +124,7 @@ S.live = { run: { run_id: 'run-1', input_cutoff: at(30), epoch: 1, runtime_mode:
     cell('creatinine@12h', 'creatinine', 12, 'persistence', 1.2, 1.2, 'patient_persistence_anchor', 'shared_jepa_head_not_external_validated', 'mg/dL'),
     cell('glucose@12h', 'glucose', 12, 'model', 171, 171, 'frozen_whole_body_jepa', null, 'mg/dL'),
     cell('potassium@12h', 'potassium', 12, 'model', 9.9, 4.1, 'unified_shared_jepa_target_head', null, 'mEq/L'),
-    cell('lactate@6h', 'lactate', 6, 'degraded', null, 1.1, 'none', 'wholebody_runtime_not_attached', 'mmol/L'),
+    cell('lactate@6h', 'lactate', 6, 'degraded', null, 1.1, 'none', 'forecast_api_not_attached', 'mmol/L'),
   ] };
 S.freshVariables = { o2sat: Date.now() };
 const out = {};

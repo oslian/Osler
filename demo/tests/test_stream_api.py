@@ -6,18 +6,18 @@ import time
 import unittest
 
 os.environ.setdefault("OSLIAN_STREAM_DB", ":memory:")
-os.environ.setdefault("OSLIAN_WHOLEBODY_RUNTIME", "fixture")
+os.environ.setdefault("OSLIAN_FORECAST_RUNTIME", "detached")
 
 from flask import Flask  # noqa: E402
 
 from oslian_demo.monitoring.api import StreamService, create_blueprint  # noqa: E402
 from oslian_demo.monitoring.timeline import delivered_timeline  # noqa: E402
-from oslian_demo.config import load_model_lock  # noqa: E402
-from oslian_demo.monitoring.wholebody import RuntimeConfig, WholeBodyRuntime  # noqa: E402
+from oslian_demo.monitoring.forecast_runtime import (  # noqa: E402
+    INTERVAL_POLICY, ForecastRuntime, RuntimeConfig, load_contract_fixture)
 
 
 def _app(runtime=None):
-    service = StreamService(":memory:", runtime=runtime or WholeBodyRuntime(RuntimeConfig("fixture", None, "python", None)))
+    service = StreamService(":memory:", runtime=runtime or ForecastRuntime(RuntimeConfig("detached", "http://127.0.0.1:1")))
     app = Flask(__name__)
     app.register_blueprint(create_blueprint(service))
     return service, app.test_client()
@@ -92,10 +92,10 @@ class StreamApiTests(unittest.TestCase):
         run = next(r for r in runs if "Observation/syn-obs-creatinine-h06/_history/1" in r["input_refs"])
         self.assertTrue(all("Observation/syn-obs-creatinine-h06/_history/1" in r["input_refs"]
                             for r in runs if r["started_at"] >= run["started_at"]), "once in, never dropped")
-        self.assertEqual(run["model_commit"], load_model_lock()["validated_commit"])
-        # the response states the lock's interval policy, never a stale "always null"
+        self.assertEqual(run["model_commit"], load_contract_fixture()["api_commit"])
+        # the response states why no interval is shown
         body = self.client.get(f"/api/patients/{pid}/forecasts").get_json()
-        self.assertEqual(body["interval_policy"], load_model_lock()["output_boundaries"]["interval_policy"])
+        self.assertEqual(body["interval_policy"], INTERVAL_POLICY)
         history = self.client.get(f"/api/patients/{pid}/forecast-history").get_json()
         self.assertIn(run["run_id"], {r["run_id"] for r in history["runs"]})
         cell_history = self.client.get(f"/api/patients/{pid}/forecast-history?cell=creatinine@6h").get_json()["cell_history"]
@@ -111,14 +111,15 @@ class StreamApiTests(unittest.TestCase):
         self.assertEqual(state["variables"]["potassium"]["count"], 6)
         self.assertEqual(state["variables"]["temperature"]["count"], 8)
         self.assertAlmostEqual(state["variables"]["temperature"]["value"], 37.3, delta=0.6)
-        self.assertEqual(state["clock"]["model_input_watermark"], state["clock"]["latest_clinical_event_time"])
-        self.assertEqual(state["runtime"]["runtime_mode"], "fixture")
+        # the watermark is the latest 6-hour anchor, never later than the latest clinical event
+        self.assertLessEqual(state["clock"]["model_input_watermark"], state["clock"]["latest_clinical_event_time"])
+        self.assertEqual(state["runtime"]["runtime_mode"], "detached")
         self.assertFalse(state["runtime"]["runtime_attached"])
 
         # live head vs historical anchor
         live = self.client.get(f"/api/patients/{pid}/forecasts").get_json()
         self.assertEqual(live["anchor"], "live_head")
-        self.assertEqual(len(live["cells"]), 41)
+        self.assertEqual(len(live["cells"]), 45)
         self.assertTrue(all(c["status"] == "degraded" and c["lower"] is None and c["upper"] is None for c in live["cells"]))
         old_run = history["runs"][-1]["run_id"]
         old = self.client.get(f"/api/patients/{pid}/forecasts?run_id={old_run}").get_json()
@@ -153,7 +154,7 @@ class StreamApiTests(unittest.TestCase):
         self.assertEqual(health.status_code, 503)
         self.assertEqual(health.get_json()["status"], "runtime_not_attached")
         cap = self.client.get("/api/model/capabilities").get_json()
-        self.assertEqual(cap["catalog_cells"], 41)
+        self.assertEqual(cap["catalog_cells"], 45)
         self.assertFalse(cap["causal_claim_allowed"])
         anatomy = self.client.get("/api/model/anatomy").get_json()
         self.assertEqual(len(anatomy["organs"]), 14)
@@ -301,35 +302,6 @@ class DemoAppIntegrationTests(unittest.TestCase):
         after = self.client.post("/api/analyze", json=payload).get_json()["result"]["candidates"]
         self.assertEqual([c["drug"] for c in before], [c["drug"] for c in after])
         self.assertTrue(before)
-
-
-@unittest.skipUnless(os.environ.get("OSLIAN_WHOLEBODY_RUNTIME") == "release", "release runtime not configured")
-class ReleaseRuntimeTests(unittest.TestCase):
-    def test_release_worker_produces_model_and_persistence_cells(self):
-        service, client = _app(WholeBodyRuntime(RuntimeConfig.from_env()))
-        try:
-            health = client.get("/api/model/health").get_json()
-            self.assertTrue(health["ready"], health)
-            sid = client.post("/api/demo-streams").get_json()["session_id"]
-            pid = client.get(f"/api/demo-streams/{sid}").get_json()["patient_id"]
-            client.post(f"/api/demo-streams/{sid}/speed", json={"speed": 20})
-            client.post(f"/api/demo-streams/{sid}/start")
-            _wait(client, sid, timeout=180)
-            service.sessions.get(sid).scheduler.wait_idle(30)
-            forecasts = client.get(f"/api/patients/{pid}/forecasts").get_json()
-            statuses = Counter(c["status"] for c in forecasts["cells"])
-            cap = client.get("/api/model/capabilities").get_json()
-            self.assertEqual(statuses["model"], cap["model_cells"])
-            self.assertEqual(statuses["persistence"], cap["persistence_cells"])
-            # bounds only where the release calibrated the cell, and each one contains its point
-            bounded = [c for c in forecasts["cells"] if c["lower"] is not None]
-            self.assertEqual(len(bounded), cap["interval_cells"])
-            self.assertTrue(all(c["lower"] <= c["forecast_point"] <= c["upper"] for c in bounded))
-            events = [c for c in forecasts["cells"] if c["target"] == "hypoxemia_event"]
-            self.assertTrue(events and all(c["lower"] is None and 0.0 <= c["forecast_point"] <= 1.0 for c in events))
-            self.assertEqual(forecasts["run"]["model_commit"], cap["model_commit"])
-        finally:
-            service.close()
 
 
 class PlaybackMetadataTests(unittest.TestCase):

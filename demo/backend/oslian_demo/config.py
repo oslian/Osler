@@ -22,10 +22,8 @@ Environment variables (all optional; see ``.env.example``):
     OSLIAN_STREAM_LOG               events|off                  (events)
     OSLIAN_STREAM_LOG_FORMAT        pretty|json                 (pretty)
     OSLIAN_STREAM_LOG_PAYLOAD       summary|full                (summary)
-    OSLIAN_WHOLEBODY_RUNTIME        fixture|release             (fixture)
-    OSLIAN_WHOLEBODY_RELEASE_DIR    release checkout            (backend/research/wholebody-jepa)
-    OSLIAN_WHOLEBODY_PYTHON         interpreter for the release worker
-    OSLIAN_WHOLEBODY_PYTHONPATH     dependency overlay for that interpreter
+    OSLIAN_FORECAST_RUNTIME         detached|api                (detached)
+    OSLIAN_FORECAST_API_URL         the forecast API in api/    (http://127.0.0.1:8000)
     OSLIAN_EPIC_PRIVATE_KEY_PEM     referenced by name only; never read here
     LLM_PROVIDER                    openai|gemini               (openai)
     OPENAI_API_KEY / OPENAI_MODEL   Medication Safety chat and free-text parsing
@@ -35,7 +33,6 @@ Environment variables (all optional; see ``.env.example``):
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import os
 from pathlib import Path
 
@@ -56,23 +53,11 @@ MONITORING_DIR = PACKAGE_DIR / "monitoring"
 FIXTURE_DIR = MONITORING_DIR / "fixtures"
 ORGAN_MAP_PATH = MONITORING_DIR / "organ_target_map.json"
 FUNCTION_MAP_PATH = MONITORING_DIR / "functional_group_map_v1.json"
-RELEASE_CONTRACT_FIXTURE = FIXTURE_DIR / "wholebody_release_contract_v2.json"
-
-# ---- the model release (model/ in this repository) and its lock -------------
-RESEARCH_DIR = REPO_ROOT.parent / "model"              # the merged repository's model/
-MODEL_LOCK_PATH = BACKEND_DIR / "model-lock.json"
+FORECAST_CONTRACT_FIXTURE = FIXTURE_DIR / "forecast_api_contract_v1.json"
 
 # ---- runtime state ---------------------------------------------------------
 VAR_DIR = REPO_ROOT / "var"
 DEFAULT_STREAM_DB = VAR_DIR / "oslian_stream.sqlite3"
-
-
-def load_model_lock(path: Path = MODEL_LOCK_PATH) -> dict:
-    """The approved model release. The release runtime may load nothing else."""
-    lock = json.loads(path.read_text(encoding="utf-8"))
-    if lock.get("schema") != "oslian.model-lock.v1":
-        raise ValueError(f"unsupported model lock schema in {path}")
-    return lock
 
 
 @dataclass(frozen=True)

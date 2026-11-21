@@ -24,8 +24,8 @@ from .eventlog import LOG_OFF, StreamEventLogger
 from .repository import ResourceVersionConflict, Repository
 from .routing import variable_routing
 from .source import ClinicalDataSource, make_source
-from .timeline import build_model_input, delivered_timeline, variable_state, observation_statements
-from .wholebody import RuntimeUnavailable, WholeBodyRuntime
+from .timeline import build_model_input, delivered_timeline, latest_anchor, variable_state, observation_statements
+from .forecast_runtime import ForecastRuntime, RuntimeUnavailable
 
 SPEEDS = (1.0, 5.0, 20.0)
 STATUS_IDLE, STATUS_RUNNING, STATUS_PAUSED, STATUS_COMPLETED = "idle", "running", "paused", "completed"
@@ -152,7 +152,7 @@ class RunScheduler:
     inference requests are merged.
 
     Consecutive runs are separated by ``debounce`` measured from the end of the
-    previous run, which bounds how much of the worker a sustained burst can take
+    previous run, which bounds how much of the forecast API a sustained burst can take
     while still guaranteeing a final run once the burst stops.
 
     Shutdown is explicit: after :meth:`stop` no further request is accepted, a
@@ -257,14 +257,14 @@ class RunScheduler:
                 with self._cv:
                     self._busy = False
                     # space the next run from the end of this one, so a sustained
-                    # burst cannot keep the worker permanently saturated
+                    # burst cannot keep the forecast API permanently saturated
                     if self._pending and not self._stop:
                         self._deadline = time.monotonic() + self.debounce
                     self._cv.notify_all()
 
 
 class StreamSession:
-    def __init__(self, repo: Repository, bus: EventBus, source: ClinicalDataSource, runtime: WholeBodyRuntime,
+    def __init__(self, repo: Repository, bus: EventBus, source: ClinicalDataSource, runtime: ForecastRuntime,
                  record: dict[str, Any]):
         self.repo = repo
         self.bus = bus
@@ -501,11 +501,16 @@ class StreamSession:
             timeline_all = delivered_timeline(self.repo, self.session_id, epoch)
         if not timeline_all or not self.onset:
             return None
-        cutoff = max(row["effective_time"] for row in timeline_all)
+        # A forecast is issued at an anchor: every 6 hours from the encounter start, as in
+        # the rows the cells were fitted on. Until the first anchor there is nothing to run,
+        # and what arrives after the latest anchor waits for the next one.
+        cutoff = latest_anchor(self.onset, max(row["effective_time"] for row in timeline_all))
+        if cutoff is None:
+            return None
         timeline = [row for row in timeline_all if row["effective_time"] <= cutoff]
         model_input = build_model_input(timeline, cutoff, self.onset)
         # The delivered prefix is unchanged since the last completed run, so the
-        # forecast would be identical. Skipping keeps the worker for prefixes that
+        # forecast would be identical. Skipping keeps the API for anchors that
         # actually moved; the newest completed run still describes the newest
         # delivered prefix, which is the property that matters.
         if model_input.input_hash == self._last_run_input_hash:
@@ -570,7 +575,7 @@ class StreamSession:
 
 
 class SessionManager:
-    def __init__(self, repo: Repository, runtime: WholeBodyRuntime, source_factory=make_source,
+    def __init__(self, repo: Repository, runtime: ForecastRuntime, source_factory=make_source,
                  logger: StreamEventLogger | None = None):
         self.repo = repo
         self.runtime = runtime

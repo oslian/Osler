@@ -1,32 +1,23 @@
 <#
 .SYNOPSIS
-    Start Oslian Demo: Flask, the frontend, the FHIR stream, the SQLite ledger and
-    the WholeBody runtime, in one command.
+    Start Oslian Demo: Flask, the frontend, the FHIR stream and the SQLite ledger,
+    in one command.
 
 .DESCRIPTION
-    Everything runs inside this one process. Flask serves frontend/ directly; the
-    stream playback clock, the SSE bus and the run scheduler are threads; the
-    ledger is SQLite in WAL mode under var/; the WholeBody runtime is either the
-    pinned fixture contract or a worker subprocess inside model/.
+    Everything the demo owns runs inside this one process. Flask serves frontend/
+    directly; the stream playback clock, the SSE bus and the run scheduler are
+    threads; the ledger is SQLite in WAL mode under var/. Forecasts come from the
+    forecast API in api/, a separate process this script does not start.
 
-    Fixture mode is the safe default and needs no configuration. Release mode
-    defaults to model/ in this repository.
+    Detached mode is the safe default and needs no configuration. Api mode calls
+    the forecast API at -ApiUrl.
 
 .PARAMETER Mode
-    fixture (default) or release.
+    detached (default) or api.
 
-.PARAMETER ReleaseDir
-    Override the release checkout. Only for a different working copy of the SAME
-    commit model-lock.json approves. Falls back to $env:OSLIAN_WHOLEBODY_RELEASE_DIR,
-    then ../model.
-
-.PARAMETER ReleasePython
-    Interpreter for the release worker; it needs scikit-learn 1.7.2.
-    Falls back to $env:OSLIAN_WHOLEBODY_PYTHON, then -Python.
-
-.PARAMETER ReleasePythonPath
-    Dependency overlay prepended to that interpreter's path.
-    Falls back to $env:OSLIAN_WHOLEBODY_PYTHONPATH.
+.PARAMETER ApiUrl
+    The forecast API. Falls back to $env:OSLIAN_FORECAST_API_URL, then
+    http://127.0.0.1:8000.
 
 .PARAMETER Python
     Interpreter that runs Flask. Falls back to $env:OSLIAN_PYTHON, then python.
@@ -43,20 +34,15 @@
     .\scripts\start-demo.ps1
 
 .EXAMPLE
-    .\scripts\start-demo.ps1 -Mode release -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
+    .\scripts\start-demo.ps1 -Mode api -ApiUrl http://127.0.0.1:8000
 
 .EXAMPLE
     .\scripts\start-demo.ps1 -Database .\var\oslian_stream_ranges_v2.sqlite3
-
-.EXAMPLE
-    .\scripts\start-demo.ps1 -Mode release -Database .\var\oslian_stream_ranges_v2.sqlite3 -Python C:\path\to\python.exe -ReleasePython C:\path\to\python.exe -ReleasePythonPath C:\path\to\sklearn-overlay
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('fixture', 'release')] [string] $Mode = 'fixture',
-    [string] $ReleaseDir,
-    [string] $ReleasePython,
-    [string] $ReleasePythonPath,
+    [ValidateSet('detached', 'api')] [string] $Mode = 'detached',
+    [string] $ApiUrl,
     [string] $Python,
     [int]    $Port,
     [string] $Database
@@ -114,43 +100,10 @@ $env:OSLIAN_STREAM_DB = $Database
 $env:PYTHONPATH = Join-Path $root 'backend'
 $env:PYTHONUTF8 = '1'
 $env:OSLIAN_PORT = "$Port"
-$env:OSLIAN_WHOLEBODY_RUNTIME = $Mode
-
-if ($Mode -eq 'release') {
-    $lock = Get-Content (Join-Path $root 'backend\model-lock.json') -Raw | ConvertFrom-Json
-    $default = Join-Path $root $lock.model_path
-    $ReleaseDir = Resolve-Setting $ReleaseDir 'OSLIAN_WHOLEBODY_RELEASE_DIR' $default
-    if (-not (Test-Path $ReleaseDir)) { throw "release checkout not found: $ReleaseDir" }
-    if (-not (Test-Path (Join-Path $ReleaseDir 'models'))) {
-        throw "no models directory in $ReleaseDir"
-    }
-    $head = (& git -C $ReleaseDir log -1 --format=%H -- .).Trim()
-    if ($head -ne $lock.validated_commit) {
-        throw "model/ was last changed in $head; model-lock.json approves $($lock.validated_commit). Re-lock deliberately (docs/MODEL_RUNTIME.md)."
-    }
-
-    $ReleasePython = Resolve-Setting $ReleasePython 'OSLIAN_WHOLEBODY_PYTHON' $pythonExe
-    if (-not (Test-Path $ReleasePython)) {
-        $resolved = (Get-Command $ReleasePython -ErrorAction SilentlyContinue).Source
-        if (-not $resolved) { throw "release interpreter not found: $ReleasePython" }
-        $ReleasePython = $resolved
-    }
-    $ReleasePythonPath = Resolve-Setting $ReleasePythonPath 'OSLIAN_WHOLEBODY_PYTHONPATH' ''
-    if ($ReleasePythonPath -and -not (Test-Path $ReleasePythonPath)) {
-        throw "release dependency overlay not found: $ReleasePythonPath"
-    }
-
-    $env:OSLIAN_WHOLEBODY_RELEASE_DIR = (Resolve-Path $ReleaseDir).Path
-    $env:OSLIAN_WHOLEBODY_PYTHON = $ReleasePython
-    if ($ReleasePythonPath) {
-        $env:OSLIAN_WHOLEBODY_PYTHONPATH = (Resolve-Path $ReleasePythonPath).Path
-    }
-    Write-Host "release checkout : $env:OSLIAN_WHOLEBODY_RELEASE_DIR"
-    Write-Host "locked commit    : $($lock.validated_commit)"
-    Write-Host "release python   : $env:OSLIAN_WHOLEBODY_PYTHON"
-    if ($ReleasePythonPath) { Write-Host "release overlay  : $env:OSLIAN_WHOLEBODY_PYTHONPATH" }
-} else {
-    Remove-Item Env:\OSLIAN_WHOLEBODY_RELEASE_DIR -ErrorAction SilentlyContinue
+$env:OSLIAN_FORECAST_RUNTIME = $Mode
+if ($Mode -eq 'api') {
+    $env:OSLIAN_FORECAST_API_URL = Resolve-Setting $ApiUrl 'OSLIAN_FORECAST_API_URL' 'http://127.0.0.1:8000'
+    Write-Host "forecast API     : $env:OSLIAN_FORECAST_API_URL"
 }
 
 Write-Host "mode             : $Mode"

@@ -24,10 +24,6 @@ build the app through it; there is no second app object, no module-level
 line between three kinds: package data (knowledge JSONs, fixtures, approved
 maps), the frontend tree, and machine-local runtime state under `var/`.
 
-The one deliberate exception to the no-`sys.path` rule is
-`monitoring/worker.py`, which runs as a subprocess *inside* the pinned release
-checkout and must let that checkout shadow every same-named module.
-
 ## Repository independence
 
 The Flask process imports from this repository only. The state vocabulary the
@@ -38,9 +34,8 @@ canonical states the demo's own knowledge files actually name.
 every variable in them resolves exactly as before — and that the table carries
 nothing the demo never asks for.
 
-The only component that loads research code is the release worker, and it does
-so in a separate interpreter, inside `model/`. See
-[MODEL_RUNTIME.md](MODEL_RUNTIME.md).
+No component loads research code. Forecasts come from the forecast API in
+`api/`, a separate process, over HTTP; see `monitoring/forecast_runtime.py`.
 
 ## Medication Safety
 
@@ -82,8 +77,8 @@ ClinicalDataSource      MockFhirSource · RetrospectiveCaseSource · EpicFhirSou
 FHIR validator     ->   append-only raw ledger (SQLite, WAL)
    |  (code system, code, shape, unit) mapping registry
 canonical observations  ->  delivered timeline + input watermark
-   |  effective_time <= input cutoff only
-WholeBodyRuntime adapter  ->  model runs + forecast cells (persisted)
+   |  effective_time <= input cutoff only; the cutoff is a 6-hour anchor
+ForecastRuntime adapter  ->  forecast API (api/)  ->  model runs + forecast cells (persisted)
    |  SSE (id: = sequence, Last-Event-ID reconnect)
 anatomy · organ signals · cells · run history · provenance drawer
 ```
@@ -92,15 +87,14 @@ anatomy · organ signals · cells · run history · provenance drawer
 |---|---|
 | `source.py` | `MockFhirSource` fixture replay; `RetrospectiveCaseSource` (eICU demo rows → FHIR R4 at measurement time); `EpicFhirSource` SMART/pagination boundary, contract only |
 | `fhir.py` | R4 structural validation, obs-6 / obs-7, RFC3339 parsing |
-| `mapping.py` | versioned LOINC/UCUM → WholeBody variable rules with exact linear conversions |
+| `mapping.py` | versioned LOINC/UCUM → canonical variable rules with exact linear conversions |
 | `repository.py` | all SQL: ledger, canonical rows, sessions, deliveries, events, runs, cells |
 | `ingest.py` | validate → ledger (idempotent) → map → canonical row or mapping failure |
-| `timeline.py` | delivered timeline, per-variable state, organ state, causal-prefix model input, exact per-run replay |
-| `wholebody.py` | the single runtime adapter: fixture gate or pinned release worker |
-| `worker.py` | the subprocess that runs inside the pinned release checkout |
+| `timeline.py` | delivered timeline, per-variable state, organ state, the 6-hour anchor stream sent to the model, exact per-run replay |
+| `forecast_runtime.py` | the single runtime adapter: detached, or the forecast API over HTTP with fail-closed contract checks |
 | `session.py` | simulated arrival clock (1× / 5× / 20×), event bus, coalesced run scheduler |
 | `anatomy.py` + `organ_target_map.json` | the explicit organ ↔ variable ↔ cell map (anatomical organs only) |
-| `functions.py` + `functional_group_map_v1.json` | the 11 checkpoint modules as clinical-function groups with primary / secondary / related splits and organ links |
+| `functions.py` + `functional_group_map_v1.json` | 11 clinical-function groups with primary / secondary / related splits and organ links |
 | `routing.py` | inverts both maps: variable → organ ids and functional group ids |
 | `eventlog.py` | the two-stage terminal console (`event_emit`, `sse_send`) with structural redaction |
 | `api.py` | the Flask blueprint: REST controls + SSE |
@@ -178,9 +172,8 @@ that fails is swallowed, so logging can never break the stream.
   `python -m oslian_demo.monitoring.build_synthetic_fixture --write`.
 - `monitoring/fixtures/retrospective_eicu_demo_case.json` — the deidentified
   public eICU CRD Demo 2.0.1 stay, converted to FHIR R4 at replay time.
-- `monitoring/fixtures/wholebody_release_contract_v1.json` — generated through
-  the worker inside the pinned checkout: manifest, registry hash, the 41-cell
-  catalog, 53 variables and one real input/output sample.
+- `monitoring/fixtures/forecast_api_contract_v1.json` — generated from a running
+  forecast API: the 45 cells, their units and recipes, and the registry hash.
 
 ## Anatomy assets
 
